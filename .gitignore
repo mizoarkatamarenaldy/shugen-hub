@@ -147,3 +147,10 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Data toko (jangan pernah di-commit)
+data/
+backup/
+*.backup.json
+*.export.json
+.env
