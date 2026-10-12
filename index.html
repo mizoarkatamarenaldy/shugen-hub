@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="theme-color" content="#0F1117">
+  <meta name="description" content="Alat operasional Shugen Store untuk pesanan joki dan topup">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
+  <link rel="stylesheet" href="css/style.css">
+  <title>Shugen Hub</title>
+</head>
+<body>
+  <header class="app-header">
+    <h1 class="app-title">Shugen Hub</h1>
+    <div class="header-actions">
+      <button type="button" class="btn-icon" id="btn-theme" aria-label="Ganti tema terang atau gelap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+      </button>
+      <button type="button" class="btn-icon" id="btn-settings" aria-label="Buka pengaturan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="search-bar">
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="search" id="search-input" class="search-input" placeholder="Cari pelanggan, game, atau ID..." aria-label="Cari pesanan berdasarkan nama, game, atau ID">
+      </div>
+    </div>
+
+    <nav class="status-tabs" aria-label="Filter status pesanan">
+      <button type="button" class="tab active" data-status="semua" aria-selected="true">Semua</button>
+      <button type="button" class="tab" data-status="menunggu_bayar" aria-selected="false">Menunggu Bayar</button>
+      <button type="button" class="tab" data-status="diproses" aria-selected="false">Diproses</button>
+      <button type="button" class="tab" data-status="selesai" aria-selected="false">Selesai</button>
+      <button type="button" class="tab" data-status="dibatalkan" aria-selected="false">Dibatalkan</button>
+    </nav>
+
+    <div id="loading-state" class="app-state" hidden>
+      <p class="state-message">Memuat pesanan...</p>
+    </div>
+
+    <div id="error-state" class="app-state" hidden>
+      <p class="state-message">Gagal memuat data</p>
+      <p class="state-hint">Muat ulang halaman atau periksa penyimpanan lokal perangkat.</p>
+    </div>
+
+    <div id="empty-state" class="app-state" hidden>
+      <p class="state-message">Belum ada pesanan</p>
+      <p class="state-hint">Tap tombol + di bawah untuk menambah pesanan, atau muat data demo di Pengaturan.</p>
+    </div>
+
+    <div id="empty-filtered" class="app-state" hidden>
+      <p class="state-message">Tidak ada pesanan yang sesuai</p>
+      <p class="state-hint">Coba ubah kata kunci pencarian atau pilih tab status yang lain.</p>
+    </div>
+
+    <section id="order-list" class="order-list" aria-label="Daftar pesanan"></section>
+
+    <button type="button" class="fab" id="fab-add" aria-label="Tambah pesanan baru">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+    </button>
+  </main>
+
+  <!-- Dialog Form Tambah / Edit Pesanan -->
+  <dialog id="order-dialog" aria-labelledby="form-title">
+    <div class="dialog-header">
+      <h2 id="form-title" class="dialog-title">Tambah Pesanan</h2>
+      <button type="button" class="btn-icon" id="btn-cancel-order" aria-label="Tutup form pesanan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <form id="order-form">
+      <div class="dialog-body">
+        <div class="form-group">
+          <label class="form-label" for="field-customer">Nama Pelanggan *</label>
+          <input type="text" id="field-customer" class="form-input" required placeholder="Contoh: Budi Santoso">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="field-type">Jenis Pesanan</label>
+            <select id="field-type" class="form-select">
+              <option value="joki">Joki</option>
+              <option value="topup">Topup</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="field-game">Game *</label>
+            <input type="text" id="field-game" class="form-input" required placeholder="Contoh: Mobile Legends">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="field-detail">Detail / Catatan</label>
+          <textarea id="field-detail" class="form-textarea" placeholder="Contoh: Push Epic ke Legend, hero Lancelot"></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="field-price">Harga (Rp)</label>
+            <div class="form-price-wrap">
+              <span class="form-price-prefix">Rp</span>
+              <input type="number" id="field-price" class="form-input form-input-price" min="0" step="1000" placeholder="0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="field-payment">Metode Pembayaran</label>
+            <select id="field-payment" class="form-select">
+              <option value="">Pilih metode</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="field-status-group" class="form-group" hidden>
+          <label class="form-label" for="field-status">Status Pesanan</label>
+          <select id="field-status" class="form-select">
+            <option value="menunggu_bayar">Menunggu Bayar</option>
+            <option value="diproses">Diproses</option>
+            <option value="selesai">Selesai</option>
+            <option value="dibatalkan">Dibatalkan</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" id="btn-delete-order" class="btn btn-danger" hidden>Hapus</button>
+        <button type="submit" class="btn btn-primary">Simpan</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog Ubah Status Cepat -->
+  <dialog id="status-dialog" class="dialog-status" aria-label="Ubah Status Pesanan">
+    <div class="dialog-header">
+      <h2 class="dialog-title">Ubah Status</h2>
+      <button type="button" class="btn-icon" id="btn-close-status" aria-label="Tutup pilihan status">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="status-options">
+      <button type="button" class="status-option" data-status="menunggu_bayar">Menunggu Bayar</button>
+      <button type="button" class="status-option" data-status="diproses">Diproses</button>
+      <button type="button" class="status-option" data-status="selesai">Selesai</button>
+      <button type="button" class="status-option" data-status="dibatalkan">Dibatalkan</button>
+    </div>
+  </dialog>
+
+  <!-- Dialog Pengaturan -->
+  <dialog id="settings-dialog" class="dialog-settings" aria-label="Pengaturan">
+    <div class="dialog-header">
+      <h2 class="dialog-title">Pengaturan</h2>
+      <button type="button" class="btn-icon" id="btn-close-settings" aria-label="Tutup pengaturan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="dialog-body">
+      <div class="settings-section">
+        <div class="settings-label">Metode Pembayaran</div>
+        <ul id="payment-list" class="payment-list"></ul>
+        <div class="payment-add">
+          <input type="text" id="payment-add-input" class="payment-add-input" placeholder="Tambah metode baru..." aria-label="Nama metode pembayaran baru">
+          <button type="button" id="btn-add-payment" class="btn btn-secondary btn-small">Tambah</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Data Demo Portofolio</div>
+        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Muat data contoh 8 pesanan untuk demonstrasi dan uji coba tampilan.</p>
+        <button type="button" id="btn-load-demo" class="btn btn-secondary btn-demo">Muat Data Demo</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/db.js"></script>
+  <script src="js/dummy.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

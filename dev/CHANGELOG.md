@@ -19,6 +19,24 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #002 [2026-10-13] Implementasi Fitur 1 (Pesanan + Status)
+- Fitur: Pesanan + Status
+- Ringkasan: Membangun struktur dasar PWA offline Shugen Hub menggunakan IndexedDB lokal. Menyediakan daftar pesanan dengan filter status dan pencarian, form tambah/edit pesanan, pengubah status cepat, pengaturan metode pembayaran kustom, dan data demo untuk demonstrasi portofolio.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/DESIGN.md
+  - icons/icon.svg
+  - icons/icon-192.svg
+  - icons/icon-512.svg
+  - index.html
+  - js/app.js
+  - js/db.js
+  - js/dummy.js
+  - manifest.json
+  - sw.js
+- Catatan: ID pesanan menggunakan format SGN-YYMMDD-XXXX (4 karakter alfanumerik) untuk memastikan keunikan data antar-perangkat secara offline.
+
 ### #001 [2026-10-13] Setup awal repo
 - Fitur: Persiapan
 - Ringkasan: Menambahkan PLAN.md, RULES.md, dan CHANGELOG.md di folder dev.
