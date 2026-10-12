@@ -22,7 +22,7 @@ Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 
 ## Fitur 1: Pesanan + Status
 Data pesanan:
-- ID pesanan otomatis (format: SGN-YYMMDD-001)
+- ID pesanan otomatis (awalan SGN-YYMMDD, lihat Aturan umum soal keunikan)
 - Nama pelanggan
 - Jenis: Joki atau Topup
 - Game
@@ -44,6 +44,7 @@ Kebutuhan layar:
 ## Aturan umum
 - Metode pembayaran bisa diatur sendiri (tambah, hapus, ganti nama), bukan daftar tetap
 - Harga dari katalog hanya saran awal, selalu bisa diubah per pesanan
+- ID pesanan harus unik walau dibuat dari beberapa perangkat sekaligus. Nomor urut tidak boleh hanya bergantung pada data lokal satu perangkat. Kalau format SGN-YYMMDD-001 tidak bisa menjamin itu, pilih cara lain yang tetap diawali SGN-YYMMDD dan mudah dibaca manusia, lalu jelaskan pilihannya di laporan akhir.
 
 ## Aturan teknis
 - PWA (manifest + service worker, bisa offline)
