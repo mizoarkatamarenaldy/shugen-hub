@@ -19,6 +19,19 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #003 [2026-10-13] Perbaikan ikon PWA dan path relatif
+- Fitur: Pesanan + Status
+- Ringkasan: Mengganti ikon di manifest.json menjadi PNG persegi 192x192, 512x512, dan ikon maskable 512x512, serta memperbarui apple-touch-icon di index.html menjadi PNG. Memastikan semua path di manifest.json dan sw.js bersifat relatif untuk dukungan subfolder GitHub Pages, serta menaikkan versi cache service worker ke shugen-v2.
+- File diubah:
+  - dev/CHANGELOG.md
+  - icons/icon-192.png
+  - icons/icon-512.png
+  - icons/icon-maskable.png
+  - index.html
+  - manifest.json
+  - sw.js
+- Catatan: Ikon SVG sebelumnya gagal dimuat di tab Manifest DevTools karena elemen `<svg>` hanya memiliki `viewBox` tanpa atribut dimensi `width` dan `height` eksplisit.
+
 ### #002 [2026-10-13] Implementasi Fitur 1 (Pesanan + Status)
 - Fitur: Pesanan + Status
 - Ringkasan: Membangun struktur dasar PWA offline Shugen Hub menggunakan IndexedDB lokal. Menyediakan daftar pesanan dengan filter status dan pencarian, form tambah/edit pesanan, pengubah status cepat, pengaturan metode pembayaran kustom, dan data demo untuk demonstrasi portofolio.
