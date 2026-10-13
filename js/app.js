@@ -14,6 +14,9 @@ const App = (function () {
   let expenseStartDate = '';
   let expenseEndDate = '';
   let expenseCategoryFilter = 'semua';
+  let cashStartDate = '';
+  let cashEndDate = '';
+  let cashInitialBalance = 0;
   let editingId = null;
   let editingIncomeId = null;
   let editingExpenseId = null;
@@ -66,6 +69,8 @@ const App = (function () {
       orders = await ShugenDB.orders.getAll();
       incomes = await ShugenDB.incomes.getAll();
       expenses = await ShugenDB.expenses.getAll();
+      const savedBalance = await ShugenDB.cash.get('initialBalance');
+      cashInitialBalance = (savedBalance !== null && savedBalance !== undefined) ? Number(savedBalance) : 0;
       await refreshProgressMap();
       await loadTheme();
       render();
@@ -100,7 +105,8 @@ const App = (function () {
     $('#view-orders').hidden = state !== 'ready' || activeView !== 'orders';
     $('#view-incomes').hidden = state !== 'ready' || activeView !== 'incomes';
     $('#view-expenses').hidden = state !== 'ready' || activeView !== 'expenses';
-    $('#fab-add').hidden = state !== 'ready';
+    $('#view-cash').hidden = state !== 'ready' || activeView !== 'cash';
+    $('#fab-add').hidden = state !== 'ready' || activeView === 'cash';
 
     $('#empty-state').hidden = true;
     $('#empty-filtered').hidden = true;
@@ -113,6 +119,10 @@ const App = (function () {
     $('#expense-empty-state').hidden = true;
     $('#expense-empty-filtered').hidden = true;
     $('#expense-list').hidden = state !== 'ready';
+
+    $('#cash-empty-state').hidden = true;
+    $('#cash-empty-filtered').hidden = true;
+    $('#cash-mutation-list').hidden = state !== 'ready';
 
     if (state === 'ready') {
       const fabLabel = activeView === 'incomes'
@@ -147,6 +157,16 @@ const App = (function () {
       } else if (filteredExpenses.length === 0) {
         $('#expense-empty-filtered').hidden = false;
         $('#expense-list').hidden = true;
+      }
+
+      const allMutations = incomes.length + expenses.length;
+      const filteredMutations = getFilteredMutations();
+      if (allMutations === 0) {
+        $('#cash-empty-state').hidden = false;
+        $('#cash-mutation-list').hidden = true;
+      } else if (filteredMutations.length === 0) {
+        $('#cash-empty-filtered').hidden = false;
+        $('#cash-mutation-list').hidden = true;
       }
     }
   }
@@ -214,6 +234,107 @@ const App = (function () {
     return list;
   }
 
+  function getFilteredMutations() {
+    const combined = [];
+    incomes.forEach((inc) => {
+      combined.push({ type: 'masuk', date: inc.date, amount: inc.amount, ref: inc });
+    });
+    expenses.forEach((exp) => {
+      combined.push({ type: 'keluar', date: exp.date, amount: exp.amount, ref: exp });
+    });
+    let list = combined;
+    if (cashStartDate) {
+      list = list.filter((m) => m.date >= cashStartDate);
+    }
+    if (cashEndDate) {
+      list = list.filter((m) => m.date <= cashEndDate);
+    }
+    list.sort((a, b) => {
+      const cmp = String(b.date || '').localeCompare(String(a.date || ''));
+      if (cmp !== 0) return cmp;
+      const timeDiff = new Date(b.ref.createdAt) - new Date(a.ref.createdAt);
+      if (timeDiff !== 0) return timeDiff;
+      return (b.ref.id || 0) - (a.ref.id || 0);
+    });
+    return list;
+  }
+
+  function renderCash() {
+    const totalIncome = incomes.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
+    const totalExpense = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+    const balance = cashInitialBalance + totalIncome - totalExpense;
+
+    $('#cash-balance-value').textContent = 'Rp ' + formatPrice(balance);
+    $('#cash-balance-breakdown').textContent =
+      'Rp ' + formatPrice(cashInitialBalance) + ' + Rp ' + formatPrice(totalIncome) + ' - Rp ' + formatPrice(totalExpense);
+    $('#cash-initial-input').value = String(cashInitialBalance);
+
+    $('#btn-reset-cash-filter').hidden = !(cashStartDate || cashEndDate);
+
+    const list = getFilteredMutations();
+    $('#cash-mutation-count').textContent = list.length + ' mutasi';
+
+    const container = $('#cash-mutation-list');
+    container.innerHTML = '';
+
+    list.forEach((mutation) => {
+      const ref = mutation.ref;
+      const card = document.createElement('article');
+      card.className = 'income-card cash-mutation-card';
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+      card.dataset.type = mutation.type;
+      card.dataset.id = ref.id;
+
+      const dateLabel = formatYmd(mutation.date);
+      const dirLabel = mutation.type === 'masuk' ? 'Masuk' : 'Keluar';
+      const signPrefix = mutation.type === 'masuk' ? '+' : '-';
+      const methodLabel = ref.paymentMethod || 'Tanpa metode';
+
+      let secondaryLabel = '';
+      if (mutation.type === 'masuk') {
+        const inc = ref;
+        if (inc.orderId) {
+          const matched = orders.find((o) => o.orderId === inc.orderId);
+          secondaryLabel = matched
+            ? ('Pesanan: ' + inc.orderId + ' (' + matched.customerName + ')')
+            : ('Pesanan: ' + inc.orderId);
+        } else {
+          secondaryLabel = 'Tanpa pesanan';
+        }
+      } else {
+        secondaryLabel = getCategoryName(ref.categoryId);
+      }
+
+      const noteHtml = ref.note
+        ? '<div class="income-note">' + esc(ref.note) + '</div>'
+        : '';
+
+      card.setAttribute(
+        'aria-label',
+        dirLabel + ', Rp ' + formatPrice(ref.amount) + ', ' + dateLabel + ', ' + methodLabel
+      );
+
+      card.innerHTML =
+        '<div class="income-header">' +
+          '<span class="income-id cash-mutation-dir cash-mutation-dir--' + mutation.type + '">' + esc(dirLabel) + '</span>' +
+          '<span class="income-date">' + esc(dateLabel) + '</span>' +
+        '</div>' +
+        '<div class="income-amount cash-mutation-amount">' +
+          '<span class="cash-mutation-sign">' + signPrefix + '</span>Rp ' + formatPrice(ref.amount) +
+        '</div>' +
+        '<div class="income-meta">' +
+          '<span class="income-method-tag">' + esc(methodLabel) + '</span>' +
+          '<span class="income-order-tag">' + esc(secondaryLabel) + '</span>' +
+        '</div>' +
+        noteHtml;
+
+      container.appendChild(card);
+    });
+
+    showView('ready');
+  }
+
   // Rendering
 
   function render() {
@@ -222,6 +343,7 @@ const App = (function () {
     renderOrders();
     renderIncomes();
     renderExpenses();
+    renderCash();
   }
 
   function renderNav() {
@@ -568,6 +690,58 @@ const App = (function () {
       if (!card) return;
       e.preventDefault();
       openExpenseForm(Number(card.dataset.id));
+    });
+
+    $('#cash-filter-start').addEventListener('change', (e) => {
+      cashStartDate = e.target.value;
+      renderCash();
+    });
+
+    $('#cash-filter-end').addEventListener('change', (e) => {
+      cashEndDate = e.target.value;
+      renderCash();
+    });
+
+    $('#btn-reset-cash-filter').addEventListener('click', () => {
+      cashStartDate = '';
+      cashEndDate = '';
+      $('#cash-filter-start').value = '';
+      $('#cash-filter-end').value = '';
+      renderCash();
+    });
+
+    $('#cash-mutation-list').addEventListener('click', (e) => {
+      const card = e.target.closest('.cash-mutation-card');
+      if (!card) return;
+      const type = card.dataset.type;
+      const id = Number(card.dataset.id);
+      if (type === 'masuk') {
+        openIncomeForm(id);
+      } else {
+        openExpenseForm(id);
+      }
+    });
+
+    $('#cash-mutation-list').addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('.cash-mutation-card');
+      if (!card) return;
+      e.preventDefault();
+      const type = card.dataset.type;
+      const id = Number(card.dataset.id);
+      if (type === 'masuk') {
+        openIncomeForm(id);
+      } else {
+        openExpenseForm(id);
+      }
+    });
+
+    $('#btn-save-cash-initial').addEventListener('click', saveCashInitialBalance);
+    $('#cash-initial-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        saveCashInitialBalance();
+      }
     });
 
     $('#fab-add').addEventListener('click', () => {
@@ -1557,6 +1731,36 @@ const App = (function () {
     }
   }
 
+  // Cash
+
+  async function saveCashInitialBalance() {
+    const saveBtn = $('#btn-save-cash-initial');
+    if (saveBtn.disabled) return;
+
+    const rawVal = $('#cash-initial-input').value.trim();
+    const newBalance = rawVal === '' ? 0 : Number(rawVal);
+
+    if (isNaN(newBalance) || newBalance < 0) {
+      toast('Saldo awal harus berupa angka positif');
+      $('#cash-initial-input').focus();
+      return;
+    }
+
+    saveBtn.disabled = true;
+
+    try {
+      await ShugenDB.cash.set('initialBalance', newBalance);
+      cashInitialBalance = newBalance;
+      renderCash();
+      toast('Saldo awal disimpan');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal menyimpan saldo awal');
+    } finally {
+      saveBtn.disabled = false;
+    }
+  }
+
   // Quick status picker
 
   function openStatusPicker(id) {
@@ -1848,6 +2052,8 @@ const App = (function () {
       expenseCategories = await ShugenDB.categories.getAll();
       await refreshProgressMap();
       paymentMethods = await ShugenDB.payment.getAll();
+      const savedBalance = await ShugenDB.cash.get('initialBalance');
+      cashInitialBalance = (savedBalance !== null && savedBalance !== undefined) ? Number(savedBalance) : 0;
       render();
       renderPaymentList();
       renderCategoryList();

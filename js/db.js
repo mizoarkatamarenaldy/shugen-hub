@@ -1,6 +1,6 @@
 const ShugenDB = (function () {
   const DB_NAME = 'shugen-hub';
-  const DB_VERSION = 4;
+  const DB_VERSION = 5;
   let _db = null;
 
   const DEFAULT_PAYMENT_METHODS = [
@@ -65,6 +65,9 @@ const ShugenDB = (function () {
           expenseStore.createIndex('categoryId', 'categoryId');
           expenseStore.createIndex('date', 'date');
           expenseStore.createIndex('createdAt', 'createdAt');
+        }
+        if (!db.objectStoreNames.contains('cashSettings')) {
+          db.createObjectStore('cashSettings', { keyPath: 'key' });
         }
       };
 
@@ -667,6 +670,19 @@ const ShugenDB = (function () {
     return req2p(tx('settings', 'readwrite').put({ key: key, value: value }));
   }
 
+  // Cash settings
+
+  async function getCashSetting(key) {
+    await open();
+    const rec = await req2p(tx('cashSettings', 'readonly').get(key));
+    return rec ? rec.value : null;
+  }
+
+  async function setCashSetting(key, value) {
+    await open();
+    return req2p(tx('cashSettings', 'readwrite').put({ key: key, value: value }));
+  }
+
   return {
     open: open,
     orders: {
@@ -724,6 +740,10 @@ const ShugenDB = (function () {
     settings: {
       get: getSetting,
       set: setSetting
+    },
+    cash: {
+      get: getCashSetting,
+      set: setCashSetting
     }
   };
 })();

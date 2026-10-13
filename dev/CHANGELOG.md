@@ -19,6 +19,20 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #011 [2026-10-13] Implementasi Fitur 13 (Kas toko)
+- Fitur: Kas toko (saldo gabungan, menu sendiri)
+- Ringkasan: Menambahkan menu Kas untuk menampilkan saldo kas saat ini secara otomatis (saldo awal ditambah total pemasukan dikurangi total pengeluaran) yang tidak terpengaruh filter tanggal, input dan penyimpanan saldo awal dengan pengaman tombol selama operasi IndexedDB, serta daftar mutasi gabungan pemasukan dan pengeluaran urut tanggal terbaru dengan filter rentang tanggal. Mengetuk baris mutasi membuka form pemasukan atau pengeluaran aslinya, memigrasi skema IndexedDB ke versi 5 dengan object store `cashSettings`, menambahkan saldo awal contoh di `js/dummy.js`, menaikkan cache service worker ke `shugen-v10`, dan memperbarui penanda fokus di `dev/PLAN.md`.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - index.html
+  - js/app.js
+  - js/db.js
+  - js/dummy.js
+  - sw.js
+- Catatan: Skema IndexedDB naik ke versi 5 (`cashSettings` store untuk menyimpan `initialBalance`) secara aman tanpa menghapus data lama, dan versi cache service worker dinaikkan ke shugen-v10.
+
 ### #010 [2026-10-13] Implementasi Fitur 4 (Pengeluaran)
 - Fitur: Pengeluaran
 - Ringkasan: Menambahkan fitur pencatatan pengeluaran toko (terhubung ke pesanan maupun berdiri sendiri) dengan daftar urut tanggal terbaru, filter rentang tanggal dan kategori, total pengeluaran hasil filter, serta form tambah/edit/hapus pengeluaran. Menambahkan pengelolaan kategori pengeluaran di Pengaturan (tambah, ganti nama, cegah nama kembar, dan cegah hapus kategori yang sedang dipakai), pengaman tombol serta cek keunikan nama pada `#btn-add-payment`, tampilan total pengeluaran di detail pesanan, data contoh pengeluaran di `js/dummy.js`, migrasi IndexedDB ke versi 4, dan pembaruan `dev/PLAN.md`.

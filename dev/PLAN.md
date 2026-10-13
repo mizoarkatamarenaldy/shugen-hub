@@ -8,7 +8,7 @@ Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 1. Pesanan + Status
 2. Progress joki (checklist + persentase)
 3. Pemasukan
-4. Pengeluaran  <- FOKUS SEKARANG
+4. Pengeluaran
 5. Invoice
 
 ## Fitur tambahan (setelah fitur inti)
@@ -19,7 +19,7 @@ Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 10. Deadline pesanan dan pengingat
 11. Katalog harga (hanya template, harga bisa diubah per pesanan)
 12. Backup dan restore manual (export/import file)
-13. Kas toko (saldo gabungan, menu sendiri)
+13. Kas toko (saldo gabungan, menu sendiri)  <- FOKUS SEKARANG
 
 ## Fitur 1: Pesanan + Status
 Data pesanan:

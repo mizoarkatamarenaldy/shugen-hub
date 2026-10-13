@@ -8,6 +8,8 @@ const DummyData = (function () {
     'Modal Topup', 'Gaji Worker', 'Kas', 'Operasional', 'Lainnya'
   ];
 
+  const INITIAL_CASH_BALANCE = 500000;
+
   const ORDERS = [
     {
       orderId: 'SGN-261011-K7M4',
@@ -314,6 +316,8 @@ const DummyData = (function () {
         createdAt: expense.createdAt
       });
     }
+
+    await ShugenDB.cash.set('initialBalance', INITIAL_CASH_BALANCE);
   }
 
   return { load: load };

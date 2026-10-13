@@ -38,10 +38,11 @@
   </header>
 
   <nav class="main-nav" aria-label="Menu utama">
-    <div class="main-nav-inner">
+    <div class="main-nav-inner main-nav-inner--4">
       <button type="button" class="nav-tab active" data-view="orders" aria-current="page">Pesanan</button>
       <button type="button" class="nav-tab" data-view="incomes">Pemasukan</button>
       <button type="button" class="nav-tab" data-view="expenses">Pengeluaran</button>
+      <button type="button" class="nav-tab" data-view="cash">Kas</button>
     </div>
   </nav>
 
@@ -167,6 +168,64 @@
       </div>
 
       <section id="expense-list" class="income-list" aria-label="Daftar pengeluaran"></section>
+    </div>
+
+    <div id="view-cash" hidden>
+      <section class="cash-balance-section income-controls" aria-label="Saldo kas toko">
+        <div class="cash-balance-card">
+          <div class="cash-balance-meta">
+            <span class="cash-balance-label">Saldo Kas Saat Ini</span>
+            <span id="cash-balance-breakdown" class="cash-balance-breakdown">Saldo awal + Pemasukan - Pengeluaran</span>
+          </div>
+          <strong id="cash-balance-value" class="cash-balance-value">Rp 0</strong>
+        </div>
+
+        <div class="cash-initial-box">
+          <div class="form-group">
+            <label class="form-label" for="cash-initial-input">Saldo Awal (Rp)</label>
+            <div class="form-price-wrap">
+              <span class="form-price-prefix">Rp</span>
+              <input type="number" id="cash-initial-input" class="form-input form-input-price" min="0" step="1" placeholder="0" value="0">
+            </div>
+          </div>
+          <button type="button" id="btn-save-cash-initial" class="btn btn-secondary btn-small cash-initial-save-btn">Simpan Saldo Awal</button>
+        </div>
+      </section>
+
+      <section class="income-controls" aria-label="Filter mutasi kas">
+        <div class="income-filter-bar">
+          <div class="income-filter-fields">
+            <div class="income-filter-field">
+              <label class="form-label" for="cash-filter-start">Dari Tanggal</label>
+              <input type="date" id="cash-filter-start" class="form-input income-date-input">
+            </div>
+            <div class="income-filter-field">
+              <label class="form-label" for="cash-filter-end">Sampai Tanggal</label>
+              <input type="date" id="cash-filter-end" class="form-input income-date-input">
+            </div>
+          </div>
+          <button type="button" id="btn-reset-cash-filter" class="btn btn-secondary btn-small btn-reset-filter" hidden>Reset Filter</button>
+        </div>
+
+        <div class="income-summary-bar" aria-live="polite">
+          <div class="income-summary-meta">
+            <span class="income-summary-label">Mutasi Ditampilkan</span>
+            <span id="cash-mutation-count" class="income-summary-count">0 mutasi</span>
+          </div>
+        </div>
+      </section>
+
+      <div id="cash-empty-state" class="app-state" hidden>
+        <p class="state-message">Belum ada mutasi kas</p>
+        <p class="state-hint">Tambahkan pemasukan atau pengeluaran untuk melihat mutasi kas.</p>
+      </div>
+
+      <div id="cash-empty-filtered" class="app-state" hidden>
+        <p class="state-message">Tidak ada mutasi pada rentang tanggal ini</p>
+        <p class="state-hint">Coba ubah rentang tanggal atau tap Reset Filter.</p>
+      </div>
+
+      <section id="cash-mutation-list" class="income-list" aria-label="Daftar mutasi kas"></section>
     </div>
 
     <button type="button" class="fab" id="fab-add" aria-label="Tambah pesanan baru">
