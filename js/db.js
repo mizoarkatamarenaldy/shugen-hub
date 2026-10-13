@@ -1,6 +1,6 @@
 const ShugenDB = (function () {
   const DB_NAME = 'shugen-hub';
-  const DB_VERSION = 6;
+  const DB_VERSION = 7;
   let _db = null;
 
   const DEFAULT_PAYMENT_METHODS = [
@@ -78,6 +78,15 @@ const ShugenDB = (function () {
           invoiceStore.createIndex('orderId', 'orderId', { unique: true });
           invoiceStore.createIndex('issueDate', 'issueDate');
           invoiceStore.createIndex('createdAt', 'createdAt');
+        }
+        if (!db.objectStoreNames.contains('customers')) {
+          const customerStore = db.createObjectStore('customers', {
+            keyPath: 'id',
+            autoIncrement: true
+          });
+          customerStore.createIndex('customerId', 'customerId', { unique: true });
+          customerStore.createIndex('name', 'name');
+          customerStore.createIndex('createdAt', 'createdAt');
         }
       };
 
@@ -831,6 +840,185 @@ const ShugenDB = (function () {
     return req2p(tx('invoices', 'readwrite').clear());
   }
 
+  // Customers
+
+  let _addCustomerQueue = Promise.resolve();
+
+  function buildCandidateCustomerId(date) {
+    const now = date || new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return 'PLG-' + yy + mm + dd + '-' + randomIdCode(4);
+  }
+
+  async function getAllCustomers() {
+    await open();
+    return req2p(tx('customers', 'readonly').getAll());
+  }
+
+  async function getCustomer(id) {
+    await open();
+    return req2p(tx('customers', 'readonly').get(id));
+  }
+
+  function addCustomer(customer) {
+    const run = _addCustomerQueue.then(async () => {
+      await open();
+      return new Promise((resolve, reject) => {
+        const transaction = _db.transaction('customers', 'readwrite');
+        const store = transaction.objectStore('customers');
+        const custIdx = store.index('customerId');
+        const now = new Date();
+        let savedRecord = null;
+
+        transaction.oncomplete = () => resolve(savedRecord);
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error || new Error('Transaksi dibatalkan'));
+
+        const cleanName = String((customer && customer.name) || '').trim();
+        if (!cleanName) {
+          transaction.abort();
+          reject(new Error('Nama pelanggan wajib diisi'));
+          return;
+        }
+
+        const checkNameReq = store.getAll();
+        checkNameReq.onsuccess = () => {
+          const all = checkNameReq.result || [];
+          const isDup = all.some(
+            (c) => c.name && c.name.trim().toLowerCase() === cleanName.toLowerCase()
+          );
+          if (isDup) {
+            transaction.abort();
+            reject(new Error('DUPLICATE_CUSTOMER_NAME'));
+            return;
+          }
+
+          function tryInsert(preferredId) {
+            const candidate = preferredId || buildCandidateCustomerId(now);
+            const checkReq = custIdx.getKey(candidate);
+            checkReq.onsuccess = () => {
+              if (checkReq.result !== undefined) {
+                tryInsert(null);
+                return;
+              }
+              const record = {
+                customerId: candidate,
+                name: cleanName,
+                contact: String((customer && customer.contact) || '').trim(),
+                note: String((customer && customer.note) || '').trim(),
+                isSubscriber: Boolean(customer && customer.isSubscriber),
+                createdAt: (customer && customer.createdAt) || now,
+                updatedAt: now
+              };
+              const addReq = store.add(record);
+              addReq.onsuccess = () => {
+                record.id = addReq.result;
+                savedRecord = record;
+              };
+              addReq.onerror = (e) => {
+                if (addReq.error && addReq.error.name === 'ConstraintError') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  tryInsert(null);
+                }
+              };
+            };
+          }
+
+          tryInsert((customer && customer.customerId) || null);
+        };
+      });
+    });
+    _addCustomerQueue = run.catch(() => {});
+    return run;
+  }
+
+  async function updateCustomer(id, changes) {
+    await open();
+    return new Promise((resolve, reject) => {
+      const transaction = _db.transaction(['customers', 'orders'], 'readwrite');
+      const custStore = transaction.objectStore('customers');
+      const orderStore = transaction.objectStore('orders');
+      let updatedRecord = null;
+
+      transaction.oncomplete = () => resolve(updatedRecord);
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error || new Error('Transaksi dibatalkan'));
+
+      const getReq = custStore.get(id);
+      getReq.onsuccess = () => {
+        const existing = getReq.result;
+        if (!existing) {
+          transaction.abort();
+          reject(new Error('Pelanggan tidak ditemukan'));
+          return;
+        }
+
+        const oldName = existing.name;
+        const newName = changes.name !== undefined ? String(changes.name).trim() : oldName;
+        if (!newName) {
+          transaction.abort();
+          reject(new Error('Nama pelanggan wajib diisi'));
+          return;
+        }
+
+        const getAllCustReq = custStore.getAll();
+        getAllCustReq.onsuccess = () => {
+          const allCusts = getAllCustReq.result || [];
+          const isDup = allCusts.some(
+            (c) => c.id !== id && c.name && c.name.trim().toLowerCase() === newName.toLowerCase()
+          );
+          if (isDup) {
+            transaction.abort();
+            reject(new Error('DUPLICATE_CUSTOMER_NAME'));
+            return;
+          }
+
+          const updated = Object.assign({}, existing, {
+            name: newName,
+            contact: changes.contact !== undefined ? String(changes.contact).trim() : existing.contact,
+            note: changes.note !== undefined ? String(changes.note).trim() : existing.note,
+            isSubscriber: changes.isSubscriber !== undefined ? Boolean(changes.isSubscriber) : existing.isSubscriber,
+            updatedAt: new Date()
+          });
+
+          custStore.put(updated);
+          updatedRecord = updated;
+
+          if (oldName.trim().toLowerCase() !== newName.toLowerCase()) {
+            const getAllOrdersReq = orderStore.getAll();
+            getAllOrdersReq.onsuccess = () => {
+              const ordersList = getAllOrdersReq.result || [];
+              const now = new Date();
+              ordersList.forEach((order) => {
+                if (
+                  order.customerName &&
+                  order.customerName.trim().toLowerCase() === oldName.trim().toLowerCase()
+                ) {
+                  order.customerName = newName;
+                  order.updatedAt = now;
+                  orderStore.put(order);
+                }
+              });
+            };
+          }
+        };
+      };
+    });
+  }
+
+  async function deleteCustomer(id) {
+    await open();
+    return req2p(tx('customers', 'readwrite').delete(id));
+  }
+
+  async function clearCustomers() {
+    await open();
+    return req2p(tx('customers', 'readwrite').clear());
+  }
+
   return {
     open: open,
     orders: {
@@ -879,6 +1067,14 @@ const ShugenDB = (function () {
       delete: deleteInvoice,
       deleteByOrderId: deleteInvoiceByOrderId,
       clear: clearInvoices
+    },
+    customers: {
+      getAll: getAllCustomers,
+      get: getCustomer,
+      add: addCustomer,
+      update: updateCustomer,
+      delete: deleteCustomer,
+      clear: clearCustomers
     },
     categories: {
       getAll: getAllExpenseCategories,

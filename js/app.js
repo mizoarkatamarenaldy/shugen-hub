@@ -26,6 +26,11 @@ const App = (function () {
   let activeInvoiceId = null;
   let shopName = 'Shugen Store';
   let shopContact = '';
+  let customers = [];
+  let customerSearchQuery = '';
+  let customerFilter = 'semua';
+  let activeCustomerId = null;
+  let editingCustomerId = null;
 
   const STATUS_LABELS = {
     menunggu_bayar: 'Menunggu Bayar',
@@ -63,6 +68,24 @@ const App = (function () {
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
 
+  function matchCustomerName(name1, name2) {
+    return String(name1 || '').trim().toLowerCase() === String(name2 || '').trim().toLowerCase();
+  }
+
+  function populateCustomerDatalist() {
+    const dl = $('#customer-datalist');
+    if (!dl) return;
+    dl.innerHTML = '';
+    const sorted = customers.slice().sort((a, b) =>
+      (a.name || '').localeCompare(b.name || '', 'id', { sensitivity: 'base' })
+    );
+    sorted.forEach((c) => {
+      const opt = document.createElement('option');
+      opt.value = c.name;
+      dl.appendChild(opt);
+    });
+  }
+
   // Initialization
 
   async function init() {
@@ -72,6 +95,7 @@ const App = (function () {
       paymentMethods = await ShugenDB.payment.init();
       expenseCategories = await ShugenDB.categories.init();
       orders = await ShugenDB.orders.getAll();
+      customers = await ShugenDB.customers.getAll();
       incomes = await ShugenDB.incomes.getAll();
       expenses = await ShugenDB.expenses.getAll();
       invoices = await ShugenDB.invoices.getAll();
@@ -83,6 +107,7 @@ const App = (function () {
       shopContact = savedShopContact || '';
       await refreshProgressMap();
       await loadTheme();
+      populateCustomerDatalist();
       render();
       bindEvents();
       registerSW();
@@ -113,6 +138,7 @@ const App = (function () {
     $('#loading-state').hidden = state !== 'loading';
     $('#error-state').hidden = state !== 'error';
     $('#view-orders').hidden = state !== 'ready' || activeView !== 'orders';
+    $('#view-customers').hidden = state !== 'ready' || activeView !== 'customers';
     $('#view-incomes').hidden = state !== 'ready' || activeView !== 'incomes';
     $('#view-expenses').hidden = state !== 'ready' || activeView !== 'expenses';
     $('#view-cash').hidden = state !== 'ready' || activeView !== 'cash';
@@ -122,6 +148,10 @@ const App = (function () {
     $('#empty-state').hidden = true;
     $('#empty-filtered').hidden = true;
     $('#order-list').hidden = state !== 'ready';
+
+    $('#customer-empty-state').hidden = true;
+    $('#customer-empty-filtered').hidden = true;
+    $('#customer-list').hidden = state !== 'ready';
 
     $('#income-empty-state').hidden = true;
     $('#income-empty-filtered').hidden = true;
@@ -144,7 +174,9 @@ const App = (function () {
         ? 'Tambah pemasukan baru'
         : activeView === 'expenses'
           ? 'Tambah pengeluaran baru'
-          : 'Tambah pesanan baru';
+          : activeView === 'customers'
+            ? 'Tambah pelanggan baru'
+            : 'Tambah pesanan baru';
       $('#fab-add').setAttribute('aria-label', fabLabel);
 
       const filteredOrders = getFilteredOrders();
@@ -154,6 +186,15 @@ const App = (function () {
       } else if (filteredOrders.length === 0) {
         $('#empty-filtered').hidden = false;
         $('#order-list').hidden = true;
+      }
+
+      const filteredCustomers = getFilteredCustomers();
+      if (customers.length === 0) {
+        $('#customer-empty-state').hidden = false;
+        $('#customer-list').hidden = true;
+      } else if (filteredCustomers.length === 0) {
+        $('#customer-empty-filtered').hidden = false;
+        $('#customer-list').hidden = true;
       }
 
       const filteredIncomes = getFilteredIncomes();
@@ -211,6 +252,24 @@ const App = (function () {
       );
     }
     list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return list;
+  }
+
+  function getFilteredCustomers() {
+    let list = customers.slice();
+    if (customerFilter === 'langganan') {
+      list = list.filter((c) => Boolean(c.isSubscriber));
+    }
+    if (customerSearchQuery) {
+      const q = customerSearchQuery.toLowerCase();
+      list = list.filter((c) =>
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.contact || '').toLowerCase().includes(q)
+      );
+    }
+    list.sort((a, b) =>
+      (a.name || '').localeCompare(b.name || '', 'id', { sensitivity: 'base' })
+    );
     return list;
   }
 
@@ -437,7 +496,9 @@ const App = (function () {
   function render() {
     renderNav();
     renderTabs();
+    renderCustomerTabs();
     renderOrders();
+    renderCustomers();
     renderIncomes();
     renderExpenses();
     renderCash();
@@ -458,8 +519,17 @@ const App = (function () {
 
   function renderTabs() {
     $$('.tab').forEach((tab) => {
+      if (!tab.dataset.status) return;
       tab.classList.toggle('active', tab.dataset.status === activeFilter);
       tab.setAttribute('aria-selected', tab.dataset.status === activeFilter);
+    });
+  }
+
+  function renderCustomerTabs() {
+    $$('.customer-filter-tabs .tab').forEach((tab) => {
+      const isSelected = tab.dataset.customerFilter === customerFilter;
+      tab.classList.toggle('active', isSelected);
+      tab.setAttribute('aria-selected', isSelected ? 'true' : 'false');
     });
   }
 
@@ -525,6 +595,62 @@ const App = (function () {
         '<div class="order-bottom">' +
           '<span class="order-price">Rp ' + formatPrice(order.price) + '</span>' +
           '<span class="order-date">' + formatDate(new Date(order.createdAt)) + '</span>' +
+        '</div>';
+
+      container.appendChild(card);
+    });
+
+    showView('ready');
+  }
+
+  function renderCustomers() {
+    renderCustomerTabs();
+    const list = getFilteredCustomers();
+    const container = $('#customer-list');
+    container.innerHTML = '';
+
+    list.forEach((cust) => {
+      const card = document.createElement('article');
+      card.className = 'customer-card';
+      card.tabIndex = 0;
+      card.dataset.id = cust.id;
+      card.setAttribute('role', 'button');
+
+      const isSub = Boolean(cust.isSubscriber);
+      const subBadgeHtml = isSub
+        ? '<span class="customer-sub-badge">Langganan</span>'
+        : '';
+
+      const matchedOrders = orders.filter((o) => matchCustomerName(o.customerName, cust.name));
+      const nonCancelledOrders = matchedOrders.filter((o) => o.status !== 'dibatalkan');
+      const orderCountLabel = nonCancelledOrders.length + ' pesanan';
+
+      const contactHtml = cust.contact
+        ? '<div class="customer-card-contact">' + esc(cust.contact) + '</div>'
+        : '';
+
+      const toggleLabel = isSub ? 'Cabut Langganan' : 'Tandai Langganan';
+      const toggleClass = isSub ? 'btn-sub-toggle is-sub' : 'btn-sub-toggle';
+      const toggleAria = isSub
+        ? ('Cabut status langganan ' + cust.name)
+        : ('Tandai ' + cust.name + ' sebagai langganan');
+
+      card.setAttribute(
+        'aria-label',
+        cust.name + (isSub ? ', Langganan' : '') + (cust.contact ? (', ' + cust.contact) : '') + ', ' + orderCountLabel + '. Tap untuk buka detail.'
+      );
+
+      card.innerHTML =
+        '<div class="customer-card-header">' +
+          '<div class="customer-card-name">' + esc(cust.name) + '</div>' +
+          subBadgeHtml +
+        '</div>' +
+        contactHtml +
+        '<div class="customer-card-footer">' +
+          '<span class="customer-card-stats">' + esc(orderCountLabel) + '</span>' +
+          '<button type="button" class="' + toggleClass + '" data-id="' + cust.id + '" aria-label="' + esc(toggleAria) + '">' +
+            esc(toggleLabel) +
+          '</button>' +
         '</div>';
 
       container.appendChild(card);
@@ -691,11 +817,50 @@ const App = (function () {
       renderOrders();
     });
 
-    $$('.tab').forEach((tab) => {
+    $$('.status-tabs:not(.customer-filter-tabs) .tab').forEach((tab) => {
       tab.addEventListener('click', () => {
         activeFilter = tab.dataset.status;
         render();
       });
+    });
+
+    $('#customer-search-input').addEventListener('input', (e) => {
+      customerSearchQuery = e.target.value;
+      renderCustomers();
+    });
+
+    $$('.customer-filter-tabs .tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        customerFilter = tab.dataset.customerFilter;
+        render();
+      });
+    });
+
+    $('#customer-list').addEventListener('click', (e) => {
+      const subBtn = e.target.closest('.btn-sub-toggle');
+      if (subBtn) {
+        e.stopPropagation();
+        toggleCustomerSubscription(Number(subBtn.dataset.id), subBtn);
+        return;
+      }
+      const card = e.target.closest('.customer-card');
+      if (card) openCustomerDetail(Number(card.dataset.id));
+    });
+
+    $('#customer-list').addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const subBtn = e.target.closest('.btn-sub-toggle');
+      if (subBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleCustomerSubscription(Number(subBtn.dataset.id), subBtn);
+        return;
+      }
+      const card = e.target.closest('.customer-card');
+      if (card) {
+        e.preventDefault();
+        openCustomerDetail(Number(card.dataset.id));
+      }
     });
 
     $('#order-list').addEventListener('click', (e) => {
@@ -847,6 +1012,8 @@ const App = (function () {
         openIncomeForm(null);
       } else if (activeView === 'expenses') {
         openExpenseForm(null);
+      } else if (activeView === 'customers') {
+        openCustomerForm(null);
       } else {
         openOrderForm(null);
       }
@@ -1005,6 +1172,46 @@ const App = (function () {
 
     $('#settings-shop-form').addEventListener('submit', handleSaveShopInfo);
 
+    // Customer events
+    $('#customer-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveCustomer();
+    });
+
+    $('#btn-cancel-customer').addEventListener('click', () => {
+      $('#customer-dialog').close();
+    });
+
+    $('#btn-delete-customer').addEventListener('click', handleDeleteCustomer);
+
+    $('#customer-dialog').addEventListener('close', () => {
+      editingCustomerId = null;
+      $('#btn-save-customer').disabled = false;
+      $('#btn-delete-customer').disabled = false;
+    });
+
+    $('#btn-close-customer-detail').addEventListener('click', () => {
+      $('#customer-detail-dialog').close();
+    });
+
+    $('#customer-detail-dialog').addEventListener('close', () => {
+      activeCustomerId = null;
+      $('#btn-cust-detail-toggle-sub').disabled = false;
+      $('#btn-cust-detail-edit').disabled = false;
+    });
+
+    $('#btn-cust-detail-edit').addEventListener('click', () => {
+      if (activeCustomerId !== null) {
+        openCustomerForm(activeCustomerId);
+      }
+    });
+
+    $('#btn-cust-detail-toggle-sub').addEventListener('click', (e) => {
+      if (activeCustomerId !== null) {
+        toggleCustomerSubscription(activeCustomerId, e.target);
+      }
+    });
+
     // Close dialogs on Escape (native <dialog> handles this)
     // Close dialogs on backdrop click
     $$('dialog').forEach((d) => {
@@ -1062,6 +1269,7 @@ const App = (function () {
     resetCopyButton();
     $('#step-add-input').value = '';
     populatePaymentSelect();
+    populateCustomerDatalist();
 
     if (id !== null) {
       const order = orders.find((o) => o.id === id);
@@ -2343,6 +2551,259 @@ const App = (function () {
     }
   }
 
+  // Customer actions
+
+  function openCustomerDetail(customerId) {
+    activeCustomerId = customerId;
+    const cust = customers.find((c) => c.id === customerId);
+    if (!cust) return;
+
+    $('#cust-detail-id').textContent = cust.customerId || '';
+    $('#cust-detail-name').textContent = cust.name;
+    $('#cust-detail-contact').textContent = cust.contact || '-';
+    $('#cust-detail-note').textContent = cust.note || '-';
+
+    const isSub = Boolean(cust.isSubscriber);
+    $('#cust-detail-sub-badge').hidden = !isSub;
+
+    const toggleSubBtn = $('#btn-cust-detail-toggle-sub');
+    toggleSubBtn.textContent = isSub ? 'Cabut Langganan' : 'Tandai Langganan';
+    toggleSubBtn.setAttribute(
+      'aria-label',
+      isSub ? ('Cabut status langganan ' + cust.name) : ('Tandai ' + cust.name + ' sebagai langganan')
+    );
+    toggleSubBtn.disabled = false;
+    $('#btn-cust-detail-edit').disabled = false;
+
+    // Calculate order stats
+    const matchedOrders = orders.filter((o) => matchCustomerName(o.customerName, cust.name));
+    const nonCancelledOrders = matchedOrders.filter((o) => o.status !== 'dibatalkan');
+
+    const orderCount = nonCancelledOrders.length;
+    const totalPrice = nonCancelledOrders.reduce((sum, o) => sum + (Number(o.price) || 0), 0);
+
+    const matchedOrderIds = new Set(matchedOrders.map((o) => o.orderId));
+    const customerIncomes = incomes.filter((inc) => inc.orderId && matchedOrderIds.has(inc.orderId));
+    const totalPaid = customerIncomes.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
+
+    $('#cust-detail-order-count').textContent = String(orderCount);
+    $('#cust-detail-total-price').textContent = 'Rp ' + formatPrice(totalPrice);
+    $('#cust-detail-total-paid').textContent = 'Rp ' + formatPrice(totalPaid);
+
+    // Riwayat pesanan
+    const sortedOrders = matchedOrders.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const ordersContainer = $('#cust-orders-list');
+    ordersContainer.innerHTML = '';
+
+    if (sortedOrders.length === 0) {
+      $('#cust-orders-empty').hidden = false;
+      ordersContainer.hidden = true;
+    } else {
+      $('#cust-orders-empty').hidden = true;
+      ordersContainer.hidden = false;
+
+      sortedOrders.forEach((order) => {
+        const item = document.createElement('article');
+        item.className = 'customer-order-item';
+        item.tabIndex = 0;
+        item.dataset.orderId = order.id;
+        item.setAttribute('role', 'button');
+
+        const serviceType = order.type === 'joki' ? 'Joki' : 'Topup';
+        const serviceLabel = serviceType + ' · ' + order.game;
+        const statusLabel = STATUS_LABELS[order.status] || order.status;
+        const priceLabel = 'Rp ' + formatPrice(order.price);
+
+        item.setAttribute(
+          'aria-label',
+          order.orderId + ', ' + serviceLabel + ', ' + statusLabel + ', ' + priceLabel + '. Tap untuk buka pesanan.'
+        );
+
+        item.innerHTML =
+          '<div class="customer-order-item-header">' +
+            '<span class="order-id">' + esc(order.orderId) + '</span>' +
+            '<span class="status-badge status-' + order.status + '">' + esc(statusLabel) + '</span>' +
+          '</div>' +
+          '<div class="customer-order-item-body">' +
+            '<span class="customer-order-item-service">' + esc(serviceLabel) + '</span>' +
+            '<strong class="customer-order-item-price">' + esc(priceLabel) + '</strong>' +
+          '</div>';
+
+        item.addEventListener('click', () => {
+          $('#customer-detail-dialog').close();
+          openOrderForm(order.id);
+        });
+
+        item.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            $('#customer-detail-dialog').close();
+            openOrderForm(order.id);
+          }
+        });
+
+        ordersContainer.appendChild(item);
+      });
+    }
+
+    $('#customer-detail-dialog').showModal();
+  }
+
+  function openCustomerForm(customerId) {
+    editingCustomerId = customerId;
+    const dialog = $('#customer-dialog');
+    const form = $('#customer-form');
+    form.reset();
+    $('#btn-save-customer').disabled = false;
+    $('#btn-delete-customer').disabled = false;
+
+    if (customerId !== null) {
+      const cust = customers.find((c) => c.id === customerId);
+      if (!cust) return;
+      $('#customer-form-title').textContent = 'Edit Pelanggan';
+      $('#customer-id-val').textContent = cust.customerId || '';
+      $('#customer-id-row').hidden = false;
+      $('#customer-field-name').value = cust.name;
+      $('#customer-field-contact').value = cust.contact || '';
+      $('#customer-field-sub').value = cust.isSubscriber ? 'ya' : 'tidak';
+      $('#customer-field-note').value = cust.note || '';
+      $('#btn-delete-customer').hidden = false;
+    } else {
+      $('#customer-form-title').textContent = 'Tambah Pelanggan';
+      $('#customer-id-val').textContent = '';
+      $('#customer-id-row').hidden = true;
+      $('#customer-field-name').value = '';
+      $('#customer-field-contact').value = '';
+      $('#customer-field-sub').value = 'tidak';
+      $('#customer-field-note').value = '';
+      $('#btn-delete-customer').hidden = true;
+    }
+
+    dialog.showModal();
+    $('#customer-field-name').focus();
+  }
+
+  async function saveCustomer() {
+    const saveBtn = $('#btn-save-customer');
+    if (saveBtn.disabled) return;
+
+    const nameVal = $('#customer-field-name').value.trim();
+    const contactVal = $('#customer-field-contact').value.trim();
+    const isSubVal = $('#customer-field-sub').value === 'ya';
+    const noteVal = $('#customer-field-note').value.trim();
+
+    if (!nameVal) {
+      toast('Nama pelanggan wajib diisi');
+      $('#customer-field-name').focus();
+      return;
+    }
+
+    const isDup = customers.some(
+      (c) => c.id !== editingCustomerId && matchCustomerName(c.name, nameVal)
+    );
+    if (isDup) {
+      toast('Nama pelanggan sudah digunakan');
+      $('#customer-field-name').focus();
+      return;
+    }
+
+    saveBtn.disabled = true;
+
+    try {
+      if (editingCustomerId !== null) {
+        await ShugenDB.customers.update(editingCustomerId, {
+          name: nameVal,
+          contact: contactVal,
+          isSubscriber: isSubVal,
+          note: noteVal
+        });
+        orders = await ShugenDB.orders.getAll();
+        customers = await ShugenDB.customers.getAll();
+        populateCustomerDatalist();
+        render();
+        $('#customer-dialog').close();
+        if (activeCustomerId === editingCustomerId) {
+          openCustomerDetail(editingCustomerId);
+        }
+        toast('Data pelanggan diperbarui');
+      } else {
+        await ShugenDB.customers.add({
+          name: nameVal,
+          contact: contactVal,
+          isSubscriber: isSubVal,
+          note: noteVal
+        });
+        customers = await ShugenDB.customers.getAll();
+        populateCustomerDatalist();
+        render();
+        $('#customer-dialog').close();
+        toast('Pelanggan ditambahkan');
+      }
+    } catch (err) {
+      console.error(err);
+      if (err && err.message === 'DUPLICATE_CUSTOMER_NAME') {
+        toast('Nama pelanggan sudah digunakan');
+        $('#customer-field-name').focus();
+      } else {
+        toast('Gagal menyimpan pelanggan');
+      }
+    } finally {
+      saveBtn.disabled = false;
+    }
+  }
+
+  async function handleDeleteCustomer() {
+    const deleteBtn = $('#btn-delete-customer');
+    if (deleteBtn.disabled) return;
+    if (editingCustomerId === null) return;
+
+    if (!confirm('Hapus pelanggan ini? Pesanan milik pelanggan ini tidak akan terhapus.')) return;
+
+    deleteBtn.disabled = true;
+
+    try {
+      await ShugenDB.customers.delete(editingCustomerId);
+      customers = await ShugenDB.customers.getAll();
+      populateCustomerDatalist();
+      render();
+      $('#customer-dialog').close();
+      if (activeCustomerId === editingCustomerId) {
+        $('#customer-detail-dialog').close();
+        activeCustomerId = null;
+      }
+      toast('Pelanggan dihapus');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal menghapus pelanggan');
+    } finally {
+      deleteBtn.disabled = false;
+    }
+  }
+
+  async function toggleCustomerSubscription(customerId, btnElement) {
+    if (btnElement && btnElement.disabled) return;
+    const cust = customers.find((c) => c.id === customerId);
+    if (!cust) return;
+
+    if (btnElement) btnElement.disabled = true;
+
+    const nextStatus = !cust.isSubscriber;
+    try {
+      await ShugenDB.customers.update(customerId, { isSubscriber: nextStatus });
+      customers = await ShugenDB.customers.getAll();
+      render();
+      if (activeCustomerId === customerId) {
+        openCustomerDetail(customerId);
+      }
+      toast(nextStatus ? 'Ditandai sebagai langganan' : 'Status langganan dicabut');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal mengubah status langganan');
+    } finally {
+      if (btnElement) btnElement.disabled = false;
+    }
+  }
+
   // Demo data actions
 
   async function loadDemoData() {
@@ -2358,6 +2819,8 @@ const App = (function () {
       incomes = await ShugenDB.incomes.getAll();
       expenses = await ShugenDB.expenses.getAll();
       invoices = await ShugenDB.invoices.getAll();
+      customers = await ShugenDB.customers.getAll();
+      populateCustomerDatalist();
       expenseCategories = await ShugenDB.categories.getAll();
       await refreshProgressMap();
       paymentMethods = await ShugenDB.payment.getAll();

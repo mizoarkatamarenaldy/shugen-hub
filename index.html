@@ -38,8 +38,9 @@
   </header>
 
   <nav class="main-nav" aria-label="Menu utama">
-    <div class="main-nav-inner main-nav-inner--5">
+    <div class="main-nav-inner main-nav-inner--6">
       <button type="button" class="nav-tab active" data-view="orders" aria-current="page">Pesanan</button>
+      <button type="button" class="nav-tab" data-view="customers">Pelanggan</button>
       <button type="button" class="nav-tab" data-view="incomes">Pemasukan</button>
       <button type="button" class="nav-tab" data-view="expenses">Pengeluaran</button>
       <button type="button" class="nav-tab" data-view="cash">Kas</button>
@@ -87,6 +88,35 @@
       </div>
 
       <section id="order-list" class="order-list" aria-label="Daftar pesanan"></section>
+    </div>
+
+    <div id="view-customers" hidden>
+      <div class="search-bar">
+        <div class="search-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="search" id="customer-search-input" class="search-input" placeholder="Cari pelanggan atau kontak..." aria-label="Cari pelanggan berdasarkan nama atau kontak">
+        </div>
+      </div>
+
+      <nav class="status-tabs customer-filter-tabs" aria-label="Filter status langganan pelanggan">
+        <button type="button" class="tab active" data-customer-filter="semua" aria-selected="true">Semua</button>
+        <button type="button" class="tab" data-customer-filter="langganan" aria-selected="false">Langganan Saja</button>
+      </nav>
+
+      <div id="customer-empty-state" class="app-state" hidden>
+        <p class="state-message">Belum ada pelanggan</p>
+        <p class="state-hint">Tap tombol + di bawah untuk menambah pelanggan, atau muat data demo di Pengaturan.</p>
+      </div>
+
+      <div id="customer-empty-filtered" class="app-state" hidden>
+        <p class="state-message">Tidak ada pelanggan yang sesuai</p>
+        <p class="state-hint">Coba ubah kata kunci pencarian atau pilih filter yang lain.</p>
+      </div>
+
+      <section id="customer-list" class="income-list" aria-label="Daftar pelanggan"></section>
     </div>
 
     <div id="view-incomes" hidden>
@@ -288,7 +318,8 @@
       <div class="dialog-body">
         <div class="form-group">
           <label class="form-label" for="field-customer">Nama Pelanggan *</label>
-          <input type="text" id="field-customer" class="form-input" required placeholder="Contoh: Budi Santoso">
+          <input type="text" id="field-customer" class="form-input" list="customer-datalist" required placeholder="Contoh: Budi Santoso" autocomplete="off">
+          <datalist id="customer-datalist"></datalist>
         </div>
 
         <div class="form-row">
@@ -642,6 +673,117 @@
         </form>
       </div>
     </div>
+  </dialog>
+
+  <!-- Dialog Detail Pelanggan -->
+  <dialog id="customer-detail-dialog" class="dialog-customer-detail" aria-labelledby="cust-detail-name">
+    <div class="dialog-header">
+      <div class="dialog-header-titles">
+        <h2 class="dialog-title">Detail Pelanggan</h2>
+        <span id="cust-detail-id" class="dialog-order-id"></span>
+      </div>
+      <button type="button" class="btn-icon" id="btn-close-customer-detail" aria-label="Tutup detail pelanggan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="dialog-body">
+      <div class="customer-profile-card">
+        <div class="customer-profile-top">
+          <div class="customer-profile-title-wrap">
+            <h3 id="cust-detail-name" class="customer-profile-name"></h3>
+            <span id="cust-detail-sub-badge" class="customer-sub-badge" hidden>Langganan</span>
+          </div>
+          <div class="customer-profile-actions">
+            <button type="button" id="btn-cust-detail-toggle-sub" class="btn btn-secondary btn-small">Tandai Langganan</button>
+            <button type="button" id="btn-cust-detail-edit" class="btn btn-secondary btn-small">Edit</button>
+          </div>
+        </div>
+
+        <div class="customer-info-grid">
+          <div class="customer-info-item">
+            <span class="customer-info-label">Kontak</span>
+            <span id="cust-detail-contact" class="customer-info-val">-</span>
+          </div>
+          <div class="customer-info-item">
+            <span class="customer-info-label">Catatan</span>
+            <p id="cust-detail-note" class="customer-info-val">-</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="customer-stats-grid" aria-label="Ringkasan order pelanggan">
+        <div class="customer-stat-card">
+          <span class="customer-stat-label">Jumlah Order</span>
+          <strong id="cust-detail-order-count" class="customer-stat-val">0</strong>
+        </div>
+        <div class="customer-stat-card">
+          <span class="customer-stat-label">Total Harga Order</span>
+          <strong id="cust-detail-total-price" class="customer-stat-val">Rp 0</strong>
+        </div>
+        <div class="customer-stat-card">
+          <span class="customer-stat-label">Total Sudah Dibayar</span>
+          <strong id="cust-detail-total-paid" class="customer-stat-val customer-stat-val--paid">Rp 0</strong>
+        </div>
+      </div>
+
+      <div class="customer-orders-section">
+        <h4 class="customer-orders-heading">Riwayat Pesanan</h4>
+        <div id="cust-orders-empty" class="step-empty" hidden>Belum ada riwayat pesanan untuk pelanggan ini.</div>
+        <div id="cust-orders-list" class="customer-orders-list" aria-label="Daftar riwayat pesanan"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Dialog Form Tambah / Edit Pelanggan -->
+  <dialog id="customer-dialog" aria-labelledby="customer-form-title">
+    <div class="dialog-header">
+      <div class="dialog-header-titles">
+        <h2 id="customer-form-title" class="dialog-title">Tambah Pelanggan</h2>
+        <div id="customer-id-row" class="dialog-order-id-row" hidden>
+          <span id="customer-id-val" class="dialog-order-id"></span>
+        </div>
+      </div>
+      <button type="button" class="btn-icon" id="btn-cancel-customer" aria-label="Tutup form pelanggan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <form id="customer-form">
+      <div class="dialog-body">
+        <div class="form-group">
+          <label class="form-label" for="customer-field-name">Nama Pelanggan *</label>
+          <input type="text" id="customer-field-name" class="form-input" required placeholder="Contoh: Budi Santoso">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="customer-field-contact">Kontak (Nomor WA / Username)</label>
+          <input type="text" id="customer-field-contact" class="form-input" placeholder="Contoh: WhatsApp: 0812-3456-7890 atau @budis">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="customer-field-sub">Tanda Langganan</label>
+          <select id="customer-field-sub" class="form-select">
+            <option value="tidak">Tidak</option>
+            <option value="ya">Ya (Langganan)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="customer-field-note">Catatan</label>
+          <textarea id="customer-field-note" class="form-textarea" placeholder="Tambahkan catatan khusus pelanggan..."></textarea>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" id="btn-delete-customer" class="btn btn-danger" hidden>Hapus</button>
+        <button type="submit" id="btn-save-customer" class="btn btn-primary">Simpan</button>
+      </div>
+    </form>
   </dialog>
 
   <!-- Dialog Pengaturan -->

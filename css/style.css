@@ -1610,6 +1610,329 @@ dialog.dialog-settings {
   }
 }
 
+/* Fitur 6: Data Pelanggan */
+
+.main-nav-inner--6 {
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+  gap: 6px;
+}
+
+.main-nav-inner--6::-webkit-scrollbar {
+  display: none;
+}
+
+.main-nav-inner--6 .nav-tab {
+  flex: 1 0 auto;
+  min-width: 78px;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .main-nav-inner--6 {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+  }
+  .main-nav-inner--6 .nav-tab {
+    min-width: 0;
+  }
+}
+
+.customer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+  text-align: left;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+}
+
+.customer-card:hover {
+  background: var(--surface-raised);
+  border-color: var(--text-secondary);
+}
+
+.customer-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.customer-card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.customer-card-contact {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.customer-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.customer-card-stats {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.customer-sub-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  background: rgba(46, 204, 143, 0.12);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+[data-theme="light"] .customer-sub-badge {
+  background: rgba(36, 165, 116, 0.1);
+  color: var(--accent);
+}
+
+.btn-sub-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.btn-sub-toggle:hover:not(:disabled) {
+  border-color: var(--text-secondary);
+}
+
+.btn-sub-toggle.is-sub {
+  color: var(--text-secondary);
+}
+
+.btn-sub-toggle.is-sub:hover:not(:disabled) {
+  border-color: var(--status-cancelled);
+  color: var(--status-cancelled);
+  background: var(--status-cancelled-bg);
+}
+
+/* Detail Pelanggan Dialog */
+
+dialog.dialog-customer-detail {
+  width: 100%;
+  max-width: 580px;
+  margin: auto;
+}
+
+@media (min-width: 600px) {
+  dialog.dialog-customer-detail {
+    border-radius: 8px;
+  }
+}
+
+.customer-profile-card {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.customer-profile-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.customer-profile-title-wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.customer-profile-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.customer-profile-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.customer-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.customer-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.customer-info-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.customer-info-val {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.customer-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+@media (min-width: 440px) {
+  .customer-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.customer-stat-card {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.customer-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.customer-stat-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.customer-stat-val--paid {
+  color: var(--status-done);
+}
+
+.customer-orders-section {
+  margin-top: 14px;
+}
+
+.customer-orders-heading {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
+.customer-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.customer-order-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.customer-order-item:hover {
+  border-color: var(--text-secondary);
+}
+
+.customer-order-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.customer-order-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.customer-order-item-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.customer-order-item-service {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.customer-order-item-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
 .order-invoice-box {
   padding: 12px;
   background: var(--surface-raised);
@@ -1927,7 +2250,9 @@ dialog.dialog-invoice {
   #settings-dialog,
   #order-dialog,
   #income-dialog,
-  #expense-dialog {
+  #expense-dialog,
+  #customer-dialog,
+  #customer-detail-dialog {
     display: none !important;
   }
 

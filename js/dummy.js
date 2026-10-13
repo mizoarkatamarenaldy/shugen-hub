@@ -300,12 +300,80 @@ const DummyData = (function () {
     }
   ];
 
+  const CUSTOMERS = [
+    {
+      customerId: 'PLG-261011-K4T2',
+      name: 'Budi Santoso',
+      contact: 'WhatsApp: 0812-3456-7891',
+      note: 'Pelanggan setia joki Mobile Legends',
+      isSubscriber: true,
+      createdAt: new Date('2026-10-11T09:00:00')
+    },
+    {
+      customerId: 'PLG-261011-R8N5',
+      name: 'Siti Rahayu',
+      contact: 'WhatsApp: 0857-1122-3344',
+      note: 'Rutin topup bulanan Genshin Impact',
+      isSubscriber: true,
+      createdAt: new Date('2026-10-11T11:00:00')
+    },
+    {
+      customerId: 'PLG-261012-P3M7',
+      name: 'Andi Pratama',
+      contact: 'Discord: @andipratama',
+      note: 'Sering main Valorant kompetitif',
+      isSubscriber: false,
+      createdAt: new Date('2026-10-12T07:45:00')
+    },
+    {
+      customerId: 'PLG-261012-L9X4',
+      name: 'Dewi Lestari',
+      contact: 'WhatsApp: 0878-9988-7766',
+      note: 'Topup Free Fire event kolaborasi',
+      isSubscriber: false,
+      createdAt: new Date('2026-10-12T10:30:00')
+    },
+    {
+      customerId: 'PLG-261012-H6W2',
+      name: 'Rizky Hidayat',
+      contact: 'WhatsApp: 0813-5544-3322',
+      note: 'Pernah batalkan pesanan joki MLBB',
+      isSubscriber: false,
+      createdAt: new Date('2026-10-12T12:50:00')
+    },
+    {
+      customerId: 'PLG-261013-N2B8',
+      name: 'Fajar Nugroho',
+      contact: 'Telegram: @fajarnug',
+      note: 'Topup diamond MLBB cepat',
+      isSubscriber: false,
+      createdAt: new Date('2026-10-13T07:15:00')
+    },
+    {
+      customerId: 'PLG-261013-C5Y1',
+      name: 'Maya Putri',
+      contact: 'WhatsApp: 0821-4455-6677',
+      note: 'Langganan joki Abyss Floor 12 tiap reset',
+      isSubscriber: true,
+      createdAt: new Date('2026-10-13T08:00:00')
+    },
+    {
+      customerId: 'PLG-261013-W7D9',
+      name: 'Hendra Wijaya',
+      contact: 'WhatsApp: 0856-7788-9900',
+      note: 'Topup pack Oneiric Shard HSR',
+      isSubscriber: false,
+      createdAt: new Date('2026-10-13T08:50:00')
+    }
+  ];
+
   async function load() {
     await ShugenDB.orders.clear();
     await ShugenDB.progress.clear();
     await ShugenDB.incomes.clear();
     await ShugenDB.expenses.clear();
     await ShugenDB.invoices.clear();
+    await ShugenDB.customers.clear();
     await ShugenDB.categories.clear();
     await ShugenDB.payment.clear();
 
@@ -322,6 +390,10 @@ const DummyData = (function () {
       if (cat) {
         categoryIdByName[cat.name] = cat.id;
       }
+    }
+
+    for (const cust of CUSTOMERS) {
+      await ShugenDB.customers.add(cust);
     }
 
     for (const order of ORDERS) {

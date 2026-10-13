@@ -19,6 +19,20 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #013 [2026-10-13] Implementasi Fitur 6 (Data pelanggan)
+- Fitur: Data pelanggan
+- Ringkasan: Menambahkan menu Pelanggan berisi daftar pelanggan toko yang diurutkan sesuai abjad, pencarian berdasarkan nama atau kontak, filter Semua atau Langganan saja, tanda langganan, dan tombol toggle status langganan satu tap. Menambahkan tampilan detail pelanggan lengkap dengan ringkasan statistik (jumlah order, total harga order, dan total bayar dari pemasukan tidak termasuk pesanan dibatalkan) serta riwayat pesanan yang dapat dibuka ke detail pesanan, form tambah/edit/hapus pelanggan dengan validasi nama unik dan pengaman tombol, sinkronisasi otomatis nama pelanggan pada pesanan saat nama diganti dalam satu transaksi IndexedDB, serta saran datalist nama pelanggan pada form pesanan tanpa pembuatan otomatis. Memperbarui skema IndexedDB ke versi 7 dengan store `customers`, menambahkan data dummy pelanggan di `js/dummy.js` yang cocok dengan nama pelanggan di pesanan demo, menaikkan cache service worker ke `shugen-v12`, dan memindahkan penanda fokus di `dev/PLAN.md`.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - index.html
+  - js/app.js
+  - js/db.js
+  - js/dummy.js
+  - sw.js
+- Catatan: Skema IndexedDB dinaikkan ke versi 7 dengan object store `customers` secara aman tanpa menghapus data lama, format ID pelanggan menggunakan PLG-YYMMDD-XXXX (4 karakter acak crypto.getRandomValues), dan versi cache service worker dinaikkan ke shugen-v12.
+
 ### #012 [2026-10-13] Implementasi Fitur 5 (Invoice)
 - Fitur: Invoice
 - Ringkasan: Menambahkan pembuatan invoice manual dari detail pesanan dengan nomor unik berformat INV-YYMMDD-XXXX (4 karakter acak crypto.getRandomValues), tampilan invoice dengan data terkini toko dan pesanan serta badge status LUNAS/BELUM LUNAS, tombol cetak atau simpan PDF melalui window.print() dengan CSS print bersih latar putih tanpa library, form edit catatan invoice, tombol hapus invoice tanpa menghapus pesanan, serta sinkronisasi penghapusan invoice saat pesanan dihapus. Menambahkan menu Invoice berisi daftar invoice urut tanggal terbaru dan pencarian nomor invoice atau nama pelanggan, pengaturan nama dan kontak toko di Pengaturan dengan pengaman tombol selama operasi IndexedDB, skema IndexedDB versi 6 dengan object store `invoices`, data contoh invoice di `js/dummy.js`, pembaruan cache service worker ke `shugen-v11`, dan pemindahan penanda fokus di `dev/PLAN.md`.

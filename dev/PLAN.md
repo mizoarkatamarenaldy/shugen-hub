@@ -9,10 +9,10 @@ Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 2. Progress joki (checklist + persentase)
 3. Pemasukan
 4. Pengeluaran
-5. Invoice  <- FOKUS SEKARANG
+5. Invoice
 
 ## Fitur tambahan (setelah fitur inti)
-6. Data pelanggan (riwayat order, tandai langganan)
+6. Data pelanggan (riwayat order, tandai langganan)  <- FOKUS SEKARANG
 7. Template pesan WA (konfirmasi, update progress, selesai)
 8. Rekap harian dan bulanan (omzet, pengeluaran, untung bersih)
 9. Daftar penjoki/partner dan bagi hasil per pesanan
@@ -83,6 +83,17 @@ Kebutuhan layar:
 - Menghapus pesanan juga menghapus invoice-nya, dan pesan konfirmasi hapus harus menyebutkan hal itu.
 - Pesanan Dibatalkan tetap boleh punya invoice.
 - Tidak ada pajak, diskon, atau banyak item per invoice. Tidak ada kirim otomatis ke WA (itu Fitur 7).
+
+## Fitur 6: Data pelanggan
+- Menyimpan data pelanggan toko dan riwayat ordernya. Pelanggan dihubungkan ke pesanan lewat nama pelanggan di Fitur 1 (dicocokkan tanpa membedakan huruf besar kecil dan tanpa spasi di pinggir). Struktur pesanan Fitur 1 tidak diubah.
+- Data pelanggan: ID unik (PLG-YYMMDD-XXXX, 4 karakter acak dengan crypto.getRandomValues, ikuti Aturan umum soal keunikan ID lintas perangkat), nama (wajib, tidak boleh kembar), kontak seperti nomor WA atau username (opsional), catatan (opsional), tanda langganan (ya atau tidak, default tidak).
+- Kebutuhan layar: menu Pelanggan berisi daftar pelanggan (urut nama, pencarian berdasarkan nama atau kontak, filter Semua atau Langganan saja, tanda langganan terlihat di tiap baris), form tambah/edit/hapus pelanggan, dan tombol tandai atau cabut langganan satu tap.
+- Mengetuk baris pelanggan membuka detail: kontak, catatan, jumlah order, total harga order, total yang sudah dibayar (dari Fitur 3), dan daftar riwayat order (urut tanggal terbaru, tiap baris menampilkan ID, jenis, game, status, harga). Mengetuk baris order membuka detail pesanan.
+- Ganti nama pelanggan otomatis ikut mengganti nama pelanggan di semua pesanannya, dalam satu transaksi IndexedDB.
+- Menghapus pelanggan tidak menghapus pesanannya. Pesan konfirmasi hapus menjelaskan hal itu.
+- Di form pesanan (Fitur 1), kolom nama pelanggan menampilkan saran dari daftar pelanggan (datalist). Pengguna tetap bebas mengetik nama yang belum ada, dan itu tidak otomatis membuat pelanggan baru.
+- Pesanan Dibatalkan tetap tampil di riwayat order pelanggan, dan tidak dihitung ke total harga order maupun jumlah order.
+- Tidak ada pembuatan pelanggan otomatis, tidak ada diskon atau poin langganan, dan tidak ada kirim pesan WA (itu Fitur 7).
 
 ## Fitur 13: Kas toko
 - Satu saldo gabungan untuk seluruh toko. Kas berfungsi sebagai penampung: uang pelanggan masuk ke kas, uang keluar ke worker dan biaya lain dari kas.
