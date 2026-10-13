@@ -5,8 +5,8 @@ PWA untuk membantu operasional Shugen Store (joki dan topup).
 Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 
 ## Fitur inti (dikerjakan satu per satu, urut)
-1. Pesanan + Status  <- FOKUS SEKARANG
-2. Progress joki (checklist + persentase)
+1. Pesanan + Status
+2. Progress joki (checklist + persentase)  <- FOKUS SEKARANG
 3. Pemasukan
 4. Pengeluaran
 5. Invoice
@@ -41,6 +41,16 @@ Kebutuhan layar:
 - Form tambah/edit pesanan
 - Ubah status dengan satu tap
 
+## Fitur 2: Progress joki
+- Hanya untuk pesanan berjenis Joki. Pesanan Topup tidak punya progress.
+- Tiap pesanan joki punya checklist langkah (tambah, hapus, ganti nama, atur ulang urutan). Checklist diisi dari nol per pesanan, tanpa template.
+- Tiap langkah bisa dicentang satu tap.
+- Persentase progress dihitung otomatis dari langkah yang sudah dicentang.
+- Persentase tampil di daftar pesanan dan di detail pesanan.
+- Status pesanan tidak berubah otomatis. Kalau semua langkah selesai, tampilkan saran "tandai Selesai?", keputusan tetap di pengguna.
+- Pesanan Dibatalkan tetap menyimpan progress-nya.
+- Data progress terhubung ke ID pesanan dari Fitur 1.
+
 ## Aturan umum
 - Metode pembayaran bisa diatur sendiri (tambah, hapus, ganti nama), bukan daftar tetap
 - Harga dari katalog hanya saran awal, selalu bisa diubah per pesanan
@@ -59,6 +69,5 @@ Kebutuhan layar:
 - Jangan pernah commit data pesanan, data pelanggan, backup, atau client secret
 - Sediakan data contoh (dummy) untuk demo portofolio
 
-## Di luar cakupan fitur 1
-Progress, keuangan, dan invoice belum dikerjakan.
-Struktur data pesanan harus siap dihubungkan ke fitur-fitur itu nanti.
+## Di luar cakupan fitur 2
+Keuangan dan invoice belum dikerjakan. Struktur data harus siap dihubungkan ke fitur-fitur itu nanti.

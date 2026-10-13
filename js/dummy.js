@@ -103,8 +103,34 @@ const DummyData = (function () {
     }
   ];
 
+  const PROGRESS = {
+    'SGN-261011-001': [
+      { id: 'demo-1-1', name: 'Login dan verifikasi akun', done: true },
+      { id: 'demo-1-2', name: 'Push Epic V ke Epic III', done: true },
+      { id: 'demo-1-3', name: 'Push Epic III ke Epic I', done: true },
+      { id: 'demo-1-4', name: 'Promosi ke Legend V', done: true }
+    ],
+    'SGN-261012-001': [
+      { id: 'demo-2-1', name: 'Cek setting akun dan crosshair', done: true },
+      { id: 'demo-2-2', name: 'Naik ke Silver 2', done: true },
+      { id: 'demo-2-3', name: 'Naik ke Silver 3', done: false },
+      { id: 'demo-2-4', name: 'Promosi ke Gold 1', done: false }
+    ],
+    'SGN-261012-003': [
+      { id: 'demo-3-1', name: 'Push Grandmaster V ke III', done: true },
+      { id: 'demo-3-2', name: 'Push Grandmaster III ke I', done: false },
+      { id: 'demo-3-3', name: 'Promosi ke Epic V', done: false }
+    ],
+    'SGN-261013-002': [
+      { id: 'demo-4-1', name: 'Floor 12 Chamber 1 (3 bintang)', done: true },
+      { id: 'demo-4-2', name: 'Floor 12 Chamber 2 (3 bintang)', done: true },
+      { id: 'demo-4-3', name: 'Floor 12 Chamber 3 (3 bintang)', done: false }
+    ]
+  };
+
   async function load() {
     await ShugenDB.orders.clear();
+    await ShugenDB.progress.clear();
     await ShugenDB.payment.clear();
 
     for (const name of PAYMENT_METHODS) {
@@ -113,6 +139,9 @@ const DummyData = (function () {
 
     for (const order of ORDERS) {
       await ShugenDB.orders.add(order);
+      if (order.type === 'joki' && PROGRESS[order.orderId]) {
+        await ShugenDB.progress.save(order.orderId, PROGRESS[order.orderId]);
+      }
     }
   }
 

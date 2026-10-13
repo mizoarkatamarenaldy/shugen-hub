@@ -1,6 +1,6 @@
 const ShugenDB = (function () {
   const DB_NAME = 'shugen-hub';
-  const DB_VERSION = 1;
+  const DB_VERSION = 2;
   let _db = null;
 
   const DEFAULT_PAYMENT_METHODS = [
@@ -32,10 +32,17 @@ const ShugenDB = (function () {
         if (!db.objectStoreNames.contains('settings')) {
           db.createObjectStore('settings', { keyPath: 'key' });
         }
+        if (!db.objectStoreNames.contains('progress')) {
+          db.createObjectStore('progress', { keyPath: 'orderId' });
+        }
       };
 
       req.onsuccess = () => {
         _db = req.result;
+        _db.onversionchange = () => {
+          _db.close();
+          _db = null;
+        };
         resolve(_db);
       };
       req.onerror = () => reject(req.error);
@@ -99,6 +106,10 @@ const ShugenDB = (function () {
 
   async function deleteOrder(id) {
     await open();
+    const existing = await getOrder(id);
+    if (existing && existing.orderId) {
+      await deleteProgress(existing.orderId);
+    }
     return req2p(tx('orders', 'readwrite').delete(id));
   }
 
@@ -128,6 +139,69 @@ const ShugenDB = (function () {
   async function clearOrders() {
     await open();
     return req2p(tx('orders', 'readwrite').clear());
+  }
+
+  function calcPercentage(steps) {
+    if (!Array.isArray(steps) || steps.length === 0) return 0;
+    const doneCount = steps.filter((s) => Boolean(s.done)).length;
+    return Math.round((doneCount / steps.length) * 100);
+  }
+
+  function normalizeSteps(steps) {
+    if (!Array.isArray(steps)) return [];
+    return steps
+      .map((s) => ({
+        id: s.id || ('step-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6)),
+        name: String(s.name || '').trim(),
+        done: Boolean(s.done)
+      }))
+      .filter((s) => s.name.length > 0)
+      .map((s, idx) => ({
+        id: s.id,
+        name: s.name,
+        done: s.done,
+        order: idx
+      }));
+  }
+
+  async function getAllProgress() {
+    await open();
+    return req2p(tx('progress', 'readonly').getAll());
+  }
+
+  async function getProgress(orderId) {
+    await open();
+    const rec = await req2p(tx('progress', 'readonly').get(orderId));
+    if (rec) return rec;
+    return {
+      orderId: orderId,
+      steps: [],
+      percentage: 0,
+      updatedAt: null
+    };
+  }
+
+  async function saveProgress(orderId, steps) {
+    await open();
+    const cleanSteps = normalizeSteps(steps);
+    const record = {
+      orderId: orderId,
+      steps: cleanSteps,
+      percentage: calcPercentage(cleanSteps),
+      updatedAt: new Date()
+    };
+    await req2p(tx('progress', 'readwrite').put(record));
+    return record;
+  }
+
+  async function deleteProgress(orderId) {
+    await open();
+    return req2p(tx('progress', 'readwrite').delete(orderId));
+  }
+
+  async function clearProgress() {
+    await open();
+    return req2p(tx('progress', 'readwrite').clear());
   }
 
   // Payment methods
@@ -195,6 +269,14 @@ const ShugenDB = (function () {
       delete: deleteOrder,
       generateId: generateOrderId,
       clear: clearOrders
+    },
+    progress: {
+      getAll: getAllProgress,
+      get: getProgress,
+      save: saveProgress,
+      delete: deleteProgress,
+      clear: clearProgress,
+      calcPercentage: calcPercentage
     },
     payment: {
       getAll: getAllPaymentMethods,

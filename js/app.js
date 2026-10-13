@@ -1,5 +1,7 @@
 const App = (function () {
   let orders = [];
+  let progressMap = {};
+  let currentSteps = [];
   let paymentMethods = [];
   let activeFilter = 'semua';
   let searchQuery = '';
@@ -31,6 +33,7 @@ const App = (function () {
       await ShugenDB.open();
       paymentMethods = await ShugenDB.payment.init();
       orders = await ShugenDB.orders.getAll();
+      await refreshProgressMap();
       await loadTheme();
       render();
       bindEvents();
@@ -40,6 +43,14 @@ const App = (function () {
       console.error(err);
       showView('error');
     }
+  }
+
+  async function refreshProgressMap() {
+    const allProg = await ShugenDB.progress.getAll();
+    progressMap = {};
+    allProg.forEach((p) => {
+      progressMap[p.orderId] = p;
+    });
   }
 
   function registerSW() {
@@ -113,8 +124,35 @@ const App = (function () {
       card.tabIndex = 0;
       card.dataset.id = order.id;
       card.setAttribute('role', 'button');
+
+      let progressHtml = '';
+      let progressAria = '';
+      if (order.type === 'joki') {
+        const prog = progressMap[order.orderId];
+        const steps = prog && Array.isArray(prog.steps) ? prog.steps : [];
+        const doneCount = steps.filter((s) => s.done).length;
+        const pct = prog && typeof prog.percentage === 'number'
+          ? prog.percentage
+          : ShugenDB.progress.calcPercentage(steps);
+        const stepLabel = steps.length === 0
+          ? '0 langkah'
+          : (doneCount + '/' + steps.length + ' langkah');
+
+        progressAria = ', Progress ' + pct + '%';
+        progressHtml =
+          '<div class="order-progress">' +
+            '<div class="order-progress-info">' +
+              '<span class="order-progress-label">Progress: <strong class="order-progress-pct">' + pct + '%</strong></span>' +
+              '<span class="order-progress-steps">' + stepLabel + '</span>' +
+            '</div>' +
+            '<div class="order-progress-track" aria-hidden="true">' +
+              '<div class="order-progress-fill" style="width:' + pct + '%"></div>' +
+            '</div>' +
+          '</div>';
+      }
+
       card.setAttribute('aria-label',
-        order.orderId + ', ' + order.customerName + ', ' + STATUS_LABELS[order.status]
+        order.orderId + ', ' + order.customerName + ', ' + STATUS_LABELS[order.status] + progressAria
       );
 
       card.innerHTML =
@@ -133,6 +171,7 @@ const App = (function () {
           '</span>' +
           '<span class="order-game">' + esc(order.game) + '</span>' +
         '</div>' +
+        progressHtml +
         '<div class="order-bottom">' +
           '<span class="order-price">Rp ' + formatPrice(order.price) + '</span>' +
           '<span class="order-date">' + formatDate(new Date(order.createdAt)) + '</span>' +
@@ -190,6 +229,19 @@ const App = (function () {
 
     $('#fab-add').addEventListener('click', () => openOrderForm(null));
 
+    $('#field-type').addEventListener('change', toggleProgressSection);
+    $('#field-status').addEventListener('change', updateCompletePrompt);
+
+    $('#btn-add-step').addEventListener('click', addStep);
+    $('#step-add-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addStep();
+      }
+    });
+
+    $('#btn-mark-done').addEventListener('click', markOrderDoneFromPrompt);
+
     $('#order-form').addEventListener('submit', (e) => {
       e.preventDefault();
       saveOrder();
@@ -201,7 +253,10 @@ const App = (function () {
 
     $('#btn-delete-order').addEventListener('click', handleDelete);
 
-    $('#order-dialog').addEventListener('close', () => { editingId = null; });
+    $('#order-dialog').addEventListener('close', () => {
+      editingId = null;
+      currentSteps = [];
+    });
 
     // Status picker
     $$('.status-option').forEach((btn) => {
@@ -244,19 +299,22 @@ const App = (function () {
     });
   }
 
-  // Order form dialog
+  // Order form & detail dialog
 
   function openOrderForm(id) {
     editingId = id;
     const dialog = $('#order-dialog');
     const form = $('#order-form');
     form.reset();
+    $('#step-add-input').value = '';
     populatePaymentSelect();
 
     if (id !== null) {
       const order = orders.find((o) => o.id === id);
       if (!order) return;
-      $('#form-title').textContent = 'Edit Pesanan';
+      $('#form-title').textContent = 'Detail Pesanan';
+      $('#detail-order-id').textContent = order.orderId;
+      $('#detail-order-id').hidden = false;
       $('#field-customer').value = order.customerName;
       $('#field-type').value = order.type;
       $('#field-game').value = order.game;
@@ -266,15 +324,260 @@ const App = (function () {
       $('#field-status').value = order.status;
       $('#field-status-group').hidden = false;
       $('#btn-delete-order').hidden = false;
+
+      const prog = progressMap[order.orderId];
+      currentSteps = prog && Array.isArray(prog.steps)
+        ? prog.steps.map((s) => ({
+            id: s.id,
+            name: s.name,
+            done: Boolean(s.done),
+            order: s.order
+          }))
+        : [];
     } else {
       $('#form-title').textContent = 'Tambah Pesanan';
+      $('#detail-order-id').textContent = '';
+      $('#detail-order-id').hidden = true;
       $('#field-status').value = 'menunggu_bayar';
       $('#field-status-group').hidden = true;
       $('#btn-delete-order').hidden = true;
+      currentSteps = [];
     }
 
+    toggleProgressSection();
+    renderChecklist();
     dialog.showModal();
-    $('#field-customer').focus();
+    if (id === null) {
+      $('#field-customer').focus();
+    }
+  }
+
+  function toggleProgressSection() {
+    const isJoki = $('#field-type').value === 'joki';
+    $('#joki-progress-section').hidden = !isJoki;
+    updateCompletePrompt();
+  }
+
+  function updateProgressUI() {
+    const total = currentSteps.length;
+    const done = currentSteps.filter((s) => s.done).length;
+    const pct = ShugenDB.progress.calcPercentage(currentSteps);
+
+    $('#progress-summary').textContent = pct + '% (' + done + '/' + total + ' langkah)';
+    $('#progress-fill').style.width = pct + '%';
+    $('#detail-progressbar').setAttribute('aria-valuenow', String(pct));
+    updateCompletePrompt();
+  }
+
+  function updateCompletePrompt() {
+    const isJoki = $('#field-type').value === 'joki';
+    const isAllDone = currentSteps.length > 0 && currentSteps.every((s) => s.done);
+    const isNotSelesai = $('#field-status').value !== 'selesai';
+    $('#progress-complete-prompt').hidden = !(isJoki && isAllDone && isNotSelesai);
+  }
+
+  async function syncCurrentProgress() {
+    updateProgressUI();
+    if (editingId === null) return;
+    const order = orders.find((o) => o.id === editingId);
+    if (!order || order.type !== 'joki') return;
+
+    try {
+      const saved = await ShugenDB.progress.save(order.orderId, currentSteps);
+      progressMap[order.orderId] = saved;
+      renderOrders();
+    } catch (err) {
+      console.error(err);
+      toast('Gagal menyimpan progress');
+    }
+  }
+
+  function renderChecklist() {
+    const list = $('#step-list');
+    list.innerHTML = '';
+
+    const hasSteps = currentSteps.length > 0;
+    $('#step-empty').hidden = hasSteps;
+    list.hidden = !hasSteps;
+
+    currentSteps.forEach((step, idx) => {
+      const li = document.createElement('li');
+      li.className = 'step-item' + (step.done ? ' is-done' : '');
+
+      const main = document.createElement('div');
+      main.className = 'step-main';
+
+      const checkBtn = document.createElement('button');
+      checkBtn.type = 'button';
+      checkBtn.className = 'btn-step-check';
+      checkBtn.setAttribute('role', 'checkbox');
+      checkBtn.setAttribute('aria-checked', step.done ? 'true' : 'false');
+      checkBtn.setAttribute('aria-label', 'Langkah ' + (idx + 1) + ': ' + step.name);
+      checkBtn.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<polyline points="20 6 9 17 4 12"/>' +
+        '</svg>';
+      checkBtn.addEventListener('click', () => toggleStep(idx));
+
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.className = 'step-name-input';
+      nameInput.value = step.name;
+      nameInput.setAttribute('aria-label', 'Nama langkah ' + (idx + 1));
+      nameInput.addEventListener('change', () => renameStep(idx, nameInput.value));
+      nameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          nameInput.blur();
+        }
+      });
+
+      main.appendChild(checkBtn);
+      main.appendChild(nameInput);
+
+      const actions = document.createElement('div');
+      actions.className = 'step-actions';
+
+      const idxLabel = document.createElement('span');
+      idxLabel.className = 'step-index-label';
+      idxLabel.textContent = 'Langkah ' + (idx + 1);
+
+      const actionGroup = document.createElement('div');
+      actionGroup.className = 'step-action-group';
+
+      const upBtn = document.createElement('button');
+      upBtn.type = 'button';
+      upBtn.className = 'btn-step-action btn-step-up';
+      upBtn.disabled = idx === 0;
+      upBtn.setAttribute('aria-label', 'Pindah langkah ' + step.name + ' ke atas');
+      upBtn.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<polyline points="18 15 12 9 6 15"/>' +
+        '</svg>';
+      upBtn.addEventListener('click', () => moveStep(idx, -1));
+
+      const downBtn = document.createElement('button');
+      downBtn.type = 'button';
+      downBtn.className = 'btn-step-action btn-step-down';
+      downBtn.disabled = idx === currentSteps.length - 1;
+      downBtn.setAttribute('aria-label', 'Pindah langkah ' + step.name + ' ke bawah');
+      downBtn.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<polyline points="6 9 12 15 18 9"/>' +
+        '</svg>';
+      downBtn.addEventListener('click', () => moveStep(idx, 1));
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'btn-step-action btn-step-delete';
+      delBtn.setAttribute('aria-label', 'Hapus langkah ' + step.name);
+      delBtn.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<line x1="18" y1="6" x2="6" y2="18"/>' +
+          '<line x1="6" y1="6" x2="18" y2="18"/>' +
+        '</svg>';
+      delBtn.addEventListener('click', () => removeStep(idx));
+
+      actionGroup.appendChild(upBtn);
+      actionGroup.appendChild(downBtn);
+      actionGroup.appendChild(delBtn);
+
+      actions.appendChild(idxLabel);
+      actions.appendChild(actionGroup);
+
+      li.appendChild(main);
+      li.appendChild(actions);
+      list.appendChild(li);
+    });
+
+    updateProgressUI();
+  }
+
+  async function addStep() {
+    const input = $('#step-add-input');
+    const name = input.value.trim();
+    if (!name) {
+      input.focus();
+      return;
+    }
+
+    currentSteps.push({
+      id: 'step-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      name: name,
+      done: false,
+      order: currentSteps.length
+    });
+    input.value = '';
+    renderChecklist();
+    await syncCurrentProgress();
+    input.focus();
+  }
+
+  async function toggleStep(idx) {
+    if (!currentSteps[idx]) return;
+    currentSteps[idx].done = !currentSteps[idx].done;
+    renderChecklist();
+    await syncCurrentProgress();
+    const checks = $$('#step-list .btn-step-check');
+    if (checks[idx]) checks[idx].focus();
+  }
+
+  async function renameStep(idx, newName) {
+    if (!currentSteps[idx]) return;
+    const trimmed = newName.trim();
+    if (!trimmed) {
+      renderChecklist();
+      return;
+    }
+    currentSteps[idx].name = trimmed;
+    renderChecklist();
+    await syncCurrentProgress();
+  }
+
+  async function moveStep(idx, dir) {
+    const targetIdx = idx + dir;
+    if (targetIdx < 0 || targetIdx >= currentSteps.length) return;
+    const temp = currentSteps[idx];
+    currentSteps[idx] = currentSteps[targetIdx];
+    currentSteps[targetIdx] = temp;
+    renderChecklist();
+    await syncCurrentProgress();
+
+    const items = $$('#step-list .step-item');
+    const targetItem = items[targetIdx];
+    if (targetItem) {
+      const btn = targetItem.querySelector(dir < 0 ? '.btn-step-up' : '.btn-step-down');
+      if (btn && !btn.disabled) {
+        btn.focus();
+      } else {
+        const check = targetItem.querySelector('.btn-step-check');
+        if (check) check.focus();
+      }
+    }
+  }
+
+  async function removeStep(idx) {
+    if (!currentSteps[idx]) return;
+    currentSteps.splice(idx, 1);
+    renderChecklist();
+    await syncCurrentProgress();
+  }
+
+  async function markOrderDoneFromPrompt() {
+    $('#field-status').value = 'selesai';
+    updateCompletePrompt();
+
+    if (editingId !== null) {
+      try {
+        await ShugenDB.orders.update(editingId, { status: 'selesai' });
+        orders = await ShugenDB.orders.getAll();
+        render();
+        toast('Status diubah: Selesai');
+      } catch (err) {
+        console.error(err);
+        toast('Gagal mengubah status');
+      }
+    }
   }
 
   function populatePaymentSelect() {
@@ -304,15 +607,35 @@ const App = (function () {
       return;
     }
 
+    const pendingStepName = $('#step-add-input').value.trim();
+    if (data.type === 'joki' && pendingStepName) {
+      currentSteps.push({
+        id: 'step-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        name: pendingStepName,
+        done: false,
+        order: currentSteps.length
+      });
+      $('#step-add-input').value = '';
+    }
+
     try {
       if (editingId !== null) {
-        await ShugenDB.orders.update(editingId, data);
+        const updated = await ShugenDB.orders.update(editingId, data);
+        if (data.type === 'joki') {
+          await ShugenDB.progress.save(updated.orderId, currentSteps);
+        } else {
+          await ShugenDB.progress.delete(updated.orderId);
+        }
         toast('Pesanan diperbarui');
       } else {
-        await ShugenDB.orders.add(data);
+        const created = await ShugenDB.orders.add(data);
+        if (data.type === 'joki') {
+          await ShugenDB.progress.save(created.orderId, currentSteps);
+        }
         toast('Pesanan ditambahkan');
       }
       orders = await ShugenDB.orders.getAll();
+      await refreshProgressMap();
       render();
       $('#order-dialog').close();
     } catch (err) {
@@ -328,6 +651,7 @@ const App = (function () {
     try {
       await ShugenDB.orders.delete(editingId);
       orders = await ShugenDB.orders.getAll();
+      await refreshProgressMap();
       render();
       $('#order-dialog').close();
       toast('Pesanan dihapus');
@@ -452,6 +776,7 @@ const App = (function () {
     try {
       await DummyData.load();
       orders = await ShugenDB.orders.getAll();
+      await refreshProgressMap();
       paymentMethods = await ShugenDB.payment.getAll();
       render();
       renderPaymentList();

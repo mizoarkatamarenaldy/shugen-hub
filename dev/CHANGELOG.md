@@ -19,6 +19,20 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #004 [2026-10-13] Implementasi Fitur 2 (Progress joki)
+- Fitur: Progress joki
+- Ringkasan: Menambahkan fitur checklist langkah pengerjaan khusus pesanan Joki (tambah, hapus, ganti nama, atur ulang urutan, centang satu tap) dengan perhitungan persentase otomatis yang tampil di daftar dan detail pesanan. Menyediakan saran penyelesaian manual saat progress mencapai 100%, menjaga progress pada pesanan yang dibatalkan, serta melakukan migrasi skema IndexedDB ke versi 2 secara aman.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - index.html
+  - js/app.js
+  - js/db.js
+  - js/dummy.js
+  - sw.js
+- Catatan: Data progress disimpan pada object store `progress` di IndexedDB (versi 2) menggunakan `orderId` (SGN-YYMMDD-XXXX) sebagai kunci agar data pesanan Fitur 1 tetap utuh dan siap disinkronkan lintas perangkat.
+
 ### #003 [2026-10-13] Perbaikan ikon PWA dan path relatif
 - Fitur: Pesanan + Status
 - Ringkasan: Mengganti ikon di manifest.json menjadi PNG persegi 192x192, 512x512, dan ikon maskable 512x512, serta memperbarui apple-touch-icon di index.html menjadi PNG. Memastikan semua path di manifest.json dan sw.js bersifat relatif untuk dukungan subfolder GitHub Pages, serta menaikkan versi cache service worker ke shugen-v2.

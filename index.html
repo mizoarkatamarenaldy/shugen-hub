@@ -88,7 +88,10 @@
   <!-- Dialog Form Tambah / Edit Pesanan -->
   <dialog id="order-dialog" aria-labelledby="form-title">
     <div class="dialog-header">
-      <h2 id="form-title" class="dialog-title">Tambah Pesanan</h2>
+      <div class="dialog-header-titles">
+        <h2 id="form-title" class="dialog-title">Tambah Pesanan</h2>
+        <span id="detail-order-id" class="dialog-order-id" hidden></span>
+      </div>
       <button type="button" class="btn-icon" id="btn-cancel-order" aria-label="Tutup form pesanan">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
           <line x1="18" y1="6" x2="6" y2="18"/>
@@ -120,6 +123,26 @@
         <div class="form-group">
           <label class="form-label" for="field-detail">Detail / Catatan</label>
           <textarea id="field-detail" class="form-textarea" placeholder="Contoh: Push Epic ke Legend, hero Lancelot"></textarea>
+        </div>
+
+        <div id="joki-progress-section" class="progress-section">
+          <div class="progress-header">
+            <span class="form-label progress-title">Progress Joki</span>
+            <span id="progress-summary" class="progress-summary" aria-live="polite">0% (0/0 langkah)</span>
+          </div>
+          <div id="detail-progressbar" class="progress-track" role="progressbar" aria-label="Persentase progress joki" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+          <div id="progress-complete-prompt" class="progress-complete-prompt" role="region" aria-label="Saran penyelesaian pesanan" hidden>
+            <span class="progress-prompt-text">Semua langkah selesai. Tandai Selesai?</span>
+            <button type="button" id="btn-mark-done" class="btn btn-small btn-mark-done">Tandai Selesai</button>
+          </div>
+          <p id="step-empty" class="step-empty">Belum ada langkah pengerjaan. Tambahkan langkah di bawah.</p>
+          <ul id="step-list" class="step-list" aria-label="Daftar langkah pengerjaan"></ul>
+          <div class="step-add">
+            <input type="text" id="step-add-input" class="form-input step-add-input" placeholder="Tambah langkah pengerjaan..." aria-label="Nama langkah pengerjaan baru">
+            <button type="button" id="btn-add-step" class="btn btn-secondary btn-add-step">Tambah</button>
+          </div>
         </div>
 
         <div class="form-row">

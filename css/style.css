@@ -302,6 +302,41 @@ body {
   color: var(--text-secondary);
 }
 
+.order-progress {
+  margin-bottom: 8px;
+  padding-top: 2px;
+}
+
+.order-progress-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.order-progress-pct {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.order-progress-track {
+  width: 100%;
+  height: 6px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.order-progress-fill {
+  height: 100%;
+  background: var(--text-secondary);
+}
+
 .order-bottom {
   display: flex;
   align-items: center;
@@ -447,9 +482,22 @@ dialog::backdrop {
   border-bottom: 1px solid var(--border);
 }
 
+.dialog-header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .dialog-title {
   font-size: 18px;
   font-weight: 700;
+}
+
+.dialog-order-id {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .dialog-body {
@@ -776,6 +824,239 @@ dialog.dialog-settings {
   justify-content: center;
 }
 
+.progress-section {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.progress-title {
+  margin-bottom: 0;
+}
+
+.progress-summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+}
+
+.progress-complete-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+}
+
+.progress-prompt-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.btn-mark-done {
+  background: var(--accent);
+  color: #0F1117;
+  min-height: 44px;
+  padding: 8px 14px;
+}
+
+.btn-mark-done:hover {
+  background: var(--accent-hover);
+}
+
+.step-empty {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 4px 0 12px;
+}
+
+.step-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.step-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-step-check {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-raised);
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  color: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.btn-step-check:hover {
+  border-color: var(--text-secondary);
+}
+
+.btn-step-check[aria-checked="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0F1117;
+}
+
+.btn-step-check svg {
+  width: 20px;
+  height: 20px;
+}
+
+.step-name-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.step-name-input:focus {
+  background: var(--surface-raised);
+  border-color: var(--accent);
+  outline: none;
+}
+
+.step-item.is-done .step-name-input:not(:focus) {
+  color: var(--text-secondary);
+  text-decoration: line-through;
+}
+
+.step-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.step-index-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding-left: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.step-action-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-step-action {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.btn-step-action:hover:not(:disabled) {
+  border-color: var(--text-secondary);
+}
+
+.btn-step-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-step-action svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-step-delete:hover:not(:disabled) {
+  background: var(--status-cancelled-bg);
+  border-color: var(--status-cancelled);
+  color: var(--status-cancelled);
+}
+
+.step-add {
+  display: flex;
+  gap: 8px;
+}
+
+.step-add-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  background: var(--surface);
+}
+
+.btn-add-step {
+  flex-shrink: 0;
+  min-height: 44px;
+  background: var(--surface);
+}
+
 /* Toast */
 
 .toast {
@@ -804,6 +1085,30 @@ dialog.dialog-settings {
 }
 
 /* Responsive: tablet and desktop */
+
+@media (min-width: 520px) {
+  .step-item {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .step-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .step-actions {
+    padding-top: 0;
+    border-top: none;
+    justify-content: flex-end;
+  }
+
+  .step-index-label {
+    display: none;
+  }
+}
 
 @media (min-width: 600px) {
   .search-bar {
