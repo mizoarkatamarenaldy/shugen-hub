@@ -247,6 +247,8 @@ const App = (function () {
       saveOrder();
     });
 
+    $('#btn-copy-order-id').addEventListener('click', copyOrderId);
+
     $('#btn-cancel-order').addEventListener('click', () => {
       $('#order-dialog').close();
     });
@@ -257,6 +259,8 @@ const App = (function () {
       editingId = null;
       currentSteps = [];
       $('#btn-save-order').disabled = false;
+      $('#btn-delete-order').disabled = false;
+      resetCopyButton();
     });
 
     // Status picker
@@ -280,6 +284,9 @@ const App = (function () {
     $('#btn-close-settings').addEventListener('click', () => {
       $('#settings-dialog').close();
     });
+    $('#settings-dialog').addEventListener('close', () => {
+      $('#btn-load-demo').disabled = false;
+    });
 
     $('#btn-add-payment').addEventListener('click', addPaymentMethod);
     $('#payment-add-input').addEventListener('keydown', (e) => {
@@ -302,12 +309,50 @@ const App = (function () {
 
   // Order form & detail dialog
 
+  let copyTimer = null;
+
+  function resetCopyButton() {
+    clearTimeout(copyTimer);
+    const btn = $('#btn-copy-order-id');
+    const label = $('#copy-order-id-label');
+    if (btn) btn.classList.remove('is-copied');
+    if (label) label.textContent = 'Salin';
+  }
+
+  async function copyOrderId() {
+    const orderId = $('#detail-order-id').textContent.trim();
+    if (!orderId) return;
+
+    try {
+      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+        throw new Error('Clipboard tidak tersedia');
+      }
+      await navigator.clipboard.writeText(orderId);
+      const btn = $('#btn-copy-order-id');
+      const label = $('#copy-order-id-label');
+      btn.classList.add('is-copied');
+      label.textContent = 'Tersalin';
+      clearTimeout(copyTimer);
+      copyTimer = setTimeout(() => {
+        btn.classList.remove('is-copied');
+        label.textContent = 'Salin';
+      }, 2000);
+      toast('Tersalin');
+    } catch (err) {
+      console.error(err);
+      resetCopyButton();
+      toast('Gagal menyalin ID pesanan');
+    }
+  }
+
   function openOrderForm(id) {
     editingId = id;
     const dialog = $('#order-dialog');
     const form = $('#order-form');
     form.reset();
     $('#btn-save-order').disabled = false;
+    $('#btn-delete-order').disabled = false;
+    resetCopyButton();
     $('#step-add-input').value = '';
     populatePaymentSelect();
 
@@ -317,6 +362,7 @@ const App = (function () {
       $('#form-title').textContent = 'Detail Pesanan';
       $('#detail-order-id').textContent = order.orderId;
       $('#detail-order-id').hidden = false;
+      $('#detail-order-id-row').hidden = false;
       $('#field-customer').value = order.customerName;
       $('#field-type').value = order.type;
       $('#field-game').value = order.game;
@@ -340,6 +386,7 @@ const App = (function () {
       $('#form-title').textContent = 'Tambah Pesanan';
       $('#detail-order-id').textContent = '';
       $('#detail-order-id').hidden = true;
+      $('#detail-order-id-row').hidden = true;
       $('#field-status').value = 'menunggu_bayar';
       $('#field-status-group').hidden = true;
       $('#btn-delete-order').hidden = true;
@@ -654,8 +701,12 @@ const App = (function () {
   }
 
   async function handleDelete() {
+    const deleteBtn = $('#btn-delete-order');
+    if (deleteBtn.disabled) return;
     if (editingId === null) return;
     if (!confirm('Hapus pesanan ini?')) return;
+
+    deleteBtn.disabled = true;
 
     try {
       await ShugenDB.orders.delete(editingId);
@@ -667,6 +718,8 @@ const App = (function () {
     } catch (err) {
       console.error(err);
       toast('Gagal menghapus pesanan');
+    } finally {
+      deleteBtn.disabled = false;
     }
   }
 
@@ -700,6 +753,7 @@ const App = (function () {
   // Settings dialog
 
   function openSettings() {
+    $('#btn-load-demo').disabled = false;
     renderPaymentList();
     $('#settings-dialog').showModal();
   }
@@ -780,7 +834,11 @@ const App = (function () {
   // Demo data actions
 
   async function loadDemoData() {
+    const demoBtn = $('#btn-load-demo');
+    if (demoBtn.disabled) return;
     if (!confirm('Data pesanan yang ada akan dihapus dan diganti dengan data demo. Lanjutkan?')) return;
+
+    demoBtn.disabled = true;
 
     try {
       await DummyData.load();
@@ -793,6 +851,8 @@ const App = (function () {
     } catch (err) {
       console.error(err);
       toast('Gagal memuat data demo');
+    } finally {
+      demoBtn.disabled = false;
     }
   }
 

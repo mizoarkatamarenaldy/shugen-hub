@@ -90,7 +90,16 @@
     <div class="dialog-header">
       <div class="dialog-header-titles">
         <h2 id="form-title" class="dialog-title">Tambah Pesanan</h2>
-        <span id="detail-order-id" class="dialog-order-id" hidden></span>
+        <div id="detail-order-id-row" class="dialog-order-id-row" hidden>
+          <span id="detail-order-id" class="dialog-order-id" hidden></span>
+          <button type="button" id="btn-copy-order-id" class="btn-copy-id" aria-label="Salin ID pesanan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            <span id="copy-order-id-label">Salin</span>
+          </button>
+        </div>
       </div>
       <button type="button" class="btn-icon" id="btn-cancel-order" aria-label="Tutup form pesanan">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">

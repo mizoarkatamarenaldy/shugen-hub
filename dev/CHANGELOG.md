@@ -19,6 +19,17 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #007 [2026-10-13] Pengaman tombol Hapus dan Muat Data Demo serta tombol salin ID pesanan
+- Fitur: Pesanan + Status
+- Ringkasan: Menonaktifkan tombol Hapus di dialog pesanan dan tombol Muat Data Demo di dialog Pengaturan selama operasi IndexedDB berlangsung agar tap ganda tidak menjalankan aksi dua kali, serta mengaktifkannya kembali jika proses gagal. Menambahkan tombol salin di sebelah ID pesanan pada dialog detail pesanan yang menyalin ID lengkap ke clipboard dengan umpan balik "Tersalin" dan pesan gagal jika penyalinan terkendala.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - index.html
+  - js/app.js
+  - sw.js
+- Catatan: Versi cache service worker dinaikkan ke shugen-v6.
+
 ### #006 [2026-10-13] Pengacakan ID dengan crypto.getRandomValues dan pengaman tombol Simpan
 - Fitur: Pesanan + Status
 - Ringkasan: Mengganti pemilihan karakter acak ID pesanan dari Math.random() ke crypto.getRandomValues() tanpa bias distribusi serta menangani ConstraintError saat penyimpanan berurutan di IndexedDB. Menonaktifkan tombol Simpan di dialog form pesanan selama proses penyimpanan berlangsung untuk mencegah penyimpanan ganda akibat tap cepat, dan mengaktifkannya kembali jika penyimpanan gagal.

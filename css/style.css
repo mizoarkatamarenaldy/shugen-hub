@@ -493,11 +493,51 @@ dialog::backdrop {
   font-weight: 700;
 }
 
+.dialog-order-id-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .dialog-order-id {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
+}
+
+.btn-copy-id {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px 10px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.btn-copy-id:hover {
+  border-color: var(--text-secondary);
+}
+
+.btn-copy-id.is-copied {
+  border-color: var(--accent);
+}
+
+.btn-copy-id svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 .dialog-body {
@@ -805,7 +845,7 @@ dialog.dialog-settings {
   border: 1px solid var(--border);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   border-color: var(--text-secondary);
 }
 
@@ -814,7 +854,7 @@ dialog.dialog-settings {
   color: var(--status-cancelled);
 }
 
-.btn-danger:hover {
+.btn-danger:hover:not(:disabled) {
   background: rgba(255, 69, 58, 0.2);
 }
 
