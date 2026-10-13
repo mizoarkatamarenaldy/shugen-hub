@@ -165,6 +165,20 @@ Kebutuhan layar:
 - Ringkasan hanya menampilkan. Alur validasi, Fitur 12c, dan proses import tidak berubah.
 - Tanpa perubahan skema IndexedDB, tanpa library baru.
 
+## Fitur 8: Rekap harian dan bulanan
+- Menu baru bernama Rekap, berisi dua tab: Harian dan Bulanan.
+- Tiga angka utama: omzet, pengeluaran, dan untung bersih.
+- Omzet = total pemasukan (Fitur 3) pada periode itu, dihitung dari tanggal pemasukan (kapan uang masuk), bukan dari harga pesanan.
+- Pengeluaran = total pengeluaran (Fitur 4) pada periode itu, dihitung dari tanggal pengeluaran.
+- Untung bersih = omzet - pengeluaran. Kalau hasilnya negatif, tampilkan dengan tanda minus. Jangan hanya mengandalkan warna. Ikuti dev/DESIGN.md: warna hanya untuk status.
+- Tab Harian: pilih satu tanggal (default hari ini), tampilkan tiga angka di atas.
+- Tab Bulanan: pilih satu bulan (default bulan ini), tampilkan tiga angka di atas, lalu daftar per hari (hanya hari yang ada transaksi, urut tanggal terbaru) dengan omzet, pengeluaran, dan untung bersih tiap hari.
+- Tanggal dibaca sesuai zona waktu perangkat.
+- Pesanan Dibatalkan tetap menghitung pemasukan dan pengeluaran yang sudah tercatat.
+- Kalau periode tidak punya transaksi, tampilkan 0 dan pesan yang jelas.
+- Menu Rekap hanya menampilkan dan tidak menambah atau mengubah data apa pun.
+- Tanpa grafik, tanpa library baru, tanpa perubahan skema IndexedDB. Tidak ada ekspor atau cetak rekap. Tidak ada rincian per kategori.
+
 ## Aturan umum
 - Metode pembayaran bisa diatur sendiri (tambah, hapus, ganti nama), bukan daftar tetap
 - Harga dari katalog hanya saran awal, selalu bisa diubah per pesanan
