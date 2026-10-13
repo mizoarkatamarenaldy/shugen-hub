@@ -6,8 +6,8 @@ Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 
 ## Fitur inti (dikerjakan satu per satu, urut)
 1. Pesanan + Status
-2. Progress joki (checklist + persentase)  <- FOKUS SEKARANG
-3. Pemasukan
+2. Progress joki (checklist + persentase)
+3. Pemasukan  <- FOKUS SEKARANG
 4. Pengeluaran
 5. Invoice
 
@@ -51,6 +51,15 @@ Kebutuhan layar:
 - Pesanan Dibatalkan tetap menyimpan progress-nya.
 - Data progress terhubung ke ID pesanan dari Fitur 1.
 
+## Fitur 3: Pemasukan
+- Mencatat uang masuk toko. Satu pemasukan bisa terhubung ke satu pesanan (lewat ID pesanan dari Fitur 1) atau berdiri sendiri (tanpa pesanan).
+- Satu pesanan boleh punya beberapa pemasukan (misalnya DP lalu pelunasan).
+- Data pemasukan: ID unik (ikuti Aturan umum soal keunikan ID lintas perangkat), tanggal, jumlah (rupiah), metode pembayaran (dari daftar di Pengaturan), ID pesanan (opsional), catatan.
+- Kebutuhan layar: daftar pemasukan (urut tanggal terbaru, filter rentang tanggal, total pemasukan dari hasil filter), form tambah/edit/hapus pemasukan, dan di detail pesanan tampil total yang sudah dibayar.
+- Mengubah status pesanan tidak otomatis membuat atau mengubah pemasukan. Semua pencatatan pemasukan dilakukan manual oleh pengguna.
+- Pesanan Dibatalkan tetap menyimpan pemasukannya.
+- Tidak ada rekap harian/bulanan di fitur ini (itu Fitur 8).
+
 ## Aturan umum
 - Metode pembayaran bisa diatur sendiri (tambah, hapus, ganti nama), bukan daftar tetap
 - Harga dari katalog hanya saran awal, selalu bisa diubah per pesanan
@@ -71,3 +80,7 @@ Kebutuhan layar:
 
 ## Di luar cakupan fitur 2
 Keuangan dan invoice belum dikerjakan. Struktur data harus siap dihubungkan ke fitur-fitur itu nanti.
+
+## Utang teknis kecil
+- Tombol #btn-add-payment di Pengaturan belum punya pengaman disabled selama operasi IndexedDB. Tap ganda bisa membuat metode pembayaran dobel kecuali nama dicek unik. Kerjakan nanti saat sebuah tugas memang menyentuh Pengaturan atau metode pembayaran. Jangan dibuat tugas sendiri.
+- Tombol #btn-mark-done dan .status-option sifatnya idempotent (hasil sama kalau dijalankan dua kali), jadi tidak mendesak.

@@ -19,6 +19,20 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #008 [2026-10-13] Implementasi Fitur 3 (Pemasukan)
+- Fitur: Pemasukan
+- Ringkasan: Menambahkan fitur pencatatan pemasukan toko (terhubung ke pesanan maupun berdiri sendiri) dengan daftar urut tanggal terbaru, filter rentang tanggal, total pemasukan hasil filter, serta form tambah/edit/hapus pemasukan. Menampilkan total yang sudah dibayar pada dialog detail pesanan, memigrasi skema IndexedDB ke versi 3 secara aman dengan object store `incomes`, dan memperbarui `dev/PLAN.md` sesuai instruksi.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - index.html
+  - js/app.js
+  - js/db.js
+  - js/dummy.js
+  - sw.js
+- Catatan: ID pemasukan memakai format MSK-YYMMDD-XXXX (4 karakter acak dengan crypto.getRandomValues) agar unik lintas perangkat secara offline. Skema IndexedDB naik ke versi 3 dan versi cache service worker dinaikkan ke shugen-v7.
+
 ### #007 [2026-10-13] Pengaman tombol Hapus dan Muat Data Demo serta tombol salin ID pesanan
 - Fitur: Pesanan + Status
 - Ringkasan: Menonaktifkan tombol Hapus di dialog pesanan dan tombol Muat Data Demo di dialog Pengaturan selama operasi IndexedDB berlangsung agar tap ganda tidak menjalankan aksi dua kali, serta mengaktifkannya kembali jika proses gagal. Menambahkan tombol salin di sebelah ID pesanan pada dialog detail pesanan yang menyalin ID lengkap ke clipboard dengan umpan balik "Tersalin" dan pesan gagal jika penyalinan terkendala.

@@ -1,11 +1,16 @@
 const App = (function () {
   let orders = [];
   let progressMap = {};
+  let incomes = [];
   let currentSteps = [];
   let paymentMethods = [];
+  let activeView = 'orders';
   let activeFilter = 'semua';
   let searchQuery = '';
+  let incomeStartDate = '';
+  let incomeEndDate = '';
   let editingId = null;
+  let editingIncomeId = null;
   let statusChangeId = null;
 
   const STATUS_LABELS = {
@@ -20,6 +25,25 @@ const App = (function () {
     day: 'numeric', month: 'short', year: 'numeric'
   }).format;
 
+  function formatYmd(ymd) {
+    if (!ymd) return '';
+    const parts = String(ymd).split('-');
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      if (!isNaN(d.getTime())) return formatDate(d);
+    }
+    const fallback = new Date(ymd);
+    return isNaN(fallback.getTime()) ? String(ymd) : formatDate(fallback);
+  }
+
+  function todayYmd() {
+    const now = new Date();
+    const yyyy = String(now.getFullYear());
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return yyyy + '-' + mm + '-' + dd;
+  }
+
   // DOM helpers
 
   const $ = (sel) => document.querySelector(sel);
@@ -33,6 +57,7 @@ const App = (function () {
       await ShugenDB.open();
       paymentMethods = await ShugenDB.payment.init();
       orders = await ShugenDB.orders.getAll();
+      incomes = await ShugenDB.incomes.getAll();
       await refreshProgressMap();
       await loadTheme();
       render();
@@ -64,18 +89,40 @@ const App = (function () {
   function showView(state) {
     $('#loading-state').hidden = state !== 'loading';
     $('#error-state').hidden = state !== 'error';
+    $('#view-orders').hidden = state !== 'ready' || activeView !== 'orders';
+    $('#view-incomes').hidden = state !== 'ready' || activeView !== 'incomes';
+    $('#fab-add').hidden = state !== 'ready';
+
     $('#empty-state').hidden = true;
     $('#empty-filtered').hidden = true;
     $('#order-list').hidden = state !== 'ready';
 
+    $('#income-empty-state').hidden = true;
+    $('#income-empty-filtered').hidden = true;
+    $('#income-list').hidden = state !== 'ready';
+
     if (state === 'ready') {
-      const filtered = getFilteredOrders();
+      $('#fab-add').setAttribute(
+        'aria-label',
+        activeView === 'incomes' ? 'Tambah pemasukan baru' : 'Tambah pesanan baru'
+      );
+
+      const filteredOrders = getFilteredOrders();
       if (orders.length === 0) {
         $('#empty-state').hidden = false;
         $('#order-list').hidden = true;
-      } else if (filtered.length === 0) {
+      } else if (filteredOrders.length === 0) {
         $('#empty-filtered').hidden = false;
         $('#order-list').hidden = true;
+      }
+
+      const filteredIncomes = getFilteredIncomes();
+      if (incomes.length === 0) {
+        $('#income-empty-state').hidden = false;
+        $('#income-list').hidden = true;
+      } else if (filteredIncomes.length === 0) {
+        $('#income-empty-filtered').hidden = false;
+        $('#income-list').hidden = true;
       }
     }
   }
@@ -83,7 +130,7 @@ const App = (function () {
   // Filtering and search
 
   function getFilteredOrders() {
-    let list = orders;
+    let list = orders.slice();
     if (activeFilter !== 'semua') {
       list = list.filter((o) => o.status === activeFilter);
     }
@@ -99,11 +146,43 @@ const App = (function () {
     return list;
   }
 
+  function getFilteredIncomes() {
+    let list = incomes.slice();
+    if (incomeStartDate) {
+      list = list.filter((inc) => inc.date >= incomeStartDate);
+    }
+    if (incomeEndDate) {
+      list = list.filter((inc) => inc.date <= incomeEndDate);
+    }
+    list.sort((a, b) => {
+      const cmp = String(b.date || '').localeCompare(String(a.date || ''));
+      if (cmp !== 0) return cmp;
+      const timeDiff = new Date(b.createdAt) - new Date(a.createdAt);
+      if (timeDiff !== 0) return timeDiff;
+      return (b.id || 0) - (a.id || 0);
+    });
+    return list;
+  }
+
   // Rendering
 
   function render() {
+    renderNav();
     renderTabs();
     renderOrders();
+    renderIncomes();
+  }
+
+  function renderNav() {
+    $$('.nav-tab').forEach((tab) => {
+      const isCurrent = tab.dataset.view === activeView;
+      tab.classList.toggle('active', isCurrent);
+      if (isCurrent) {
+        tab.setAttribute('aria-current', 'page');
+      } else {
+        tab.removeAttribute('aria-current');
+      }
+    });
   }
 
   function renderTabs() {
@@ -183,6 +262,61 @@ const App = (function () {
     showView('ready');
   }
 
+  function renderIncomes() {
+    const list = getFilteredIncomes();
+    const totalAmount = list.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
+
+    $('#income-summary-total').textContent = 'Rp ' + formatPrice(totalAmount);
+    $('#income-summary-count').textContent = list.length + ' pemasukan';
+    $('#btn-reset-income-filter').hidden = !(incomeStartDate || incomeEndDate);
+
+    const container = $('#income-list');
+    container.innerHTML = '';
+
+    list.forEach((inc) => {
+      const card = document.createElement('article');
+      card.className = 'income-card';
+      card.tabIndex = 0;
+      card.dataset.id = inc.id;
+      card.setAttribute('role', 'button');
+
+      const dateLabel = formatYmd(inc.date);
+      const methodLabel = inc.paymentMethod || 'Tanpa metode';
+      let orderLabel = 'Tanpa pesanan';
+      if (inc.orderId) {
+        const matchedOrder = orders.find((o) => o.orderId === inc.orderId);
+        orderLabel = matchedOrder
+          ? ('Pesanan: ' + inc.orderId + ' (' + matchedOrder.customerName + ')')
+          : ('Pesanan: ' + inc.orderId);
+      }
+
+      card.setAttribute(
+        'aria-label',
+        inc.incomeId + ', Rp ' + formatPrice(inc.amount) + ', ' + dateLabel + ', ' + methodLabel + ', ' + orderLabel
+      );
+
+      const noteHtml = inc.note
+        ? '<div class="income-note">' + esc(inc.note) + '</div>'
+        : '';
+
+      card.innerHTML =
+        '<div class="income-header">' +
+          '<span class="income-id">' + esc(inc.incomeId) + '</span>' +
+          '<span class="income-date">' + esc(dateLabel) + '</span>' +
+        '</div>' +
+        '<div class="income-amount">Rp ' + formatPrice(inc.amount) + '</div>' +
+        '<div class="income-meta">' +
+          '<span class="income-method-tag">' + esc(methodLabel) + '</span>' +
+          '<span class="income-order-tag">' + esc(orderLabel) + '</span>' +
+        '</div>' +
+        noteHtml;
+
+      container.appendChild(card);
+    });
+
+    showView('ready');
+  }
+
   function esc(str) {
     const el = document.createElement('span');
     el.textContent = str;
@@ -192,6 +326,13 @@ const App = (function () {
   // Event handlers
 
   function bindEvents() {
+    $$('.nav-tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        activeView = tab.dataset.view;
+        render();
+      });
+    });
+
     $('#search-input').addEventListener('input', (e) => {
       searchQuery = e.target.value;
       renderOrders();
@@ -227,7 +368,44 @@ const App = (function () {
       }
     });
 
-    $('#fab-add').addEventListener('click', () => openOrderForm(null));
+    $('#income-filter-start').addEventListener('change', (e) => {
+      incomeStartDate = e.target.value;
+      renderIncomes();
+    });
+
+    $('#income-filter-end').addEventListener('change', (e) => {
+      incomeEndDate = e.target.value;
+      renderIncomes();
+    });
+
+    $('#btn-reset-income-filter').addEventListener('click', () => {
+      incomeStartDate = '';
+      incomeEndDate = '';
+      $('#income-filter-start').value = '';
+      $('#income-filter-end').value = '';
+      renderIncomes();
+    });
+
+    $('#income-list').addEventListener('click', (e) => {
+      const card = e.target.closest('.income-card');
+      if (card) openIncomeForm(Number(card.dataset.id));
+    });
+
+    $('#income-list').addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('.income-card');
+      if (!card) return;
+      e.preventDefault();
+      openIncomeForm(Number(card.dataset.id));
+    });
+
+    $('#fab-add').addEventListener('click', () => {
+      if (activeView === 'incomes') {
+        openIncomeForm(null);
+      } else {
+        openOrderForm(null);
+      }
+    });
 
     $('#field-type').addEventListener('change', toggleProgressSection);
     $('#field-status').addEventListener('change', updateCompletePrompt);
@@ -261,6 +439,25 @@ const App = (function () {
       $('#btn-save-order').disabled = false;
       $('#btn-delete-order').disabled = false;
       resetCopyButton();
+    });
+
+    $('#income-field-order').addEventListener('input', updateIncomeOrderHint);
+
+    $('#income-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveIncome();
+    });
+
+    $('#btn-cancel-income').addEventListener('click', () => {
+      $('#income-dialog').close();
+    });
+
+    $('#btn-delete-income').addEventListener('click', handleDeleteIncome);
+
+    $('#income-dialog').addEventListener('close', () => {
+      editingIncomeId = null;
+      $('#btn-save-income').disabled = false;
+      $('#btn-delete-income').disabled = false;
     });
 
     // Status picker
@@ -373,6 +570,14 @@ const App = (function () {
       $('#field-status-group').hidden = false;
       $('#btn-delete-order').hidden = false;
 
+      const orderIncomes = incomes.filter((inc) => inc.orderId === order.orderId);
+      const totalPaid = orderIncomes.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
+      $('#order-paid-total').textContent = 'Rp ' + formatPrice(totalPaid);
+      $('#order-paid-count').textContent = orderIncomes.length === 0
+        ? 'Belum ada pemasukan tercatat'
+        : (orderIncomes.length + ' catatan pemasukan');
+      $('#order-paid-group').hidden = false;
+
       const prog = progressMap[order.orderId];
       currentSteps = prog && Array.isArray(prog.steps)
         ? prog.steps.map((s) => ({
@@ -389,6 +594,9 @@ const App = (function () {
       $('#detail-order-id-row').hidden = true;
       $('#field-status').value = 'menunggu_bayar';
       $('#field-status-group').hidden = true;
+      $('#order-paid-group').hidden = true;
+      $('#order-paid-total').textContent = 'Rp 0';
+      $('#order-paid-count').textContent = 'Belum ada pemasukan tercatat';
       $('#btn-delete-order').hidden = true;
       currentSteps = [];
     }
@@ -723,6 +931,196 @@ const App = (function () {
     }
   }
 
+  function populateIncomePaymentSelect(selectedMethod) {
+    const sel = $('#income-field-payment');
+    sel.innerHTML = '<option value="">Pilih metode</option>';
+    const names = [];
+    paymentMethods.forEach((pm) => {
+      names.push(pm.name);
+      const opt = document.createElement('option');
+      opt.value = pm.name;
+      opt.textContent = pm.name;
+      sel.appendChild(opt);
+    });
+    if (selectedMethod && !names.includes(selectedMethod)) {
+      const extra = document.createElement('option');
+      extra.value = selectedMethod;
+      extra.textContent = selectedMethod;
+      sel.appendChild(extra);
+    }
+  }
+
+  function populateIncomeOrderDatalist() {
+    const dl = $('#income-order-datalist');
+    dl.innerHTML = '';
+    const sorted = orders.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    sorted.forEach((o) => {
+      const opt = document.createElement('option');
+      opt.value = o.orderId;
+      opt.textContent = o.customerName + ' - ' + o.game + ' (Rp ' + formatPrice(o.price) + ')';
+      dl.appendChild(opt);
+    });
+  }
+
+  function updateIncomeOrderHint() {
+    const raw = $('#income-field-order').value.trim();
+    const hint = $('#income-order-hint');
+    if (!raw) {
+      hint.textContent = 'Kosongkan jika berdiri sendiri tanpa pesanan.';
+      return;
+    }
+    const matched = orders.find((o) => o.orderId.toLowerCase() === raw.toLowerCase());
+    if (matched) {
+      hint.textContent = 'Terhubung ke: ' + matched.customerName + ' - ' + matched.game + ' (Harga: Rp ' + formatPrice(matched.price) + ')';
+    } else {
+      hint.textContent = 'ID pesanan tidak ditemukan di daftar pesanan.';
+    }
+  }
+
+  function openIncomeForm(id) {
+    editingIncomeId = id;
+    const dialog = $('#income-dialog');
+    const form = $('#income-form');
+    form.reset();
+    $('#btn-save-income').disabled = false;
+    $('#btn-delete-income').disabled = false;
+    populateIncomeOrderDatalist();
+
+    if (id !== null) {
+      const inc = incomes.find((x) => x.id === id);
+      if (!inc) return;
+      $('#income-form-title').textContent = 'Detail Pemasukan';
+      $('#detail-income-id').textContent = inc.incomeId;
+      $('#detail-income-id-row').hidden = false;
+      populateIncomePaymentSelect(inc.paymentMethod);
+      $('#income-field-date').value = inc.date;
+      $('#income-field-amount').value = inc.amount || '';
+      $('#income-field-payment').value = inc.paymentMethod || '';
+      $('#income-field-order').value = inc.orderId || '';
+      $('#income-field-note').value = inc.note || '';
+      $('#btn-delete-income').hidden = false;
+    } else {
+      $('#income-form-title').textContent = 'Tambah Pemasukan';
+      $('#detail-income-id').textContent = '';
+      $('#detail-income-id-row').hidden = true;
+      populateIncomePaymentSelect('');
+      $('#income-field-date').value = todayYmd();
+      $('#income-field-amount').value = '';
+      $('#income-field-payment').value = '';
+      $('#income-field-order').value = '';
+      $('#income-field-note').value = '';
+      $('#btn-delete-income').hidden = true;
+    }
+
+    updateIncomeOrderHint();
+    dialog.showModal();
+    if (id === null) {
+      $('#income-field-amount').focus();
+    }
+  }
+
+  async function saveIncome() {
+    const saveBtn = $('#btn-save-income');
+    if (saveBtn.disabled) return;
+
+    const dateVal = $('#income-field-date').value.trim();
+    const amountVal = Number($('#income-field-amount').value) || 0;
+    const paymentVal = $('#income-field-payment').value.trim();
+    const rawOrderId = $('#income-field-order').value.trim();
+    const noteVal = $('#income-field-note').value.trim();
+
+    if (!dateVal) {
+      toast('Tanggal pemasukan wajib diisi');
+      $('#income-field-date').focus();
+      return;
+    }
+
+    if (amountVal <= 0) {
+      toast('Jumlah pemasukan harus lebih dari Rp 0');
+      $('#income-field-amount').focus();
+      return;
+    }
+
+    if (!paymentVal) {
+      toast('Metode pembayaran wajib dipilih');
+      $('#income-field-payment').focus();
+      return;
+    }
+
+    let linkedOrderId = null;
+    if (rawOrderId) {
+      const matchedOrder = orders.find(
+        (o) => o.orderId.toLowerCase() === rawOrderId.toLowerCase()
+      );
+      const existingIncome = editingIncomeId !== null
+        ? incomes.find((inc) => inc.id === editingIncomeId)
+        : null;
+      if (matchedOrder) {
+        linkedOrderId = matchedOrder.orderId;
+      } else if (
+        existingIncome &&
+        existingIncome.orderId &&
+        existingIncome.orderId.toLowerCase() === rawOrderId.toLowerCase()
+      ) {
+        linkedOrderId = existingIncome.orderId;
+      } else {
+        toast('ID pesanan tidak ditemukan');
+        $('#income-field-order').focus();
+        return;
+      }
+    }
+
+    const data = {
+      date: dateVal,
+      amount: amountVal,
+      paymentMethod: paymentVal,
+      orderId: linkedOrderId,
+      note: noteVal
+    };
+
+    saveBtn.disabled = true;
+
+    try {
+      if (editingIncomeId !== null) {
+        await ShugenDB.incomes.update(editingIncomeId, data);
+        toast('Pemasukan diperbarui');
+      } else {
+        await ShugenDB.incomes.add(data);
+        toast('Pemasukan ditambahkan');
+      }
+      incomes = await ShugenDB.incomes.getAll();
+      render();
+      $('#income-dialog').close();
+    } catch (err) {
+      console.error(err);
+      toast('Gagal menyimpan pemasukan');
+    } finally {
+      saveBtn.disabled = false;
+    }
+  }
+
+  async function handleDeleteIncome() {
+    const deleteBtn = $('#btn-delete-income');
+    if (deleteBtn.disabled) return;
+    if (editingIncomeId === null) return;
+    if (!confirm('Hapus pemasukan ini?')) return;
+
+    deleteBtn.disabled = true;
+
+    try {
+      await ShugenDB.incomes.delete(editingIncomeId);
+      incomes = await ShugenDB.incomes.getAll();
+      render();
+      $('#income-dialog').close();
+      toast('Pemasukan dihapus');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal menghapus pemasukan');
+    } finally {
+      deleteBtn.disabled = false;
+    }
+  }
+
   // Quick status picker
 
   function openStatusPicker(id) {
@@ -843,6 +1241,7 @@ const App = (function () {
     try {
       await DummyData.load();
       orders = await ShugenDB.orders.getAll();
+      incomes = await ShugenDB.incomes.getAll();
       await refreshProgressMap();
       paymentMethods = await ShugenDB.payment.getAll();
       render();

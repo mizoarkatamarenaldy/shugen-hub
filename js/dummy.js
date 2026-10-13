@@ -128,9 +128,76 @@ const DummyData = (function () {
     ]
   };
 
+  const INCOMES = [
+    {
+      incomeId: 'MSK-261011-A8D3',
+      date: '2026-10-11',
+      amount: 150000,
+      paymentMethod: 'Transfer BCA',
+      orderId: 'SGN-261011-K7M4',
+      note: 'Pelunasan langsung joki Epic ke Legend',
+      createdAt: new Date('2026-10-11T09:35:00')
+    },
+    {
+      incomeId: 'MSK-261011-F4P6',
+      date: '2026-10-11',
+      amount: 95000,
+      paymentMethod: 'DANA',
+      orderId: 'SGN-261011-R9W2',
+      note: 'Pembayaran penuh Welkin Moon + 300 GC',
+      createdAt: new Date('2026-10-11T11:20:00')
+    },
+    {
+      incomeId: 'MSK-261012-M2Y9',
+      date: '2026-10-12',
+      amount: 100000,
+      paymentMethod: 'Transfer BRI',
+      orderId: 'SGN-261012-4H8P',
+      note: 'DP 50% joki Valorant Silver ke Gold',
+      createdAt: new Date('2026-10-12T08:05:00')
+    },
+    {
+      incomeId: 'MSK-261012-N7W3',
+      date: '2026-10-12',
+      amount: 100000,
+      paymentMethod: 'Transfer BRI',
+      orderId: 'SGN-261012-4H8P',
+      note: 'Pelunasan joki Valorant Silver ke Gold',
+      createdAt: new Date('2026-10-12T16:15:00')
+    },
+    {
+      incomeId: 'MSK-261012-Q5R8',
+      date: '2026-10-12',
+      amount: 50000,
+      paymentMethod: 'Cash',
+      orderId: 'SGN-261012-T5V9',
+      note: 'DP awal sebelum pesanan dibatalkan',
+      createdAt: new Date('2026-10-12T13:10:00')
+    },
+    {
+      incomeId: 'MSK-261013-C9K2',
+      date: '2026-10-13',
+      amount: 125000,
+      paymentMethod: 'DANA',
+      orderId: 'SGN-261013-L2C7',
+      note: 'DP 50% Spiral Abyss Floor 12',
+      createdAt: new Date('2026-10-13T08:15:00')
+    },
+    {
+      incomeId: 'MSK-261013-V6H4',
+      date: '2026-10-13',
+      amount: 45000,
+      paymentMethod: 'Cash',
+      orderId: null,
+      note: 'Jasa cek dan bind akun langsung di toko',
+      createdAt: new Date('2026-10-13T10:30:00')
+    }
+  ];
+
   async function load() {
     await ShugenDB.orders.clear();
     await ShugenDB.progress.clear();
+    await ShugenDB.incomes.clear();
     await ShugenDB.payment.clear();
 
     for (const name of PAYMENT_METHODS) {
@@ -142,6 +209,10 @@ const DummyData = (function () {
       if (order.type === 'joki' && PROGRESS[order.orderId]) {
         await ShugenDB.progress.save(order.orderId, PROGRESS[order.orderId]);
       }
+    }
+
+    for (const income of INCOMES) {
+      await ShugenDB.incomes.add(income);
     }
   }
 

@@ -37,27 +37,16 @@
     </div>
   </header>
 
-  <main>
-    <div class="search-bar">
-      <div class="search-wrap">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="8"/>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input type="search" id="search-input" class="search-input" placeholder="Cari pelanggan, game, atau ID..." aria-label="Cari pesanan berdasarkan nama, game, atau ID">
-      </div>
+  <nav class="main-nav" aria-label="Menu utama">
+    <div class="main-nav-inner">
+      <button type="button" class="nav-tab active" data-view="orders" aria-current="page">Pesanan</button>
+      <button type="button" class="nav-tab" data-view="incomes">Pemasukan</button>
     </div>
+  </nav>
 
-    <nav class="status-tabs" aria-label="Filter status pesanan">
-      <button type="button" class="tab active" data-status="semua" aria-selected="true">Semua</button>
-      <button type="button" class="tab" data-status="menunggu_bayar" aria-selected="false">Menunggu Bayar</button>
-      <button type="button" class="tab" data-status="diproses" aria-selected="false">Diproses</button>
-      <button type="button" class="tab" data-status="selesai" aria-selected="false">Selesai</button>
-      <button type="button" class="tab" data-status="dibatalkan" aria-selected="false">Dibatalkan</button>
-    </nav>
-
+  <main>
     <div id="loading-state" class="app-state" hidden>
-      <p class="state-message">Memuat pesanan...</p>
+      <p class="state-message">Memuat data...</p>
     </div>
 
     <div id="error-state" class="app-state" hidden>
@@ -65,17 +54,75 @@
       <p class="state-hint">Muat ulang halaman atau periksa penyimpanan lokal perangkat.</p>
     </div>
 
-    <div id="empty-state" class="app-state" hidden>
-      <p class="state-message">Belum ada pesanan</p>
-      <p class="state-hint">Tap tombol + di bawah untuk menambah pesanan, atau muat data demo di Pengaturan.</p>
+    <div id="view-orders">
+      <div class="search-bar">
+        <div class="search-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="search" id="search-input" class="search-input" placeholder="Cari pelanggan, game, atau ID..." aria-label="Cari pesanan berdasarkan nama, game, atau ID">
+        </div>
+      </div>
+
+      <nav class="status-tabs" aria-label="Filter status pesanan">
+        <button type="button" class="tab active" data-status="semua" aria-selected="true">Semua</button>
+        <button type="button" class="tab" data-status="menunggu_bayar" aria-selected="false">Menunggu Bayar</button>
+        <button type="button" class="tab" data-status="diproses" aria-selected="false">Diproses</button>
+        <button type="button" class="tab" data-status="selesai" aria-selected="false">Selesai</button>
+        <button type="button" class="tab" data-status="dibatalkan" aria-selected="false">Dibatalkan</button>
+      </nav>
+
+      <div id="empty-state" class="app-state" hidden>
+        <p class="state-message">Belum ada pesanan</p>
+        <p class="state-hint">Tap tombol + di bawah untuk menambah pesanan, atau muat data demo di Pengaturan.</p>
+      </div>
+
+      <div id="empty-filtered" class="app-state" hidden>
+        <p class="state-message">Tidak ada pesanan yang sesuai</p>
+        <p class="state-hint">Coba ubah kata kunci pencarian atau pilih tab status yang lain.</p>
+      </div>
+
+      <section id="order-list" class="order-list" aria-label="Daftar pesanan"></section>
     </div>
 
-    <div id="empty-filtered" class="app-state" hidden>
-      <p class="state-message">Tidak ada pesanan yang sesuai</p>
-      <p class="state-hint">Coba ubah kata kunci pencarian atau pilih tab status yang lain.</p>
-    </div>
+    <div id="view-incomes" hidden>
+      <section class="income-controls" aria-label="Filter dan ringkasan pemasukan">
+        <div class="income-filter-bar">
+          <div class="income-filter-fields">
+            <div class="income-filter-field">
+              <label class="form-label" for="income-filter-start">Dari Tanggal</label>
+              <input type="date" id="income-filter-start" class="form-input income-date-input">
+            </div>
+            <div class="income-filter-field">
+              <label class="form-label" for="income-filter-end">Sampai Tanggal</label>
+              <input type="date" id="income-filter-end" class="form-input income-date-input">
+            </div>
+          </div>
+          <button type="button" id="btn-reset-income-filter" class="btn btn-secondary btn-small btn-reset-filter" hidden>Reset Filter</button>
+        </div>
 
-    <section id="order-list" class="order-list" aria-label="Daftar pesanan"></section>
+        <div class="income-summary-bar" aria-live="polite">
+          <div class="income-summary-meta">
+            <span class="income-summary-label">Total Pemasukan</span>
+            <span id="income-summary-count" class="income-summary-count">0 transaksi</span>
+          </div>
+          <strong id="income-summary-total" class="income-summary-total">Rp 0</strong>
+        </div>
+      </section>
+
+      <div id="income-empty-state" class="app-state" hidden>
+        <p class="state-message">Belum ada pemasukan</p>
+        <p class="state-hint">Tap tombol + di bawah untuk mencatat pemasukan, atau muat data demo di Pengaturan.</p>
+      </div>
+
+      <div id="income-empty-filtered" class="app-state" hidden>
+        <p class="state-message">Tidak ada pemasukan pada rentang tanggal ini</p>
+        <p class="state-hint">Coba ubah rentang tanggal atau tap Reset Filter.</p>
+      </div>
+
+      <section id="income-list" class="income-list" aria-label="Daftar pemasukan"></section>
+    </div>
 
     <button type="button" class="fab" id="fab-add" aria-label="Tambah pesanan baru">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
@@ -170,6 +217,14 @@
           </div>
         </div>
 
+        <div id="order-paid-group" class="order-paid-box" hidden>
+          <div class="order-paid-meta">
+            <span class="order-paid-label">Total Sudah Dibayar</span>
+            <span id="order-paid-count" class="order-paid-count">Belum ada pemasukan tercatat</span>
+          </div>
+          <strong id="order-paid-total" class="order-paid-value">Rp 0</strong>
+        </div>
+
         <div id="field-status-group" class="form-group" hidden>
           <label class="form-label" for="field-status">Status Pesanan</label>
           <select id="field-status" class="form-select">
@@ -184,6 +239,64 @@
       <div class="dialog-footer">
         <button type="button" id="btn-delete-order" class="btn btn-danger" hidden>Hapus</button>
         <button type="submit" id="btn-save-order" class="btn btn-primary">Simpan</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="income-dialog" aria-labelledby="income-form-title">
+    <div class="dialog-header">
+      <div class="dialog-header-titles">
+        <h2 id="income-form-title" class="dialog-title">Tambah Pemasukan</h2>
+        <div id="detail-income-id-row" class="dialog-order-id-row" hidden>
+          <span id="detail-income-id" class="dialog-order-id"></span>
+        </div>
+      </div>
+      <button type="button" class="btn-icon" id="btn-cancel-income" aria-label="Tutup form pemasukan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <form id="income-form">
+      <div class="dialog-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="income-field-date">Tanggal *</label>
+            <input type="date" id="income-field-date" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="income-field-payment">Metode Pembayaran *</label>
+            <select id="income-field-payment" class="form-select" required>
+              <option value="">Pilih metode</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="income-field-amount">Jumlah (Rp) *</label>
+          <div class="form-price-wrap">
+            <span class="form-price-prefix">Rp</span>
+            <input type="number" id="income-field-amount" class="form-input form-input-price" min="1" step="1" required placeholder="0">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="income-field-order">ID Pesanan (Opsional)</label>
+          <input type="text" id="income-field-order" class="form-input" list="income-order-datalist" placeholder="Contoh: SGN-261011-K7M4" autocomplete="off">
+          <datalist id="income-order-datalist"></datalist>
+          <p id="income-order-hint" class="form-hint">Kosongkan jika berdiri sendiri tanpa pesanan.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="income-field-note">Catatan</label>
+          <textarea id="income-field-note" class="form-textarea" placeholder="Contoh: DP 50% atau pelunasan pesanan"></textarea>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" id="btn-delete-income" class="btn btn-danger" hidden>Hapus</button>
+        <button type="submit" id="btn-save-income" class="btn btn-primary">Simpan</button>
       </div>
     </form>
   </dialog>
@@ -229,7 +342,7 @@
       </div>
       <div class="settings-section">
         <div class="settings-label">Data Demo Portofolio</div>
-        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Muat data contoh 8 pesanan untuk demonstrasi dan uji coba tampilan.</p>
+        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Muat data contoh pesanan dan pemasukan untuk demonstrasi dan uji coba tampilan.</p>
         <button type="button" id="btn-load-demo" class="btn btn-secondary btn-demo">Muat Data Demo</button>
       </div>
     </div>

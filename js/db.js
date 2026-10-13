@@ -1,6 +1,6 @@
 const ShugenDB = (function () {
   const DB_NAME = 'shugen-hub';
-  const DB_VERSION = 2;
+  const DB_VERSION = 3;
   let _db = null;
 
   const DEFAULT_PAYMENT_METHODS = [
@@ -34,6 +34,16 @@ const ShugenDB = (function () {
         }
         if (!db.objectStoreNames.contains('progress')) {
           db.createObjectStore('progress', { keyPath: 'orderId' });
+        }
+        if (!db.objectStoreNames.contains('incomes')) {
+          const incomeStore = db.createObjectStore('incomes', {
+            keyPath: 'id',
+            autoIncrement: true
+          });
+          incomeStore.createIndex('incomeId', 'incomeId', { unique: true });
+          incomeStore.createIndex('orderId', 'orderId');
+          incomeStore.createIndex('date', 'date');
+          incomeStore.createIndex('createdAt', 'createdAt');
         }
       };
 
@@ -267,6 +277,131 @@ const ShugenDB = (function () {
     return req2p(tx('progress', 'readwrite').clear());
   }
 
+  let _addIncomeQueue = Promise.resolve();
+
+  function normalizeDateStr(dateInput) {
+    if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput.trim())) {
+      return dateInput.trim();
+    }
+    const d = dateInput ? new Date(dateInput) : new Date();
+    const valid = isNaN(d.getTime()) ? new Date() : d;
+    const yyyy = String(valid.getFullYear());
+    const mm = String(valid.getMonth() + 1).padStart(2, '0');
+    const dd = String(valid.getDate()).padStart(2, '0');
+    return yyyy + '-' + mm + '-' + dd;
+  }
+
+  function buildCandidateIncomeId(dateStr) {
+    const cleanDate = normalizeDateStr(dateStr);
+    const yy = cleanDate.slice(2, 4);
+    const mm = cleanDate.slice(5, 7);
+    const dd = cleanDate.slice(8, 10);
+    return 'MSK-' + yy + mm + dd + '-' + randomIdCode(4);
+  }
+
+  async function getAllIncomes() {
+    await open();
+    return req2p(tx('incomes', 'readonly').getAll());
+  }
+
+  async function getIncome(id) {
+    await open();
+    return req2p(tx('incomes', 'readonly').get(id));
+  }
+
+  async function getIncomesByOrderId(orderId) {
+    await open();
+    if (!orderId) return [];
+    const idx = tx('incomes', 'readonly').index('orderId');
+    return req2p(idx.getAll(orderId));
+  }
+
+  function addIncome(income) {
+    const run = _addIncomeQueue.then(async () => {
+      await open();
+      return new Promise((resolve, reject) => {
+        const transaction = _db.transaction('incomes', 'readwrite');
+        const store = transaction.objectStore('incomes');
+        const idx = store.index('incomeId');
+        const now = new Date();
+        const dateStr = normalizeDateStr(income.date);
+        let savedRecord = null;
+
+        transaction.oncomplete = () => resolve(savedRecord);
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error || new Error('Transaksi dibatalkan'));
+
+        function tryInsert(preferredId) {
+          const candidate = preferredId || buildCandidateIncomeId(dateStr);
+          const checkReq = idx.getKey(candidate);
+          checkReq.onsuccess = () => {
+            if (checkReq.result !== undefined) {
+              tryInsert(null);
+              return;
+            }
+            const cleanOrderId = income.orderId ? String(income.orderId).trim() : '';
+            const record = {
+              incomeId: candidate,
+              date: dateStr,
+              amount: Number(income.amount) || 0,
+              paymentMethod: String(income.paymentMethod || '').trim(),
+              orderId: cleanOrderId || null,
+              note: String(income.note || '').trim(),
+              createdAt: income.createdAt || now,
+              updatedAt: now
+            };
+            const addReq = store.add(record);
+            addReq.onsuccess = () => {
+              record.id = addReq.result;
+              savedRecord = record;
+            };
+            addReq.onerror = (e) => {
+              if (addReq.error && addReq.error.name === 'ConstraintError') {
+                e.preventDefault();
+                e.stopPropagation();
+                tryInsert(null);
+              }
+            };
+          };
+        }
+
+        tryInsert(income.incomeId || null);
+      });
+    });
+    _addIncomeQueue = run.catch(() => {});
+    return run;
+  }
+
+  async function updateIncome(id, changes) {
+    await open();
+    const store = tx('incomes', 'readwrite');
+    const existing = await req2p(store.get(id));
+    if (!existing) throw new Error('Pemasukan tidak ditemukan');
+    const nextOrderId = changes.orderId !== undefined
+      ? (String(changes.orderId || '').trim() || null)
+      : existing.orderId;
+    const updated = Object.assign({}, existing, {
+      date: changes.date !== undefined ? normalizeDateStr(changes.date) : existing.date,
+      amount: changes.amount !== undefined ? (Number(changes.amount) || 0) : existing.amount,
+      paymentMethod: changes.paymentMethod !== undefined ? String(changes.paymentMethod || '').trim() : existing.paymentMethod,
+      orderId: nextOrderId,
+      note: changes.note !== undefined ? String(changes.note || '').trim() : existing.note,
+      updatedAt: new Date()
+    });
+    await req2p(store.put(updated));
+    return updated;
+  }
+
+  async function deleteIncome(id) {
+    await open();
+    return req2p(tx('incomes', 'readwrite').delete(id));
+  }
+
+  async function clearIncomes() {
+    await open();
+    return req2p(tx('incomes', 'readwrite').clear());
+  }
+
   // Payment methods
 
   async function getAllPaymentMethods() {
@@ -340,6 +475,15 @@ const ShugenDB = (function () {
       delete: deleteProgress,
       clear: clearProgress,
       calcPercentage: calcPercentage
+    },
+    incomes: {
+      getAll: getAllIncomes,
+      get: getIncome,
+      getByOrderId: getIncomesByOrderId,
+      add: addIncome,
+      update: updateIncome,
+      delete: deleteIncome,
+      clear: clearIncomes
     },
     payment: {
       getAll: getAllPaymentMethods,
