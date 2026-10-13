@@ -19,6 +19,19 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #016 [2026-10-13] Implementasi Fitur 12 (Backup dan restore manual)
+- Fitur: Backup dan restore manual (export/import file)
+- Ringkasan: Menambahkan bagian Backup dan Restore di dialog Pengaturan dengan fitur export seluruh object store IndexedDB ke file JSON berformat shugen-backup-YYYYMMDD-HHMM.json dan import file backup dengan validasi ketat (penanda aplikasi shugen-hub, format JSON, dan kecocokan versi skema database). Proses restore dijalankan dalam satu transaksi IndexedDB dengan konfirmasi pengguna serta pemulihan tampilan otomatis ke seluruh menu, pengaman tombol selama operasi berlangsung, dan peningkatan cache service worker ke shugen-v14.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - index.html
+  - js/app.js
+  - js/db.js
+  - sw.js
+- Catatan: Versi skema IndexedDB tetap pada versi 8 (tanpa penambahan store baru); versi cache service worker dinaikkan ke shugen-v14.
+
 ### #015 [2026-10-13] Implementasi Fitur 14 (Kategori game)
 - Fitur: Kategori game (daftar game di Pengaturan, wajib dipilih di form pesanan)
 - Ringkasan: Menambahkan pengelolaan kategori game dinamis di Pengaturan (tambah, ganti nama, dan hapus) dengan validasi nama unik tidak peka huruf besar/kecil. Mengubah input game pada form pesanan menjadi dropdown pilihan wajib yang menyimpan ID game (gameId) berformat GAM-YYMMDD-XXXX, memblokir simpan pesanan dan menampilkan peringatan jika daftar game kosong, serta mencegah penghapusan game yang sedang dipakai pesanan. Menampilkan nama game terbaru berdasarkan gameId di daftar pesanan, pencarian pesanan, detail pesanan, invoice, dan riwayat pesanan pelanggan, menaikkan skema IndexedDB ke versi 8 dengan store games, memperbarui data demo di js/dummy.js, dan menaikkan versi cache service worker ke shugen-v13.

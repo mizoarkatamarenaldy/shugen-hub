@@ -1125,7 +1125,13 @@ const App = (function () {
       $('#btn-add-payment').disabled = false;
       $('#btn-add-game').disabled = false;
       $('#btn-add-category').disabled = false;
+      $('#btn-export-backup').disabled = false;
+      $('#btn-import-backup').disabled = false;
     });
+
+    $('#btn-export-backup').addEventListener('click', exportBackup);
+    $('#btn-import-backup').addEventListener('click', triggerImportBackup);
+    $('#backup-file-input').addEventListener('change', handleBackupFileSelected);
 
     $('#btn-add-payment').addEventListener('click', addPaymentMethod);
     $('#payment-add-input').addEventListener('keydown', (e) => {
@@ -2227,6 +2233,8 @@ const App = (function () {
     $('#btn-add-game').disabled = false;
     $('#btn-add-category').disabled = false;
     $('#btn-save-shop-info').disabled = false;
+    $('#btn-export-backup').disabled = false;
+    $('#btn-import-backup').disabled = false;
     $('#setting-shop-name').value = shopName || 'Shugen Store';
     $('#setting-shop-contact').value = shopContact || '';
     renderPaymentList();
@@ -3011,6 +3019,134 @@ const App = (function () {
     }
   }
 
+  // App data reload
+
+  async function reloadAllAppData() {
+    orders = await ShugenDB.orders.getAll();
+    games = await ShugenDB.games.getAll();
+    incomes = await ShugenDB.incomes.getAll();
+    expenses = await ShugenDB.expenses.getAll();
+    invoices = await ShugenDB.invoices.getAll();
+    customers = await ShugenDB.customers.getAll();
+    populateCustomerDatalist();
+    expenseCategories = await ShugenDB.categories.getAll();
+    await refreshProgressMap();
+    paymentMethods = await ShugenDB.payment.getAll();
+    const savedBalance = await ShugenDB.cash.get('initialBalance');
+    cashInitialBalance = (savedBalance !== null && savedBalance !== undefined) ? Number(savedBalance) : 0;
+    const savedShopName = await ShugenDB.settings.get('shopName');
+    shopName = savedShopName || 'Shugen Store';
+    const savedShopContact = await ShugenDB.settings.get('shopContact');
+    shopContact = savedShopContact || '';
+    $('#setting-shop-name').value = shopName;
+    $('#setting-shop-contact').value = shopContact;
+    await loadTheme();
+    render();
+    renderPaymentList();
+    renderGameList();
+    renderCategoryList();
+    showView('ready');
+  }
+
+  // Backup & Restore actions
+
+  function formatBackupTimestamp(date) {
+    const d = date || new Date();
+    const yyyy = String(d.getFullYear());
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return yyyy + mm + dd + '-' + hh + min;
+  }
+
+  async function exportBackup() {
+    const exportBtn = $('#btn-export-backup');
+    const importBtn = $('#btn-import-backup');
+    if (exportBtn.disabled) return;
+
+    exportBtn.disabled = true;
+    importBtn.disabled = true;
+
+    try {
+      const data = await ShugenDB.backup.exportData();
+      const filename = 'shugen-backup-' + formatBackupTimestamp(new Date()) + '.json';
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        if (a.parentNode) a.parentNode.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+      toast('Backup data berhasil diunduh');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal mengekspor backup: ' + (err.message || 'terjadi kesalahan'));
+    } finally {
+      exportBtn.disabled = false;
+      importBtn.disabled = false;
+    }
+  }
+
+  function triggerImportBackup() {
+    const importBtn = $('#btn-import-backup');
+    if (importBtn.disabled) return;
+    const fileInput = $('#backup-file-input');
+    fileInput.value = '';
+    fileInput.click();
+  }
+
+  async function handleBackupFileSelected(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    const exportBtn = $('#btn-export-backup');
+    const importBtn = $('#btn-import-backup');
+    if (importBtn.disabled) return;
+
+    exportBtn.disabled = true;
+    importBtn.disabled = true;
+
+    try {
+      const fileText = await file.text();
+      let parsed;
+      try {
+        parsed = JSON.parse(fileText);
+      } catch (jsonErr) {
+        toast('File backup tidak valid: format JSON rusak.');
+        return;
+      }
+
+      const validation = ShugenDB.backup.validate(parsed);
+      if (!validation.valid) {
+        toast(validation.error);
+        return;
+      }
+
+      const confirmed = window.confirm(
+        'Semua data saat ini akan DIGANTI dengan isi file backup. Lanjutkan proses import?'
+      );
+      if (!confirmed) {
+        return;
+      }
+
+      await ShugenDB.backup.importData(parsed);
+      await reloadAllAppData();
+      toast('Data backup berhasil dipulihkan');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal mengimpor backup: ' + (err.message || 'terjadi kesalahan'));
+    } finally {
+      exportBtn.disabled = false;
+      importBtn.disabled = false;
+      e.target.value = '';
+    }
+  }
+
   // Demo data actions
 
   async function loadDemoData() {
@@ -3022,28 +3158,7 @@ const App = (function () {
 
     try {
       await DummyData.load();
-      orders = await ShugenDB.orders.getAll();
-      games = await ShugenDB.games.getAll();
-      incomes = await ShugenDB.incomes.getAll();
-      expenses = await ShugenDB.expenses.getAll();
-      invoices = await ShugenDB.invoices.getAll();
-      customers = await ShugenDB.customers.getAll();
-      populateCustomerDatalist();
-      expenseCategories = await ShugenDB.categories.getAll();
-      await refreshProgressMap();
-      paymentMethods = await ShugenDB.payment.getAll();
-      const savedBalance = await ShugenDB.cash.get('initialBalance');
-      cashInitialBalance = (savedBalance !== null && savedBalance !== undefined) ? Number(savedBalance) : 0;
-      const savedShopName = await ShugenDB.settings.get('shopName');
-      shopName = savedShopName || 'Shugen Store';
-      const savedShopContact = await ShugenDB.settings.get('shopContact');
-      shopContact = savedShopContact || '';
-      $('#setting-shop-name').value = shopName;
-      $('#setting-shop-contact').value = shopContact;
-      render();
-      renderPaymentList();
-      renderGameList();
-      renderCategoryList();
+      await reloadAllAppData();
       toast('Data demo dimuat');
     } catch (err) {
       console.error(err);

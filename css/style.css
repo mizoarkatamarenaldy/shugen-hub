@@ -873,6 +873,23 @@ dialog.dialog-settings {
   justify-content: center;
 }
 
+.backup-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.backup-actions .btn {
+  flex: 1;
+  justify-content: center;
+  min-height: 44px;
+}
+
+@media (max-width: 360px) {
+  .backup-actions {
+    flex-direction: column;
+  }
+}
+
 .progress-section {
   margin-bottom: 16px;
   padding: 12px;

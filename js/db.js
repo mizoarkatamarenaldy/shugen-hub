@@ -1174,6 +1174,138 @@ const ShugenDB = (function () {
     return req2p(tx('games', 'readwrite').clear());
   }
 
+  // Backup & Restore
+
+  function reviveDates(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) {
+      return obj.map(reviveDates);
+    }
+    const copy = {};
+    for (const k of Object.keys(obj)) {
+      const val = obj[k];
+      if ((k === 'createdAt' || k === 'updatedAt') && typeof val === 'string') {
+        const d = new Date(val);
+        copy[k] = isNaN(d.getTime()) ? val : d;
+      } else if (val && typeof val === 'object') {
+        copy[k] = reviveDates(val);
+      } else {
+        copy[k] = val;
+      }
+    }
+    return copy;
+  }
+
+  function validateBackupData(data) {
+    if (!data || typeof data !== 'object') {
+      return { valid: false, error: 'Format file backup tidak valid.' };
+    }
+    if (data.app !== 'shugen-hub') {
+      return { valid: false, error: 'Penanda aplikasi tidak cocok. File ini bukan backup Shugen Hub.' };
+    }
+    const fileVersion = data.version !== undefined ? data.version : data.schemaVersion;
+    if (fileVersion !== DB_VERSION) {
+      return {
+        valid: false,
+        error: 'Versi skema backup (' + fileVersion + ') tidak sama dengan versi aplikasi saat ini (' + DB_VERSION + ').'
+      };
+    }
+    if (!data.stores || typeof data.stores !== 'object') {
+      return { valid: false, error: 'Data store tidak ditemukan di dalam file backup.' };
+    }
+    return { valid: true, error: null };
+  }
+
+  async function exportAllData() {
+    await open();
+    const storeNames = Array.from(_db.objectStoreNames);
+    return new Promise((resolve, reject) => {
+      const transaction = _db.transaction(storeNames, 'readonly');
+      const storesData = {};
+
+      transaction.onabort = () => reject(transaction.error || new Error('Transaksi export dibatalkan'));
+      transaction.onerror = () => reject(transaction.error || new Error('Gagal membaca data dari database'));
+
+      storeNames.forEach((name) => {
+        const store = transaction.objectStore(name);
+        const req = store.getAll();
+        req.onsuccess = () => {
+          storesData[name] = req.result || [];
+        };
+      });
+
+      transaction.oncomplete = () => {
+        resolve({
+          app: 'shugen-hub',
+          version: DB_VERSION,
+          schemaVersion: DB_VERSION,
+          exportedAt: new Date().toISOString(),
+          stores: storesData
+        });
+      };
+    });
+  }
+
+  async function importAllData(backupData) {
+    await open();
+    const validation = validateBackupData(backupData);
+    if (!validation.valid) {
+      throw new Error(validation.error);
+    }
+
+    const storeNames = Array.from(_db.objectStoreNames);
+
+    return new Promise((resolve, reject) => {
+      let finished = false;
+      const transaction = _db.transaction(storeNames, 'readwrite');
+
+      transaction.oncomplete = () => {
+        finished = true;
+        resolve(true);
+      };
+
+      transaction.onerror = () => {
+        if (!finished) {
+          finished = true;
+          reject(transaction.error || new Error('Gagal menulis data ke database. Data lama tetap utuh.'));
+        }
+      };
+
+      transaction.onabort = () => {
+        if (!finished) {
+          finished = true;
+          reject(transaction.error || new Error('Transaksi import dibatalkan. Data lama tetap utuh.'));
+        }
+      };
+
+      try {
+        for (const name of storeNames) {
+          const store = transaction.objectStore(name);
+          store.clear();
+        }
+
+        for (const name of storeNames) {
+          const records = backupData.stores[name];
+          if (Array.isArray(records)) {
+            const store = transaction.objectStore(name);
+            for (const item of records) {
+              const restored = reviveDates(item);
+              store.put(restored);
+            }
+          }
+        }
+      } catch (err) {
+        try {
+          transaction.abort();
+        } catch (abortErr) {}
+        if (!finished) {
+          finished = true;
+          reject(err);
+        }
+      }
+    });
+  }
+
   return {
     open: open,
     orders: {
@@ -1263,6 +1395,13 @@ const ShugenDB = (function () {
     cash: {
       get: getCashSetting,
       set: setCashSetting
-    }
+    },
+    backup: {
+      exportData: exportAllData,
+      importData: importAllData,
+      validate: validateBackupData
+    },
+    version: DB_VERSION
   };
 })();
+

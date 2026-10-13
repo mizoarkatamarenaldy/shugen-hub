@@ -843,6 +843,15 @@
         </div>
       </div>
       <div class="settings-section">
+        <div class="settings-label">Backup dan Restore</div>
+        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Simpan seluruh data ke file JSON atau pulihkan data dari file backup.</p>
+        <div class="backup-actions">
+          <button type="button" id="btn-export-backup" class="btn btn-secondary">Export Data</button>
+          <button type="button" id="btn-import-backup" class="btn btn-secondary">Import Data</button>
+          <input type="file" id="backup-file-input" accept=".json,application/json" aria-label="Pilih file backup JSON" hidden>
+        </div>
+      </div>
+      <div class="settings-section">
         <div class="settings-label">Data Demo Portofolio</div>
         <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Muat data contoh pesanan dan pemasukan untuk demonstrasi dan uji coba tampilan.</p>
         <button type="button" id="btn-load-demo" class="btn btn-secondary btn-demo">Muat Data Demo</button>

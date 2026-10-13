@@ -14,10 +14,10 @@ Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 - [x] 5. Invoice
 - [x] 6. Data pelanggan (riwayat order, tandai langganan)
 - [x] 13. Kas toko (saldo gabungan, menu sendiri)
+- [x] 14. Kategori game (daftar game di Pengaturan, wajib dipilih di form pesanan)
 
 ### Berikutnya
-- [ ] 14. Kategori game (daftar game di Pengaturan, wajib dipilih di form pesanan)  <- FOKUS SEKARANG
-- [ ] 12. Backup dan restore manual (export/import file)
+- [x] 12. Backup dan restore manual (export/import file)  <- FOKUS SEKARANG
 - [ ] 8. Rekap harian dan bulanan (omzet, pengeluaran, untung bersih)
 - [ ] 7. Template pesan WA (konfirmasi, update progress, selesai)
 - [ ] 10. Deadline pesanan dan pengingat
@@ -108,6 +108,19 @@ Kebutuhan layar:
 - Nama game tampil (diambil dari daftar lewat `gameId`) di semua tempat yang sebelumnya menampilkan game: daftar pesanan, detail pesanan, pencarian pesanan, invoice, dan riwayat order pelanggan.
 - Tidak ada kompatibilitas dengan data pesanan lama. Semua data yang ada sekarang adalah data demo, dan pengguna akan memuat ulang data demo.
 - Tidak ada harga atau katalog di fitur ini (itu Fitur 11).
+
+## Fitur 12: Backup dan restore manual
+- Ada di dialog Pengaturan, bagian baru bernama "Backup dan Restore".
+- Tombol Export: mengunduh satu file JSON berisi seluruh isi semua object store IndexedDB (baca js/db.js untuk daftar store lengkap, jangan ada yang terlewat, termasuk pengaturan toko, metode pembayaran, kategori, saldo awal kas, dan daftar game).
+- Nama file: shugen-backup-YYYYMMDD-HHMM.json.
+- File berisi penanda aplikasi ("shugen-hub"), versi skema IndexedDB saat export, waktu export, dan data per store.
+- Tombol Import: pilih file JSON dari perangkat.
+- Sebelum menimpa data, validasi file: harus JSON valid, penanda aplikasi cocok, dan versi skema sama persis dengan versi skema aplikasi saat ini. Kalau tidak lolos, tampilkan pesan error yang jelas dan jangan ubah data apa pun.
+- Setelah lolos validasi, tampilkan konfirmasi yang menjelaskan bahwa semua data sekarang akan DIGANTI dengan isi file backup.
+- Proses import menghapus isi semua store lalu menulis data dari file dalam satu transaksi IndexedDB. Kalau gagal di tengah jalan, data lama tetap utuh.
+- Tombol Export dan Import dinonaktifkan selama prosesnya berjalan (ikuti pola pengaman tombol yang sudah ada). Setelah import berhasil, tampilkan pesan sukses dan muat ulang tampilan agar semua menu menampilkan data baru.
+- Tanpa library baru. Tanpa kompresi, tanpa enkripsi, tanpa sinkron Google Drive (itu fitur terpisah).
+- Jangan menyimpan atau meng-commit file backup apa pun ke repo.
 
 ## Fitur 13: Kas toko
 - Satu saldo gabungan untuk seluruh toko. Kas berfungsi sebagai penampung: uang pelanggan masuk ke kas, uang keluar ke worker dan biaya lain dari kas.
