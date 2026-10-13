@@ -8,6 +8,34 @@ const DummyData = (function () {
     'Modal Topup', 'Gaji Worker', 'Kas', 'Operasional', 'Lainnya'
   ];
 
+  const GAMES = [
+    {
+      gameId: 'GAM-261011-M7K2',
+      name: 'Mobile Legends',
+      createdAt: new Date('2026-10-11T08:00:00')
+    },
+    {
+      gameId: 'GAM-261011-G4P9',
+      name: 'Genshin Impact',
+      createdAt: new Date('2026-10-11T08:05:00')
+    },
+    {
+      gameId: 'GAM-261011-V8T3',
+      name: 'Valorant',
+      createdAt: new Date('2026-10-11T08:10:00')
+    },
+    {
+      gameId: 'GAM-261011-F2W6',
+      name: 'Free Fire',
+      createdAt: new Date('2026-10-11T08:15:00')
+    },
+    {
+      gameId: 'GAM-261011-H9N4',
+      name: 'Honkai: Star Rail',
+      createdAt: new Date('2026-10-11T08:20:00')
+    }
+  ];
+
   const INITIAL_CASH_BALANCE = 500000;
 
   const ORDERS = [
@@ -15,7 +43,7 @@ const DummyData = (function () {
       orderId: 'SGN-261011-K7M4',
       customerName: 'Budi Santoso',
       type: 'joki',
-      game: 'Mobile Legends',
+      gameId: 'GAM-261011-M7K2',
       detail: 'Push rank Epic ke Legend, hero Lancelot/Ling',
       price: 150000,
       status: 'selesai',
@@ -27,7 +55,7 @@ const DummyData = (function () {
       orderId: 'SGN-261011-R9W2',
       customerName: 'Siti Rahayu',
       type: 'topup',
-      game: 'Genshin Impact',
+      gameId: 'GAM-261011-G4P9',
       detail: 'Welkin Moon + 300 Genesis Crystal',
       price: 95000,
       status: 'selesai',
@@ -39,7 +67,7 @@ const DummyData = (function () {
       orderId: 'SGN-261012-4H8P',
       customerName: 'Andi Pratama',
       type: 'joki',
-      game: 'Valorant',
+      gameId: 'GAM-261011-V8T3',
       detail: 'Push rank Silver ke Gold',
       price: 200000,
       status: 'diproses',
@@ -51,7 +79,7 @@ const DummyData = (function () {
       orderId: 'SGN-261012-X3N6',
       customerName: 'Dewi Lestari',
       type: 'topup',
-      game: 'Free Fire',
+      gameId: 'GAM-261011-F2W6',
       detail: '2180 Diamond',
       price: 300000,
       status: 'menunggu_bayar',
@@ -63,7 +91,7 @@ const DummyData = (function () {
       orderId: 'SGN-261012-T5V9',
       customerName: 'Rizky Hidayat',
       type: 'joki',
-      game: 'Mobile Legends',
+      gameId: 'GAM-261011-M7K2',
       detail: 'Push rank Grandmaster ke Epic',
       price: 100000,
       status: 'dibatalkan',
@@ -75,7 +103,7 @@ const DummyData = (function () {
       orderId: 'SGN-261013-B6Q8',
       customerName: 'Fajar Nugroho',
       type: 'topup',
-      game: 'Mobile Legends',
+      gameId: 'GAM-261011-M7K2',
       detail: '571 Diamond',
       price: 140000,
       status: 'menunggu_bayar',
@@ -87,7 +115,7 @@ const DummyData = (function () {
       orderId: 'SGN-261013-L2C7',
       customerName: 'Maya Putri',
       type: 'joki',
-      game: 'Genshin Impact',
+      gameId: 'GAM-261011-G4P9',
       detail: 'Clear Spiral Abyss Floor 12',
       price: 250000,
       status: 'diproses',
@@ -99,7 +127,7 @@ const DummyData = (function () {
       orderId: 'SGN-261013-J4Z3',
       customerName: 'Hendra Wijaya',
       type: 'topup',
-      game: 'Honkai: Star Rail',
+      gameId: 'GAM-261011-H9N4',
       detail: 'Oneiric Shard 3280',
       price: 800000,
       status: 'menunggu_bayar',
@@ -374,6 +402,7 @@ const DummyData = (function () {
     await ShugenDB.expenses.clear();
     await ShugenDB.invoices.clear();
     await ShugenDB.customers.clear();
+    await ShugenDB.games.clear();
     await ShugenDB.categories.clear();
     await ShugenDB.payment.clear();
 
@@ -390,6 +419,10 @@ const DummyData = (function () {
       if (cat) {
         categoryIdByName[cat.name] = cat.id;
       }
+    }
+
+    for (const g of GAMES) {
+      await ShugenDB.games.add(g);
     }
 
     for (const cust of CUSTOMERS) {

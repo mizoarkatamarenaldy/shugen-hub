@@ -1385,6 +1385,21 @@ dialog.dialog-settings {
   color: var(--text-secondary);
 }
 
+.game-empty-warning {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.game-empty-text {
+  font-size: 12px;
+  color: #F5A623;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+
 .form-row .form-group {
   min-width: 0;
 }

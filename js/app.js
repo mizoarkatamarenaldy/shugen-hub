@@ -1,5 +1,6 @@
 const App = (function () {
   let orders = [];
+  let games = [];
   let progressMap = {};
   let incomes = [];
   let expenses = [];
@@ -68,6 +69,12 @@ const App = (function () {
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
 
+  function getGameName(gameId) {
+    if (!gameId) return '-';
+    const found = games.find((g) => g.gameId === gameId);
+    return found ? found.name : '-';
+  }
+
   function matchCustomerName(name1, name2) {
     return String(name1 || '').trim().toLowerCase() === String(name2 || '').trim().toLowerCase();
   }
@@ -94,6 +101,7 @@ const App = (function () {
       await ShugenDB.open();
       paymentMethods = await ShugenDB.payment.init();
       expenseCategories = await ShugenDB.categories.init();
+      games = await ShugenDB.games.getAll();
       orders = await ShugenDB.orders.getAll();
       customers = await ShugenDB.customers.getAll();
       incomes = await ShugenDB.incomes.getAll();
@@ -248,7 +256,7 @@ const App = (function () {
       list = list.filter((o) =>
         o.customerName.toLowerCase().includes(q) ||
         o.orderId.toLowerCase().includes(q) ||
-        o.game.toLowerCase().includes(q)
+        getGameName(o.gameId).toLowerCase().includes(q)
       );
     }
     list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -459,7 +467,7 @@ const App = (function () {
 
       const dateLabel = formatYmd(inv.issueDate);
       const customerName = order ? order.customerName : '(Pesanan tidak ditemukan)';
-      const serviceName = order ? ((order.type === 'joki' ? 'Joki' : 'Topup') + ' · ' + order.game) : '-';
+      const serviceName = order ? ((order.type === 'joki' ? 'Joki' : 'Topup') + ' · ' + getGameName(order.gameId)) : '-';
       const badgeText = isPaidOff ? 'LUNAS' : 'BELUM LUNAS';
       const badgeClass = isPaidOff ? 'inv-badge--lunas' : 'inv-badge--belum-lunas';
 
@@ -589,7 +597,7 @@ const App = (function () {
           '<span class="order-type type-' + order.type + '">' +
             (order.type === 'joki' ? 'Joki' : 'Topup') +
           '</span>' +
-          '<span class="order-game">' + esc(order.game) + '</span>' +
+          '<span class="order-game">' + esc(getGameName(order.gameId)) + '</span>' +
         '</div>' +
         progressHtml +
         '<div class="order-bottom">' +
@@ -1115,6 +1123,7 @@ const App = (function () {
     $('#settings-dialog').addEventListener('close', () => {
       $('#btn-load-demo').disabled = false;
       $('#btn-add-payment').disabled = false;
+      $('#btn-add-game').disabled = false;
       $('#btn-add-category').disabled = false;
     });
 
@@ -1122,6 +1131,19 @@ const App = (function () {
     $('#payment-add-input').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); addPaymentMethod(); }
     });
+
+    $('#btn-add-game').addEventListener('click', addGame);
+    $('#game-add-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); addGame(); }
+    });
+
+    const btnGotoSettingsGame = $('#btn-goto-settings-game');
+    if (btnGotoSettingsGame) {
+      btnGotoSettingsGame.addEventListener('click', () => {
+        $('#order-dialog').close();
+        openSettings();
+      });
+    }
 
     $('#btn-add-category').addEventListener('click', addExpenseCategory);
     $('#category-add-input').addEventListener('keydown', (e) => {
@@ -1280,7 +1302,7 @@ const App = (function () {
       $('#detail-order-id-row').hidden = false;
       $('#field-customer').value = order.customerName;
       $('#field-type').value = order.type;
-      $('#field-game').value = order.game;
+      populateGameSelect(order.gameId);
       $('#field-detail').value = order.detail;
       $('#field-price').value = order.price || '';
       $('#field-payment').value = order.paymentMethod;
@@ -1337,6 +1359,7 @@ const App = (function () {
       $('#detail-order-id').textContent = '';
       $('#detail-order-id').hidden = true;
       $('#detail-order-id-row').hidden = true;
+      populateGameSelect('');
       $('#field-status').value = 'menunggu_bayar';
       $('#field-status-group').hidden = true;
       $('#order-paid-group').hidden = true;
@@ -1586,6 +1609,43 @@ const App = (function () {
     }
   }
 
+  function populateGameSelect(selectedGameId) {
+    const sel = $('#field-game');
+    const warning = $('#game-empty-warning');
+    const saveBtn = $('#btn-save-order');
+
+    sel.innerHTML = '';
+
+    if (games.length === 0) {
+      sel.hidden = true;
+      sel.required = false;
+      if (warning) warning.hidden = false;
+      if (saveBtn) saveBtn.disabled = true;
+      return;
+    }
+
+    sel.hidden = false;
+    sel.required = true;
+    if (warning) warning.hidden = true;
+    if (saveBtn) saveBtn.disabled = false;
+
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = 'Pilih game';
+    sel.appendChild(defaultOpt);
+
+    games.forEach((g) => {
+      const opt = document.createElement('option');
+      opt.value = g.gameId;
+      opt.textContent = g.name;
+      sel.appendChild(opt);
+    });
+
+    if (selectedGameId) {
+      sel.value = selectedGameId;
+    }
+  }
+
   function populatePaymentSelect() {
     const sel = $('#field-payment');
     sel.innerHTML = '<option value="">Pilih metode</option>';
@@ -1601,17 +1661,22 @@ const App = (function () {
     const saveBtn = $('#btn-save-order');
     if (saveBtn.disabled) return;
 
+    if (games.length === 0) {
+      toast('Daftar game masih kosong. Silakan tambah game di Pengaturan terlebih dahulu.');
+      return;
+    }
+
     const data = {
       customerName: $('#field-customer').value.trim(),
       type: $('#field-type').value,
-      game: $('#field-game').value.trim(),
+      gameId: $('#field-game').value,
       detail: $('#field-detail').value.trim(),
       price: Number($('#field-price').value) || 0,
       paymentMethod: $('#field-payment').value,
       status: $('#field-status').value
     };
 
-    if (!data.customerName || !data.game) {
+    if (!data.customerName || !data.gameId) {
       toast('Nama pelanggan dan game wajib diisi');
       return;
     }
@@ -1707,7 +1772,7 @@ const App = (function () {
     sorted.forEach((o) => {
       const opt = document.createElement('option');
       opt.value = o.orderId;
-      opt.textContent = o.customerName + ' - ' + o.game + ' (Rp ' + formatPrice(o.price) + ')';
+      opt.textContent = o.customerName + ' - ' + getGameName(o.gameId) + ' (Rp ' + formatPrice(o.price) + ')';
       dl.appendChild(opt);
     });
   }
@@ -1721,7 +1786,7 @@ const App = (function () {
     }
     const matched = orders.find((o) => o.orderId.toLowerCase() === raw.toLowerCase());
     if (matched) {
-      hint.textContent = 'Terhubung ke: ' + matched.customerName + ' - ' + matched.game + ' (Harga: Rp ' + formatPrice(matched.price) + ')';
+      hint.textContent = 'Terhubung ke: ' + matched.customerName + ' - ' + getGameName(matched.gameId) + ' (Harga: Rp ' + formatPrice(matched.price) + ')';
     } else {
       hint.textContent = 'ID pesanan tidak ditemukan di daftar pesanan.';
     }
@@ -1921,7 +1986,7 @@ const App = (function () {
     sorted.forEach((o) => {
       const opt = document.createElement('option');
       opt.value = o.orderId;
-      opt.textContent = o.customerName + ' - ' + o.game + ' (Rp ' + formatPrice(o.price) + ')';
+      opt.textContent = o.customerName + ' - ' + getGameName(o.gameId) + ' (Rp ' + formatPrice(o.price) + ')';
       dl.appendChild(opt);
     });
   }
@@ -1935,7 +2000,7 @@ const App = (function () {
     }
     const matched = orders.find((o) => o.orderId.toLowerCase() === raw.toLowerCase());
     if (matched) {
-      hint.textContent = 'Terhubung ke: ' + matched.customerName + ' - ' + matched.game + ' (Harga: Rp ' + formatPrice(matched.price) + ')';
+      hint.textContent = 'Terhubung ke: ' + matched.customerName + ' - ' + getGameName(matched.gameId) + ' (Harga: Rp ' + formatPrice(matched.price) + ')';
     } else {
       hint.textContent = 'ID pesanan tidak ditemukan di daftar pesanan.';
     }
@@ -2159,11 +2224,13 @@ const App = (function () {
   function openSettings() {
     $('#btn-load-demo').disabled = false;
     $('#btn-add-payment').disabled = false;
+    $('#btn-add-game').disabled = false;
     $('#btn-add-category').disabled = false;
     $('#btn-save-shop-info').disabled = false;
     $('#setting-shop-name').value = shopName || 'Shugen Store';
     $('#setting-shop-contact').value = shopContact || '';
     renderPaymentList();
+    renderGameList();
     renderCategoryList();
     $('#settings-dialog').showModal();
   }
@@ -2273,6 +2340,146 @@ const App = (function () {
     } catch (err) {
       console.error(err);
       toast('Gagal menghapus metode');
+    }
+  }
+
+  function renderGameList() {
+    const list = $('#game-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    if (games.length === 0) {
+      const emptyLi = document.createElement('li');
+      emptyLi.className = 'payment-item-empty';
+      emptyLi.style.cssText = 'padding:8px 0; font-size:13px; color:var(--text-secondary);';
+      emptyLi.textContent = 'Belum ada game. Tambahkan game baru di bawah.';
+      list.appendChild(emptyLi);
+      return;
+    }
+
+    games.forEach((game) => {
+      const li = document.createElement('li');
+      li.className = 'payment-item';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'payment-name';
+      input.value = game.name;
+      input.setAttribute('aria-label', 'Nama game: ' + game.name);
+      input.addEventListener('change', () => renameGame(game.id, input.value));
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'btn-delete-payment';
+      del.setAttribute('aria-label', 'Hapus game ' + game.name);
+      del.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      del.addEventListener('click', () => removeGame(game.id));
+
+      li.appendChild(input);
+      li.appendChild(del);
+      list.appendChild(li);
+    });
+  }
+
+  async function addGame() {
+    const addBtn = $('#btn-add-game');
+    if (addBtn.disabled) return;
+
+    const input = $('#game-add-input');
+    const name = input.value.trim();
+    if (!name) {
+      toast('Nama game wajib diisi');
+      input.focus();
+      return;
+    }
+
+    const isDuplicate = games.some(
+      (g) => g.name.trim().toLowerCase() === name.toLowerCase()
+    );
+    if (isDuplicate) {
+      toast('Nama game tidak boleh kembar');
+      input.focus();
+      return;
+    }
+
+    addBtn.disabled = true;
+
+    try {
+      await ShugenDB.games.add({ name: name });
+      games = await ShugenDB.games.getAll();
+      input.value = '';
+      renderGameList();
+      render();
+      toast('Game ditambahkan');
+    } catch (err) {
+      console.error(err);
+      if (err && err.message === 'DUPLICATE_GAME_NAME') {
+        toast('Nama game tidak boleh kembar');
+      } else {
+        toast('Gagal menambah game');
+      }
+    } finally {
+      addBtn.disabled = false;
+    }
+  }
+
+  async function renameGame(id, newName) {
+    const trimmed = String(newName || '').trim();
+    if (!trimmed) {
+      renderGameList();
+      toast('Nama game wajib diisi');
+      return;
+    }
+
+    const isDuplicate = games.some(
+      (g) => g.id !== id && g.name.trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (isDuplicate) {
+      renderGameList();
+      toast('Nama game tidak boleh kembar');
+      return;
+    }
+
+    try {
+      await ShugenDB.games.update(id, trimmed);
+      games = await ShugenDB.games.getAll();
+      renderGameList();
+      render();
+      toast('Game diperbarui');
+    } catch (err) {
+      console.error(err);
+      renderGameList();
+      if (err && err.message === 'DUPLICATE_GAME_NAME') {
+        toast('Nama game tidak boleh kembar');
+      } else {
+        toast('Gagal mengubah nama game');
+      }
+    }
+  }
+
+  async function removeGame(id) {
+    const game = games.find((g) => g.id === id);
+    if (!game) return;
+
+    const usedCount = orders.filter((o) => o.gameId === game.gameId).length;
+    if (usedCount > 0) {
+      toast('Game sedang dipakai oleh pesanan dan tidak dapat dihapus');
+      return;
+    }
+
+    try {
+      await ShugenDB.games.delete(id);
+      games = await ShugenDB.games.getAll();
+      renderGameList();
+      render();
+      toast('Game dihapus');
+    } catch (err) {
+      console.error(err);
+      if (err && err.message === 'GAME_IN_USE') {
+        toast('Game sedang dipakai oleh pesanan dan tidak dapat dihapus');
+      } else {
+        toast('Gagal menghapus game');
+      }
     }
   }
 
@@ -2462,7 +2669,7 @@ const App = (function () {
     $('#inv-customer-name').textContent = order ? order.customerName : '(Pesanan tidak ditemukan)';
 
     const serviceType = order ? (order.type === 'joki' ? 'Joki' : 'Topup') : '-';
-    const serviceGame = order ? order.game : '-';
+    const serviceGame = order ? getGameName(order.gameId) : '-';
     $('#inv-order-service').textContent = serviceType + ' - ' + serviceGame;
     $('#inv-order-desc').textContent = order && order.detail ? order.detail : '-';
     $('#inv-order-price-val').textContent = 'Rp ' + formatPrice(price);
@@ -2610,7 +2817,7 @@ const App = (function () {
         item.setAttribute('role', 'button');
 
         const serviceType = order.type === 'joki' ? 'Joki' : 'Topup';
-        const serviceLabel = serviceType + ' · ' + order.game;
+        const serviceLabel = serviceType + ' · ' + getGameName(order.gameId);
         const statusLabel = STATUS_LABELS[order.status] || order.status;
         const priceLabel = 'Rp ' + formatPrice(order.price);
 
@@ -2816,6 +3023,7 @@ const App = (function () {
     try {
       await DummyData.load();
       orders = await ShugenDB.orders.getAll();
+      games = await ShugenDB.games.getAll();
       incomes = await ShugenDB.incomes.getAll();
       expenses = await ShugenDB.expenses.getAll();
       invoices = await ShugenDB.invoices.getAll();
@@ -2834,6 +3042,7 @@ const App = (function () {
       $('#setting-shop-contact').value = shopContact;
       render();
       renderPaymentList();
+      renderGameList();
       renderCategoryList();
       toast('Data demo dimuat');
     } catch (err) {

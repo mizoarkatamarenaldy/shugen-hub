@@ -1,6 +1,6 @@
 const ShugenDB = (function () {
   const DB_NAME = 'shugen-hub';
-  const DB_VERSION = 7;
+  const DB_VERSION = 8;
   let _db = null;
 
   const DEFAULT_PAYMENT_METHODS = [
@@ -87,6 +87,21 @@ const ShugenDB = (function () {
           customerStore.createIndex('customerId', 'customerId', { unique: true });
           customerStore.createIndex('name', 'name');
           customerStore.createIndex('createdAt', 'createdAt');
+        }
+        if (!db.objectStoreNames.contains('games')) {
+          const gameStore = db.createObjectStore('games', {
+            keyPath: 'id',
+            autoIncrement: true
+          });
+          gameStore.createIndex('gameId', 'gameId', { unique: true });
+          gameStore.createIndex('name', 'name');
+          gameStore.createIndex('createdAt', 'createdAt');
+        }
+        if (e.target.transaction && e.target.transaction.objectStoreNames.contains('orders')) {
+          const orderStore = e.target.transaction.objectStore('orders');
+          if (!orderStore.indexNames.contains('gameId')) {
+            orderStore.createIndex('gameId', 'gameId', { unique: false });
+          }
         }
       };
 
@@ -178,7 +193,7 @@ const ShugenDB = (function () {
               orderId: candidate,
               customerName: order.customerName,
               type: order.type,
-              game: order.game,
+              gameId: order.gameId || null,
               detail: order.detail || '',
               price: Number(order.price) || 0,
               status: order.status || 'menunggu_bayar',
@@ -1019,6 +1034,146 @@ const ShugenDB = (function () {
     return req2p(tx('customers', 'readwrite').clear());
   }
 
+  // Games
+
+  let _addGameQueue = Promise.resolve();
+
+  function buildCandidateGameId(date) {
+    const now = date || new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return 'GAM-' + yy + mm + dd + '-' + randomIdCode(4);
+  }
+
+  async function getAllGames() {
+    await open();
+    return req2p(tx('games', 'readonly').getAll());
+  }
+
+  async function getGame(id) {
+    await open();
+    return req2p(tx('games', 'readonly').get(id));
+  }
+
+  async function getGameByGameId(gameId) {
+    await open();
+    if (!gameId) return null;
+    const idx = tx('games', 'readonly').index('gameId');
+    return req2p(idx.get(gameId));
+  }
+
+  function addGame(game) {
+    const nameStr = typeof game === 'string' ? game : (game && game.name);
+    const cleanName = String(nameStr || '').trim();
+    const run = _addGameQueue.then(async () => {
+      await open();
+      return new Promise((resolve, reject) => {
+        const transaction = _db.transaction('games', 'readwrite');
+        const store = transaction.objectStore('games');
+        const gameIdx = store.index('gameId');
+        const now = new Date();
+        let savedRecord = null;
+
+        transaction.oncomplete = () => resolve(savedRecord);
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error || new Error('Transaksi dibatalkan'));
+
+        if (!cleanName) {
+          transaction.abort();
+          reject(new Error('Nama game wajib diisi'));
+          return;
+        }
+
+        const checkNameReq = store.getAll();
+        checkNameReq.onsuccess = () => {
+          const all = checkNameReq.result || [];
+          const isDup = all.some(
+            (g) => g.name && g.name.trim().toLowerCase() === cleanName.toLowerCase()
+          );
+          if (isDup) {
+            transaction.abort();
+            reject(new Error('DUPLICATE_GAME_NAME'));
+            return;
+          }
+
+          function tryInsert(preferredId) {
+            const candidate = preferredId || buildCandidateGameId(now);
+            const checkReq = gameIdx.getKey(candidate);
+            checkReq.onsuccess = () => {
+              if (checkReq.result !== undefined) {
+                tryInsert(null);
+                return;
+              }
+              const record = {
+                gameId: candidate,
+                name: cleanName,
+                createdAt: (game && game.createdAt) || now,
+                updatedAt: now
+              };
+              const addReq = store.add(record);
+              addReq.onsuccess = () => {
+                record.id = addReq.result;
+                savedRecord = record;
+              };
+              addReq.onerror = (e) => {
+                if (addReq.error && addReq.error.name === 'ConstraintError') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  tryInsert(null);
+                }
+              };
+            };
+          }
+
+          tryInsert((game && game.gameId) || null);
+        };
+      });
+    });
+    _addGameQueue = run.catch(() => {});
+    return run;
+  }
+
+  async function updateGame(id, newName) {
+    await open();
+    const cleanName = String(newName || '').trim();
+    if (!cleanName) {
+      throw new Error('Nama game wajib diisi');
+    }
+    const all = await getAllGames();
+    const existing = all.find((g) => g.id === id);
+    if (!existing) throw new Error('Game tidak ditemukan');
+    const isDup = all.some(
+      (g) => g.id !== id && g.name && g.name.trim().toLowerCase() === cleanName.toLowerCase()
+    );
+    if (isDup) {
+      throw new Error('DUPLICATE_GAME_NAME');
+    }
+    const updated = Object.assign({}, existing, {
+      name: cleanName,
+      updatedAt: new Date()
+    });
+    await req2p(tx('games', 'readwrite').put(updated));
+    return updated;
+  }
+
+  async function deleteGame(id) {
+    await open();
+    const existing = await getGame(id);
+    if (!existing) return;
+    const allOrders = await getAllOrders();
+    const isUsed = allOrders.some((o) => o.gameId === existing.gameId);
+    if (isUsed) {
+      throw new Error('GAME_IN_USE');
+    }
+    return req2p(tx('games', 'readwrite').delete(id));
+  }
+
+  async function clearGames() {
+    await open();
+    return req2p(tx('games', 'readwrite').clear());
+  }
+
   return {
     open: open,
     orders: {
@@ -1075,6 +1230,15 @@ const ShugenDB = (function () {
       update: updateCustomer,
       delete: deleteCustomer,
       clear: clearCustomers
+    },
+    games: {
+      getAll: getAllGames,
+      get: getGame,
+      getByGameId: getGameByGameId,
+      add: addGame,
+      update: updateGame,
+      delete: deleteGame,
+      clear: clearGames
     },
     categories: {
       getAll: getAllExpenseCategories,

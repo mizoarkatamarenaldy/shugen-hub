@@ -330,9 +330,15 @@
               <option value="topup">Topup</option>
             </select>
           </div>
-          <div class="form-group">
+          <div class="form-group" id="field-game-group">
             <label class="form-label" for="field-game">Game *</label>
-            <input type="text" id="field-game" class="form-input" required placeholder="Contoh: Mobile Legends">
+            <select id="field-game" class="form-select" required>
+              <option value="">Pilih game</option>
+            </select>
+            <div id="game-empty-warning" class="game-empty-warning" hidden>
+              <p class="game-empty-text">Daftar game masih kosong. Silakan tambah game di Pengaturan terlebih dahulu.</p>
+              <button type="button" id="btn-goto-settings-game" class="btn btn-secondary btn-small">Buka Pengaturan</button>
+            </div>
           </div>
         </div>
 
@@ -818,6 +824,14 @@
         <div class="payment-add">
           <input type="text" id="payment-add-input" class="payment-add-input" placeholder="Tambah metode baru..." aria-label="Nama metode pembayaran baru">
           <button type="button" id="btn-add-payment" class="btn btn-secondary btn-small">Tambah</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Kategori Game</div>
+        <ul id="game-list" class="payment-list"></ul>
+        <div class="payment-add">
+          <input type="text" id="game-add-input" class="payment-add-input" placeholder="Tambah game baru..." aria-label="Nama game baru">
+          <button type="button" id="btn-add-game" class="btn btn-secondary btn-small">Tambah</button>
         </div>
       </div>
       <div class="settings-section">

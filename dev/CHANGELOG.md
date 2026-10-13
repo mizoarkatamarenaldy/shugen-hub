@@ -19,6 +19,20 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #015 [2026-10-13] Implementasi Fitur 14 (Kategori game)
+- Fitur: Kategori game (daftar game di Pengaturan, wajib dipilih di form pesanan)
+- Ringkasan: Menambahkan pengelolaan kategori game dinamis di Pengaturan (tambah, ganti nama, dan hapus) dengan validasi nama unik tidak peka huruf besar/kecil. Mengubah input game pada form pesanan menjadi dropdown pilihan wajib yang menyimpan ID game (gameId) berformat GAM-YYMMDD-XXXX, memblokir simpan pesanan dan menampilkan peringatan jika daftar game kosong, serta mencegah penghapusan game yang sedang dipakai pesanan. Menampilkan nama game terbaru berdasarkan gameId di daftar pesanan, pencarian pesanan, detail pesanan, invoice, dan riwayat pesanan pelanggan, menaikkan skema IndexedDB ke versi 8 dengan store games, memperbarui data demo di js/dummy.js, dan menaikkan versi cache service worker ke shugen-v13.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - index.html
+  - js/app.js
+  - js/db.js
+  - js/dummy.js
+  - sw.js
+- Catatan: Skema IndexedDB dinaikkan ke versi 8 dengan object store games dan indeks gameId pada orders; format ID game GAM-YYMMDD-XXXX; cache service worker dinaikkan ke shugen-v13.
+
 ### #014 [2026-10-13] Rapikan daftar fitur di PLAN.md menjadi checklist prioritas
 - Fitur: Persiapan
 - Ringkasan: Mengubah daftar fitur di dev/PLAN.md menjadi checklist prioritas yang memisahkan fitur selesai (berdasarkan implementasi di CHANGELOG) dan fitur berikutnya. Memindahkan fokus pengerjaan ke Fitur 12 (Backup dan restore manual).

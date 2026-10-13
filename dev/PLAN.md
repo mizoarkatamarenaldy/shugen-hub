@@ -16,7 +16,8 @@ Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 - [x] 13. Kas toko (saldo gabungan, menu sendiri)
 
 ### Berikutnya
-- [ ] 12. Backup dan restore manual (export/import file)  <- FOKUS SEKARANG
+- [ ] 14. Kategori game (daftar game di Pengaturan, wajib dipilih di form pesanan)  <- FOKUS SEKARANG
+- [ ] 12. Backup dan restore manual (export/import file)
 - [ ] 8. Rekap harian dan bulanan (omzet, pengeluaran, untung bersih)
 - [ ] 7. Template pesan WA (konfirmasi, update progress, selesai)
 - [ ] 10. Deadline pesanan dan pengingat
@@ -96,6 +97,17 @@ Kebutuhan layar:
 - Di form pesanan (Fitur 1), kolom nama pelanggan menampilkan saran dari daftar pelanggan (datalist). Pengguna tetap bebas mengetik nama yang belum ada, dan itu tidak otomatis membuat pelanggan baru.
 - Pesanan Dibatalkan tetap tampil di riwayat order pelanggan, dan tidak dihitung ke total harga order maupun jumlah order.
 - Tidak ada pembuatan pelanggan otomatis, tidak ada diskon atau poin langganan, dan tidak ada kirim pesan WA (itu Fitur 7).
+
+## Fitur 14: Kategori game
+- Daftar game diatur sendiri di Pengaturan (tambah, ganti nama, hapus), bukan daftar tetap. Daftar awal kosong.
+- Nama game wajib diisi dan tidak boleh kembar (tanpa membedakan huruf besar kecil dan spasi di pinggir).
+- Game wajib dipilih dari daftar ini di form pesanan (Fitur 1). Kolom Game berupa pilihan (select), tidak bisa diketik bebas.
+- Kalau daftar game masih kosong, form pesanan menampilkan pesan jelas yang mengarahkan pengguna ke Pengaturan untuk menambah game dulu, dan pesanan tidak bisa disimpan.
+- Pesanan menyimpan ID game (`gameId`), bukan teks nama, supaya ganti nama game otomatis berlaku di semua pesanan. Format ID: GAM-YYMMDD-XXXX (4 karakter acak dengan crypto.getRandomValues, ikuti Aturan umum soal keunikan ID lintas perangkat).
+- Game yang sedang dipakai oleh minimal satu pesanan tidak boleh dihapus (tampilkan pesan yang jelas).
+- Nama game tampil (diambil dari daftar lewat `gameId`) di semua tempat yang sebelumnya menampilkan game: daftar pesanan, detail pesanan, pencarian pesanan, invoice, dan riwayat order pelanggan.
+- Tidak ada kompatibilitas dengan data pesanan lama. Semua data yang ada sekarang adalah data demo, dan pengguna akan memuat ulang data demo.
+- Tidak ada harga atau katalog di fitur ini (itu Fitur 11).
 
 ## Fitur 13: Kas toko
 - Satu saldo gabungan untuk seluruh toko. Kas berfungsi sebagai penampung: uang pelanggan masuk ke kas, uang keluar ke worker dan biaya lain dari kas.
