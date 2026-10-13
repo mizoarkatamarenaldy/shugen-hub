@@ -1133,7 +1133,7 @@ dialog.dialog-settings {
   transform: translateX(-50%) translateY(0);
 }
 
-/* Main navigation & Pemasukan */
+/* Main navigation, Pemasukan & Pengeluaran */
 
 .main-nav {
   background: var(--surface);
@@ -1144,14 +1144,14 @@ dialog.dialog-settings {
   max-width: 640px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   padding: 8px 16px;
 }
 
 .nav-tab {
   min-height: 44px;
-  padding: 8px 16px;
+  padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
@@ -1161,6 +1161,7 @@ dialog.dialog-settings {
   font-family: inherit;
   cursor: pointer;
   touch-action: manipulation;
+  white-space: nowrap;
 }
 
 .nav-tab:hover {
@@ -1313,6 +1314,7 @@ dialog.dialog-settings {
   font-size: 12px;
 }
 
+.expense-category-tag,
 .income-method-tag {
   display: inline-block;
   padding: 2px 8px;
@@ -1390,7 +1392,8 @@ dialog.dialog-settings {
 /* Responsive: tablet and desktop */
 
 @media (max-width: 479px) {
-  #income-form .form-row {
+  #income-form .form-row,
+  #expense-form .form-row {
     flex-direction: column;
     gap: 0;
   }
@@ -1400,6 +1403,10 @@ dialog.dialog-settings {
   .income-filter-fields {
     grid-template-columns: 1fr 1fr;
     gap: 12px;
+  }
+
+  .expense-filter-category-field {
+    grid-column: 1 / -1;
   }
 }
 

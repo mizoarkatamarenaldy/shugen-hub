@@ -19,6 +19,20 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #010 [2026-10-13] Implementasi Fitur 4 (Pengeluaran)
+- Fitur: Pengeluaran
+- Ringkasan: Menambahkan fitur pencatatan pengeluaran toko (terhubung ke pesanan maupun berdiri sendiri) dengan daftar urut tanggal terbaru, filter rentang tanggal dan kategori, total pengeluaran hasil filter, serta form tambah/edit/hapus pengeluaran. Menambahkan pengelolaan kategori pengeluaran di Pengaturan (tambah, ganti nama, cegah nama kembar, dan cegah hapus kategori yang sedang dipakai), pengaman tombol serta cek keunikan nama pada `#btn-add-payment`, tampilan total pengeluaran di detail pesanan, data contoh pengeluaran di `js/dummy.js`, migrasi IndexedDB ke versi 4, dan pembaruan `dev/PLAN.md`.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - index.html
+  - js/app.js
+  - js/db.js
+  - js/dummy.js
+  - sw.js
+- Catatan: ID pengeluaran memakai format MKL-YYMMDD-XXXX (4 karakter acak dengan crypto.getRandomValues) dan pengeluaran menyimpan ID kategori (`categoryId`) agar penggantian nama kategori otomatis berlaku pada seluruh catatan. Skema IndexedDB naik ke versi 4 dan versi cache service worker dinaikkan ke shugen-v9.
+
 ### #009 [2026-10-13] Penyesuaian tampilan Fitur 3 terhadap DESIGN.md dan pembaruan RULES.md
 - Fitur: Pemasukan
 - Ringkasan: Memperbarui `dev/RULES.md` untuk menyertakan `dev/DESIGN.md` serta aturan kerja nomor 9 dan 10 sesuai instruksi pemilik. Menyesuaikan tampilan Fitur 3 agar sepenuhnya mengikuti token warna, kontras tema terang dan gelap (`--accent-text` `#1A1A1E` dan ikon panah `select` `#6B6D78` di tema terang, serta `var(--accent-text)` pada `.nav-tab.active`), `border-radius` (`6px` pada tag pemasukan dan `8px` pada dialog form), dan `max-width: 640px` dari `dev/DESIGN.md`.

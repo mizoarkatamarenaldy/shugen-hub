@@ -7,8 +7,8 @@ Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 ## Fitur inti (dikerjakan satu per satu, urut)
 1. Pesanan + Status
 2. Progress joki (checklist + persentase)
-3. Pemasukan  <- FOKUS SEKARANG
-4. Pengeluaran
+3. Pemasukan
+4. Pengeluaran  <- FOKUS SEKARANG
 5. Invoice
 
 ## Fitur tambahan (setelah fitur inti)
@@ -60,6 +60,18 @@ Kebutuhan layar:
 - Pesanan Dibatalkan tetap menyimpan pemasukannya.
 - Tidak ada rekap harian/bulanan di fitur ini (itu Fitur 8).
 
+## Fitur 4: Pengeluaran
+- Mencatat uang keluar toko. Satu pengeluaran bisa terhubung ke satu pesanan (lewat ID pesanan dari Fitur 1, misalnya modal topup) atau berdiri sendiri (misalnya kas, gaji worker, biaya operasional).
+- Satu pesanan boleh punya beberapa pengeluaran.
+- Setiap pengeluaran wajib punya kategori. Kategori bisa diatur sendiri di Pengaturan (tambah, hapus, ganti nama), bukan daftar tetap. Kategori awal: Modal Topup, Gaji Worker, Kas, Operasional, Lainnya.
+- Kategori yang sudah dipakai oleh minimal satu pengeluaran tidak boleh dihapus (tampilkan pesan yang jelas). Ganti nama boleh dan otomatis berlaku di semua pengeluaran yang memakainya. Nama kategori tidak boleh kembar.
+- Data pengeluaran: ID unik (ikuti Aturan umum soal keunikan ID lintas perangkat, awalan MKL-YYMMDD), tanggal, jumlah (rupiah), kategori (wajib), metode pembayaran (dari daftar di Pengaturan), ID pesanan (opsional), catatan (opsional).
+- Kebutuhan layar: daftar pengeluaran (urut tanggal terbaru, filter rentang tanggal, filter kategori, total pengeluaran dari hasil filter, kategori tampil di tiap baris), form tambah/edit/hapus pengeluaran, pengelolaan kategori di Pengaturan, dan di detail pesanan tampil total pengeluaran yang terhubung ke pesanan itu.
+- Gaji worker di fitur ini hanya dicatat lewat kategori dan catatan. Tidak ada data worker dan tidak ada bagi hasil (itu Fitur 9).
+- Mengubah status pesanan tidak otomatis membuat atau mengubah pengeluaran. Semua pencatatan dilakukan manual oleh pengguna.
+- Pesanan Dibatalkan tetap menyimpan pengeluarannya.
+- Tidak ada perhitungan untung bersih dan tidak ada rekap harian/bulanan di fitur ini (itu Fitur 8).
+
 ## Aturan umum
 - Metode pembayaran bisa diatur sendiri (tambah, hapus, ganti nama), bukan daftar tetap
 - Harga dari katalog hanya saran awal, selalu bisa diubah per pesanan
@@ -82,5 +94,4 @@ Kebutuhan layar:
 Keuangan dan invoice belum dikerjakan. Struktur data harus siap dihubungkan ke fitur-fitur itu nanti.
 
 ## Utang teknis kecil
-- Tombol #btn-add-payment di Pengaturan belum punya pengaman disabled selama operasi IndexedDB. Tap ganda bisa membuat metode pembayaran dobel kecuali nama dicek unik. Kerjakan nanti saat sebuah tugas memang menyentuh Pengaturan atau metode pembayaran. Jangan dibuat tugas sendiri.
 - Tombol #btn-mark-done dan .status-option sifatnya idempotent (hasil sama kalau dijalankan dua kali), jadi tidak mendesak.

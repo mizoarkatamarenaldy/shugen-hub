@@ -2,6 +2,8 @@ const App = (function () {
   let orders = [];
   let progressMap = {};
   let incomes = [];
+  let expenses = [];
+  let expenseCategories = [];
   let currentSteps = [];
   let paymentMethods = [];
   let activeView = 'orders';
@@ -9,8 +11,12 @@ const App = (function () {
   let searchQuery = '';
   let incomeStartDate = '';
   let incomeEndDate = '';
+  let expenseStartDate = '';
+  let expenseEndDate = '';
+  let expenseCategoryFilter = 'semua';
   let editingId = null;
   let editingIncomeId = null;
+  let editingExpenseId = null;
   let statusChangeId = null;
 
   const STATUS_LABELS = {
@@ -56,8 +62,10 @@ const App = (function () {
     try {
       await ShugenDB.open();
       paymentMethods = await ShugenDB.payment.init();
+      expenseCategories = await ShugenDB.categories.init();
       orders = await ShugenDB.orders.getAll();
       incomes = await ShugenDB.incomes.getAll();
+      expenses = await ShugenDB.expenses.getAll();
       await refreshProgressMap();
       await loadTheme();
       render();
@@ -91,6 +99,7 @@ const App = (function () {
     $('#error-state').hidden = state !== 'error';
     $('#view-orders').hidden = state !== 'ready' || activeView !== 'orders';
     $('#view-incomes').hidden = state !== 'ready' || activeView !== 'incomes';
+    $('#view-expenses').hidden = state !== 'ready' || activeView !== 'expenses';
     $('#fab-add').hidden = state !== 'ready';
 
     $('#empty-state').hidden = true;
@@ -101,11 +110,17 @@ const App = (function () {
     $('#income-empty-filtered').hidden = true;
     $('#income-list').hidden = state !== 'ready';
 
+    $('#expense-empty-state').hidden = true;
+    $('#expense-empty-filtered').hidden = true;
+    $('#expense-list').hidden = state !== 'ready';
+
     if (state === 'ready') {
-      $('#fab-add').setAttribute(
-        'aria-label',
-        activeView === 'incomes' ? 'Tambah pemasukan baru' : 'Tambah pesanan baru'
-      );
+      const fabLabel = activeView === 'incomes'
+        ? 'Tambah pemasukan baru'
+        : activeView === 'expenses'
+          ? 'Tambah pengeluaran baru'
+          : 'Tambah pesanan baru';
+      $('#fab-add').setAttribute('aria-label', fabLabel);
 
       const filteredOrders = getFilteredOrders();
       if (orders.length === 0) {
@@ -123,6 +138,15 @@ const App = (function () {
       } else if (filteredIncomes.length === 0) {
         $('#income-empty-filtered').hidden = false;
         $('#income-list').hidden = true;
+      }
+
+      const filteredExpenses = getFilteredExpenses();
+      if (expenses.length === 0) {
+        $('#expense-empty-state').hidden = false;
+        $('#expense-list').hidden = true;
+      } else if (filteredExpenses.length === 0) {
+        $('#expense-empty-filtered').hidden = false;
+        $('#expense-list').hidden = true;
       }
     }
   }
@@ -164,6 +188,32 @@ const App = (function () {
     return list;
   }
 
+  function getCategoryName(categoryId) {
+    const cat = expenseCategories.find((c) => Number(c.id) === Number(categoryId));
+    return cat ? cat.name : 'Tanpa kategori';
+  }
+
+  function getFilteredExpenses() {
+    let list = expenses.slice();
+    if (expenseStartDate) {
+      list = list.filter((exp) => exp.date >= expenseStartDate);
+    }
+    if (expenseEndDate) {
+      list = list.filter((exp) => exp.date <= expenseEndDate);
+    }
+    if (expenseCategoryFilter && expenseCategoryFilter !== 'semua') {
+      list = list.filter((exp) => String(exp.categoryId) === String(expenseCategoryFilter));
+    }
+    list.sort((a, b) => {
+      const cmp = String(b.date || '').localeCompare(String(a.date || ''));
+      if (cmp !== 0) return cmp;
+      const timeDiff = new Date(b.createdAt) - new Date(a.createdAt);
+      if (timeDiff !== 0) return timeDiff;
+      return (b.id || 0) - (a.id || 0);
+    });
+    return list;
+  }
+
   // Rendering
 
   function render() {
@@ -171,6 +221,7 @@ const App = (function () {
     renderTabs();
     renderOrders();
     renderIncomes();
+    renderExpenses();
   }
 
   function renderNav() {
@@ -317,6 +368,88 @@ const App = (function () {
     showView('ready');
   }
 
+  function populateExpenseFilterCategorySelect() {
+    const sel = $('#expense-filter-category');
+    if (!sel) return;
+    sel.innerHTML = '<option value="semua">Semua Kategori</option>';
+    let hasActiveCategory = expenseCategoryFilter === 'semua';
+    expenseCategories.forEach((cat) => {
+      const opt = document.createElement('option');
+      opt.value = String(cat.id);
+      opt.textContent = cat.name;
+      if (String(cat.id) === String(expenseCategoryFilter)) {
+        hasActiveCategory = true;
+      }
+      sel.appendChild(opt);
+    });
+    if (!hasActiveCategory) {
+      expenseCategoryFilter = 'semua';
+    }
+    sel.value = expenseCategoryFilter;
+  }
+
+  function renderExpenses() {
+    populateExpenseFilterCategorySelect();
+    const list = getFilteredExpenses();
+    const totalAmount = list.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+
+    $('#expense-summary-total').textContent = 'Rp ' + formatPrice(totalAmount);
+    $('#expense-summary-count').textContent = list.length + ' pengeluaran';
+    $('#btn-reset-expense-filter').hidden = !(
+      expenseStartDate ||
+      expenseEndDate ||
+      (expenseCategoryFilter && expenseCategoryFilter !== 'semua')
+    );
+
+    const container = $('#expense-list');
+    container.innerHTML = '';
+
+    list.forEach((exp) => {
+      const card = document.createElement('article');
+      card.className = 'income-card expense-card';
+      card.tabIndex = 0;
+      card.dataset.id = exp.id;
+      card.setAttribute('role', 'button');
+
+      const dateLabel = formatYmd(exp.date);
+      const categoryLabel = getCategoryName(exp.categoryId);
+      const methodLabel = exp.paymentMethod || 'Tanpa metode';
+      let orderLabel = 'Tanpa pesanan';
+      if (exp.orderId) {
+        const matchedOrder = orders.find((o) => o.orderId === exp.orderId);
+        orderLabel = matchedOrder
+          ? ('Pesanan: ' + exp.orderId + ' (' + matchedOrder.customerName + ')')
+          : ('Pesanan: ' + exp.orderId);
+      }
+
+      card.setAttribute(
+        'aria-label',
+        exp.expenseId + ', Rp ' + formatPrice(exp.amount) + ', ' + categoryLabel + ', ' + dateLabel + ', ' + methodLabel + ', ' + orderLabel
+      );
+
+      const noteHtml = exp.note
+        ? '<div class="income-note">' + esc(exp.note) + '</div>'
+        : '';
+
+      card.innerHTML =
+        '<div class="income-header">' +
+          '<span class="income-id">' + esc(exp.expenseId) + '</span>' +
+          '<span class="income-date">' + esc(dateLabel) + '</span>' +
+        '</div>' +
+        '<div class="income-amount">Rp ' + formatPrice(exp.amount) + '</div>' +
+        '<div class="income-meta">' +
+          '<span class="expense-category-tag">' + esc(categoryLabel) + '</span>' +
+          '<span class="income-method-tag">' + esc(methodLabel) + '</span>' +
+          '<span class="income-order-tag">' + esc(orderLabel) + '</span>' +
+        '</div>' +
+        noteHtml;
+
+      container.appendChild(card);
+    });
+
+    showView('ready');
+  }
+
   function esc(str) {
     const el = document.createElement('span');
     el.textContent = str;
@@ -399,9 +532,49 @@ const App = (function () {
       openIncomeForm(Number(card.dataset.id));
     });
 
+    $('#expense-filter-start').addEventListener('change', (e) => {
+      expenseStartDate = e.target.value;
+      renderExpenses();
+    });
+
+    $('#expense-filter-end').addEventListener('change', (e) => {
+      expenseEndDate = e.target.value;
+      renderExpenses();
+    });
+
+    $('#expense-filter-category').addEventListener('change', (e) => {
+      expenseCategoryFilter = e.target.value;
+      renderExpenses();
+    });
+
+    $('#btn-reset-expense-filter').addEventListener('click', () => {
+      expenseStartDate = '';
+      expenseEndDate = '';
+      expenseCategoryFilter = 'semua';
+      $('#expense-filter-start').value = '';
+      $('#expense-filter-end').value = '';
+      $('#expense-filter-category').value = 'semua';
+      renderExpenses();
+    });
+
+    $('#expense-list').addEventListener('click', (e) => {
+      const card = e.target.closest('.expense-card');
+      if (card) openExpenseForm(Number(card.dataset.id));
+    });
+
+    $('#expense-list').addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('.expense-card');
+      if (!card) return;
+      e.preventDefault();
+      openExpenseForm(Number(card.dataset.id));
+    });
+
     $('#fab-add').addEventListener('click', () => {
       if (activeView === 'incomes') {
         openIncomeForm(null);
+      } else if (activeView === 'expenses') {
+        openExpenseForm(null);
       } else {
         openOrderForm(null);
       }
@@ -460,6 +633,25 @@ const App = (function () {
       $('#btn-delete-income').disabled = false;
     });
 
+    $('#expense-field-order').addEventListener('input', updateExpenseOrderHint);
+
+    $('#expense-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveExpense();
+    });
+
+    $('#btn-cancel-expense').addEventListener('click', () => {
+      $('#expense-dialog').close();
+    });
+
+    $('#btn-delete-expense').addEventListener('click', handleDeleteExpense);
+
+    $('#expense-dialog').addEventListener('close', () => {
+      editingExpenseId = null;
+      $('#btn-save-expense').disabled = false;
+      $('#btn-delete-expense').disabled = false;
+    });
+
     // Status picker
     $$('.status-option').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -483,11 +675,18 @@ const App = (function () {
     });
     $('#settings-dialog').addEventListener('close', () => {
       $('#btn-load-demo').disabled = false;
+      $('#btn-add-payment').disabled = false;
+      $('#btn-add-category').disabled = false;
     });
 
     $('#btn-add-payment').addEventListener('click', addPaymentMethod);
     $('#payment-add-input').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); addPaymentMethod(); }
+    });
+
+    $('#btn-add-category').addEventListener('click', addExpenseCategory);
+    $('#category-add-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); addExpenseCategory(); }
     });
 
     $('#btn-load-demo').addEventListener('click', loadDemoData);
@@ -578,6 +777,14 @@ const App = (function () {
         : (orderIncomes.length + ' catatan pemasukan');
       $('#order-paid-group').hidden = false;
 
+      const orderExpenses = expenses.filter((exp) => exp.orderId === order.orderId);
+      const totalExpense = orderExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+      $('#order-expense-total').textContent = 'Rp ' + formatPrice(totalExpense);
+      $('#order-expense-count').textContent = orderExpenses.length === 0
+        ? 'Belum ada pengeluaran tercatat'
+        : (orderExpenses.length + ' catatan pengeluaran');
+      $('#order-expense-group').hidden = false;
+
       const prog = progressMap[order.orderId];
       currentSteps = prog && Array.isArray(prog.steps)
         ? prog.steps.map((s) => ({
@@ -597,6 +804,9 @@ const App = (function () {
       $('#order-paid-group').hidden = true;
       $('#order-paid-total').textContent = 'Rp 0';
       $('#order-paid-count').textContent = 'Belum ada pemasukan tercatat';
+      $('#order-expense-group').hidden = true;
+      $('#order-expense-total').textContent = 'Rp 0';
+      $('#order-expense-count').textContent = 'Belum ada pengeluaran tercatat';
       $('#btn-delete-order').hidden = true;
       currentSteps = [];
     }
@@ -1121,6 +1331,232 @@ const App = (function () {
     }
   }
 
+  function populateExpenseCategorySelect(selectedCategoryId) {
+    const sel = $('#expense-field-category');
+    sel.innerHTML = '<option value="">Pilih kategori</option>';
+    const ids = [];
+    expenseCategories.forEach((cat) => {
+      ids.push(String(cat.id));
+      const opt = document.createElement('option');
+      opt.value = String(cat.id);
+      opt.textContent = cat.name;
+      sel.appendChild(opt);
+    });
+    if (
+      selectedCategoryId !== undefined &&
+      selectedCategoryId !== null &&
+      selectedCategoryId !== '' &&
+      !ids.includes(String(selectedCategoryId))
+    ) {
+      const extra = document.createElement('option');
+      extra.value = String(selectedCategoryId);
+      extra.textContent = getCategoryName(selectedCategoryId);
+      sel.appendChild(extra);
+    }
+  }
+
+  function populateExpensePaymentSelect(selectedMethod) {
+    const sel = $('#expense-field-payment');
+    sel.innerHTML = '<option value="">Pilih metode</option>';
+    const names = [];
+    paymentMethods.forEach((pm) => {
+      names.push(pm.name);
+      const opt = document.createElement('option');
+      opt.value = pm.name;
+      opt.textContent = pm.name;
+      sel.appendChild(opt);
+    });
+    if (selectedMethod && !names.includes(selectedMethod)) {
+      const extra = document.createElement('option');
+      extra.value = selectedMethod;
+      extra.textContent = selectedMethod;
+      sel.appendChild(extra);
+    }
+  }
+
+  function populateExpenseOrderDatalist() {
+    const dl = $('#expense-order-datalist');
+    dl.innerHTML = '';
+    const sorted = orders.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    sorted.forEach((o) => {
+      const opt = document.createElement('option');
+      opt.value = o.orderId;
+      opt.textContent = o.customerName + ' - ' + o.game + ' (Rp ' + formatPrice(o.price) + ')';
+      dl.appendChild(opt);
+    });
+  }
+
+  function updateExpenseOrderHint() {
+    const raw = $('#expense-field-order').value.trim();
+    const hint = $('#expense-order-hint');
+    if (!raw) {
+      hint.textContent = 'Kosongkan jika berdiri sendiri tanpa pesanan.';
+      return;
+    }
+    const matched = orders.find((o) => o.orderId.toLowerCase() === raw.toLowerCase());
+    if (matched) {
+      hint.textContent = 'Terhubung ke: ' + matched.customerName + ' - ' + matched.game + ' (Harga: Rp ' + formatPrice(matched.price) + ')';
+    } else {
+      hint.textContent = 'ID pesanan tidak ditemukan di daftar pesanan.';
+    }
+  }
+
+  function openExpenseForm(id) {
+    editingExpenseId = id;
+    const dialog = $('#expense-dialog');
+    const form = $('#expense-form');
+    form.reset();
+    $('#btn-save-expense').disabled = false;
+    $('#btn-delete-expense').disabled = false;
+    populateExpenseOrderDatalist();
+
+    if (id !== null) {
+      const exp = expenses.find((x) => x.id === id);
+      if (!exp) return;
+      $('#expense-form-title').textContent = 'Detail Pengeluaran';
+      $('#detail-expense-id').textContent = exp.expenseId;
+      $('#detail-expense-id-row').hidden = false;
+      populateExpenseCategorySelect(exp.categoryId);
+      populateExpensePaymentSelect(exp.paymentMethod);
+      $('#expense-field-date').value = exp.date;
+      $('#expense-field-category').value = exp.categoryId !== undefined && exp.categoryId !== null ? String(exp.categoryId) : '';
+      $('#expense-field-amount').value = exp.amount || '';
+      $('#expense-field-payment').value = exp.paymentMethod || '';
+      $('#expense-field-order').value = exp.orderId || '';
+      $('#expense-field-note').value = exp.note || '';
+      $('#btn-delete-expense').hidden = false;
+    } else {
+      $('#expense-form-title').textContent = 'Tambah Pengeluaran';
+      $('#detail-expense-id').textContent = '';
+      $('#detail-expense-id-row').hidden = true;
+      populateExpenseCategorySelect('');
+      populateExpensePaymentSelect('');
+      $('#expense-field-date').value = todayYmd();
+      $('#expense-field-category').value = '';
+      $('#expense-field-amount').value = '';
+      $('#expense-field-payment').value = '';
+      $('#expense-field-order').value = '';
+      $('#expense-field-note').value = '';
+      $('#btn-delete-expense').hidden = true;
+    }
+
+    updateExpenseOrderHint();
+    dialog.showModal();
+    if (id === null) {
+      $('#expense-field-amount').focus();
+    }
+  }
+
+  async function saveExpense() {
+    const saveBtn = $('#btn-save-expense');
+    if (saveBtn.disabled) return;
+
+    const dateVal = $('#expense-field-date').value.trim();
+    const categoryVal = $('#expense-field-category').value.trim();
+    const amountVal = Number($('#expense-field-amount').value) || 0;
+    const paymentVal = $('#expense-field-payment').value.trim();
+    const rawOrderId = $('#expense-field-order').value.trim();
+    const noteVal = $('#expense-field-note').value.trim();
+
+    if (!dateVal) {
+      toast('Tanggal pengeluaran wajib diisi');
+      $('#expense-field-date').focus();
+      return;
+    }
+
+    if (!categoryVal) {
+      toast('Kategori pengeluaran wajib dipilih');
+      $('#expense-field-category').focus();
+      return;
+    }
+
+    if (amountVal <= 0) {
+      toast('Jumlah pengeluaran harus lebih dari Rp 0');
+      $('#expense-field-amount').focus();
+      return;
+    }
+
+    if (!paymentVal) {
+      toast('Metode pembayaran wajib dipilih');
+      $('#expense-field-payment').focus();
+      return;
+    }
+
+    let linkedOrderId = null;
+    if (rawOrderId) {
+      const matchedOrder = orders.find(
+        (o) => o.orderId.toLowerCase() === rawOrderId.toLowerCase()
+      );
+      const existingExpense = editingExpenseId !== null
+        ? expenses.find((exp) => exp.id === editingExpenseId)
+        : null;
+      if (matchedOrder) {
+        linkedOrderId = matchedOrder.orderId;
+      } else if (
+        existingExpense &&
+        existingExpense.orderId &&
+        existingExpense.orderId.toLowerCase() === rawOrderId.toLowerCase()
+      ) {
+        linkedOrderId = existingExpense.orderId;
+      } else {
+        toast('ID pesanan tidak ditemukan');
+        $('#expense-field-order').focus();
+        return;
+      }
+    }
+
+    const data = {
+      date: dateVal,
+      categoryId: Number(categoryVal),
+      amount: amountVal,
+      paymentMethod: paymentVal,
+      orderId: linkedOrderId,
+      note: noteVal
+    };
+
+    saveBtn.disabled = true;
+
+    try {
+      if (editingExpenseId !== null) {
+        await ShugenDB.expenses.update(editingExpenseId, data);
+        toast('Pengeluaran diperbarui');
+      } else {
+        await ShugenDB.expenses.add(data);
+        toast('Pengeluaran ditambahkan');
+      }
+      expenses = await ShugenDB.expenses.getAll();
+      render();
+      $('#expense-dialog').close();
+    } catch (err) {
+      console.error(err);
+      toast('Gagal menyimpan pengeluaran');
+    } finally {
+      saveBtn.disabled = false;
+    }
+  }
+
+  async function handleDeleteExpense() {
+    const deleteBtn = $('#btn-delete-expense');
+    if (deleteBtn.disabled) return;
+    if (editingExpenseId === null) return;
+    if (!confirm('Hapus pengeluaran ini?')) return;
+
+    deleteBtn.disabled = true;
+
+    try {
+      await ShugenDB.expenses.delete(editingExpenseId);
+      expenses = await ShugenDB.expenses.getAll();
+      render();
+      $('#expense-dialog').close();
+      toast('Pengeluaran dihapus');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal menghapus pengeluaran');
+    } finally {
+      deleteBtn.disabled = false;
+    }
+  }
+
   // Quick status picker
 
   function openStatusPicker(id) {
@@ -1152,7 +1588,10 @@ const App = (function () {
 
   function openSettings() {
     $('#btn-load-demo').disabled = false;
+    $('#btn-add-payment').disabled = false;
+    $('#btn-add-category').disabled = false;
     renderPaymentList();
+    renderCategoryList();
     $('#settings-dialog').showModal();
   }
 
@@ -1172,6 +1611,7 @@ const App = (function () {
       input.addEventListener('change', () => renamePayment(pm.id, input.value));
 
       const del = document.createElement('button');
+      del.type = 'button';
       del.className = 'btn-delete-payment';
       del.setAttribute('aria-label', 'Hapus ' + pm.name);
       del.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
@@ -1184,9 +1624,26 @@ const App = (function () {
   }
 
   async function addPaymentMethod() {
+    const addBtn = $('#btn-add-payment');
+    if (addBtn.disabled) return;
+
     const input = $('#payment-add-input');
     const name = input.value.trim();
-    if (!name) return;
+    if (!name) {
+      input.focus();
+      return;
+    }
+
+    const isDuplicate = paymentMethods.some(
+      (pm) => pm.name.toLowerCase() === name.toLowerCase()
+    );
+    if (isDuplicate) {
+      toast('Metode pembayaran sudah ada');
+      input.focus();
+      return;
+    }
+
+    addBtn.disabled = true;
 
     try {
       await ShugenDB.payment.add(name);
@@ -1196,7 +1653,13 @@ const App = (function () {
       toast('Metode ditambahkan');
     } catch (err) {
       console.error(err);
-      toast('Gagal menambah metode');
+      if (err && err.message === 'DUPLICATE_PAYMENT') {
+        toast('Metode pembayaran sudah ada');
+      } else {
+        toast('Gagal menambah metode');
+      }
+    } finally {
+      addBtn.disabled = false;
     }
   }
 
@@ -1207,12 +1670,23 @@ const App = (function () {
       return;
     }
 
+    const isDuplicate = paymentMethods.some(
+      (pm) => pm.id !== id && pm.name.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (isDuplicate) {
+      renderPaymentList();
+      toast('Metode pembayaran sudah ada');
+      return;
+    }
+
     try {
       await ShugenDB.payment.update(id, trimmed);
       paymentMethods = await ShugenDB.payment.getAll();
+      renderPaymentList();
       toast('Metode diperbarui');
     } catch (err) {
       console.error(err);
+      renderPaymentList();
       toast('Gagal mengubah nama');
     }
   }
@@ -1229,6 +1703,134 @@ const App = (function () {
     }
   }
 
+  function renderCategoryList() {
+    const list = $('#category-list');
+    list.innerHTML = '';
+
+    expenseCategories.forEach((cat) => {
+      const li = document.createElement('li');
+      li.className = 'payment-item';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'payment-name';
+      input.value = cat.name;
+      input.setAttribute('aria-label', 'Nama kategori: ' + cat.name);
+      input.addEventListener('change', () => renameExpenseCategory(cat.id, input.value));
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'btn-delete-payment';
+      del.setAttribute('aria-label', 'Hapus kategori ' + cat.name);
+      del.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      del.addEventListener('click', () => removeExpenseCategory(cat.id));
+
+      li.appendChild(input);
+      li.appendChild(del);
+      list.appendChild(li);
+    });
+  }
+
+  async function addExpenseCategory() {
+    const addBtn = $('#btn-add-category');
+    if (addBtn.disabled) return;
+
+    const input = $('#category-add-input');
+    const name = input.value.trim();
+    if (!name) {
+      input.focus();
+      return;
+    }
+
+    const isDuplicate = expenseCategories.some(
+      (cat) => cat.name.toLowerCase() === name.toLowerCase()
+    );
+    if (isDuplicate) {
+      toast('Nama kategori tidak boleh kembar');
+      input.focus();
+      return;
+    }
+
+    addBtn.disabled = true;
+
+    try {
+      await ShugenDB.categories.add(name);
+      expenseCategories = await ShugenDB.categories.getAll();
+      input.value = '';
+      renderCategoryList();
+      render();
+      toast('Kategori ditambahkan');
+    } catch (err) {
+      console.error(err);
+      if (err && err.message === 'DUPLICATE_CATEGORY') {
+        toast('Nama kategori tidak boleh kembar');
+      } else {
+        toast('Gagal menambah kategori');
+      }
+    } finally {
+      addBtn.disabled = false;
+    }
+  }
+
+  async function renameExpenseCategory(id, newName) {
+    const trimmed = newName.trim();
+    if (!trimmed) {
+      renderCategoryList();
+      return;
+    }
+
+    const isDuplicate = expenseCategories.some(
+      (cat) => cat.id !== id && cat.name.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (isDuplicate) {
+      renderCategoryList();
+      toast('Nama kategori tidak boleh kembar');
+      return;
+    }
+
+    try {
+      await ShugenDB.categories.update(id, trimmed);
+      expenseCategories = await ShugenDB.categories.getAll();
+      renderCategoryList();
+      render();
+      toast('Kategori diperbarui');
+    } catch (err) {
+      console.error(err);
+      renderCategoryList();
+      if (err && err.message === 'DUPLICATE_CATEGORY') {
+        toast('Nama kategori tidak boleh kembar');
+      } else {
+        toast('Gagal mengubah nama kategori');
+      }
+    }
+  }
+
+  async function removeExpenseCategory(id) {
+    const usedCount = expenses.filter((exp) => Number(exp.categoryId) === Number(id)).length;
+    if (usedCount > 0) {
+      toast('Kategori sedang dipakai oleh pengeluaran dan tidak dapat dihapus');
+      return;
+    }
+
+    try {
+      await ShugenDB.categories.delete(id);
+      expenseCategories = await ShugenDB.categories.getAll();
+      if (String(expenseCategoryFilter) === String(id)) {
+        expenseCategoryFilter = 'semua';
+      }
+      renderCategoryList();
+      render();
+      toast('Kategori dihapus');
+    } catch (err) {
+      console.error(err);
+      if (err && err.message === 'CATEGORY_IN_USE') {
+        toast('Kategori sedang dipakai oleh pengeluaran dan tidak dapat dihapus');
+      } else {
+        toast('Gagal menghapus kategori');
+      }
+    }
+  }
+
   // Demo data actions
 
   async function loadDemoData() {
@@ -1242,10 +1844,13 @@ const App = (function () {
       await DummyData.load();
       orders = await ShugenDB.orders.getAll();
       incomes = await ShugenDB.incomes.getAll();
+      expenses = await ShugenDB.expenses.getAll();
+      expenseCategories = await ShugenDB.categories.getAll();
       await refreshProgressMap();
       paymentMethods = await ShugenDB.payment.getAll();
       render();
       renderPaymentList();
+      renderCategoryList();
       toast('Data demo dimuat');
     } catch (err) {
       console.error(err);

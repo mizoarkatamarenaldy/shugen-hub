@@ -1,10 +1,14 @@
 const ShugenDB = (function () {
   const DB_NAME = 'shugen-hub';
-  const DB_VERSION = 3;
+  const DB_VERSION = 4;
   let _db = null;
 
   const DEFAULT_PAYMENT_METHODS = [
     'Transfer Bank', 'DANA', 'GoPay', 'OVO', 'Cash'
+  ];
+
+  const DEFAULT_EXPENSE_CATEGORIES = [
+    'Modal Topup', 'Gaji Worker', 'Kas', 'Operasional', 'Lainnya'
   ];
 
   function open() {
@@ -44,6 +48,23 @@ const ShugenDB = (function () {
           incomeStore.createIndex('orderId', 'orderId');
           incomeStore.createIndex('date', 'date');
           incomeStore.createIndex('createdAt', 'createdAt');
+        }
+        if (!db.objectStoreNames.contains('expenseCategories')) {
+          db.createObjectStore('expenseCategories', {
+            keyPath: 'id',
+            autoIncrement: true
+          });
+        }
+        if (!db.objectStoreNames.contains('expenses')) {
+          const expenseStore = db.createObjectStore('expenses', {
+            keyPath: 'id',
+            autoIncrement: true
+          });
+          expenseStore.createIndex('expenseId', 'expenseId', { unique: true });
+          expenseStore.createIndex('orderId', 'orderId');
+          expenseStore.createIndex('categoryId', 'categoryId');
+          expenseStore.createIndex('date', 'date');
+          expenseStore.createIndex('createdAt', 'createdAt');
         }
       };
 
@@ -402,6 +423,188 @@ const ShugenDB = (function () {
     return req2p(tx('incomes', 'readwrite').clear());
   }
 
+  let _addExpenseQueue = Promise.resolve();
+
+  function buildCandidateExpenseId(dateStr) {
+    const cleanDate = normalizeDateStr(dateStr);
+    const yy = cleanDate.slice(2, 4);
+    const mm = cleanDate.slice(5, 7);
+    const dd = cleanDate.slice(8, 10);
+    return 'MKL-' + yy + mm + dd + '-' + randomIdCode(4);
+  }
+
+  async function getAllExpenses() {
+    await open();
+    return req2p(tx('expenses', 'readonly').getAll());
+  }
+
+  async function getExpense(id) {
+    await open();
+    return req2p(tx('expenses', 'readonly').get(id));
+  }
+
+  async function getExpensesByOrderId(orderId) {
+    await open();
+    if (!orderId) return [];
+    const idx = tx('expenses', 'readonly').index('orderId');
+    return req2p(idx.getAll(orderId));
+  }
+
+  async function getExpensesByCategoryId(categoryId) {
+    await open();
+    if (categoryId === undefined || categoryId === null) return [];
+    const idx = tx('expenses', 'readonly').index('categoryId');
+    return req2p(idx.getAll(Number(categoryId)));
+  }
+
+  function addExpense(expense) {
+    const run = _addExpenseQueue.then(async () => {
+      await open();
+      return new Promise((resolve, reject) => {
+        const transaction = _db.transaction('expenses', 'readwrite');
+        const store = transaction.objectStore('expenses');
+        const idx = store.index('expenseId');
+        const now = new Date();
+        const dateStr = normalizeDateStr(expense.date);
+        let savedRecord = null;
+
+        transaction.oncomplete = () => resolve(savedRecord);
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error || new Error('Transaksi dibatalkan'));
+
+        function tryInsert(preferredId) {
+          const candidate = preferredId || buildCandidateExpenseId(dateStr);
+          const checkReq = idx.getKey(candidate);
+          checkReq.onsuccess = () => {
+            if (checkReq.result !== undefined) {
+              tryInsert(null);
+              return;
+            }
+            const cleanOrderId = expense.orderId ? String(expense.orderId).trim() : '';
+            const record = {
+              expenseId: candidate,
+              date: dateStr,
+              amount: Number(expense.amount) || 0,
+              categoryId: Number(expense.categoryId),
+              paymentMethod: String(expense.paymentMethod || '').trim(),
+              orderId: cleanOrderId || null,
+              note: String(expense.note || '').trim(),
+              createdAt: expense.createdAt || now,
+              updatedAt: now
+            };
+            const addReq = store.add(record);
+            addReq.onsuccess = () => {
+              record.id = addReq.result;
+              savedRecord = record;
+            };
+            addReq.onerror = (e) => {
+              if (addReq.error && addReq.error.name === 'ConstraintError') {
+                e.preventDefault();
+                e.stopPropagation();
+                tryInsert(null);
+              }
+            };
+          };
+        }
+
+        tryInsert(expense.expenseId || null);
+      });
+    });
+    _addExpenseQueue = run.catch(() => {});
+    return run;
+  }
+
+  async function updateExpense(id, changes) {
+    await open();
+    const store = tx('expenses', 'readwrite');
+    const existing = await req2p(store.get(id));
+    if (!existing) throw new Error('Pengeluaran tidak ditemukan');
+    const nextOrderId = changes.orderId !== undefined
+      ? (String(changes.orderId || '').trim() || null)
+      : existing.orderId;
+    const updated = Object.assign({}, existing, {
+      date: changes.date !== undefined ? normalizeDateStr(changes.date) : existing.date,
+      amount: changes.amount !== undefined ? (Number(changes.amount) || 0) : existing.amount,
+      categoryId: changes.categoryId !== undefined ? Number(changes.categoryId) : existing.categoryId,
+      paymentMethod: changes.paymentMethod !== undefined ? String(changes.paymentMethod || '').trim() : existing.paymentMethod,
+      orderId: nextOrderId,
+      note: changes.note !== undefined ? String(changes.note || '').trim() : existing.note,
+      updatedAt: new Date()
+    });
+    await req2p(store.put(updated));
+    return updated;
+  }
+
+  async function deleteExpense(id) {
+    await open();
+    return req2p(tx('expenses', 'readwrite').delete(id));
+  }
+
+  async function clearExpenses() {
+    await open();
+    return req2p(tx('expenses', 'readwrite').clear());
+  }
+
+  // Expense categories
+
+  async function getAllExpenseCategories() {
+    await open();
+    return req2p(tx('expenseCategories', 'readonly').getAll());
+  }
+
+  async function addExpenseCategory(name) {
+    await open();
+    const trimmed = String(name || '').trim();
+    if (!trimmed) return null;
+    const existing = await getAllExpenseCategories();
+    const isDuplicate = existing.some(
+      (c) => String(c.name || '').toLowerCase() === trimmed.toLowerCase()
+    );
+    if (isDuplicate) {
+      throw new Error('DUPLICATE_CATEGORY');
+    }
+    const key = await req2p(tx('expenseCategories', 'readwrite').add({ name: trimmed }));
+    return { id: key, name: trimmed };
+  }
+
+  async function updateExpenseCategory(id, name) {
+    await open();
+    const trimmed = String(name || '').trim();
+    if (!trimmed) return null;
+    const existing = await getAllExpenseCategories();
+    const isDuplicate = existing.some(
+      (c) => c.id !== id && String(c.name || '').toLowerCase() === trimmed.toLowerCase()
+    );
+    if (isDuplicate) {
+      throw new Error('DUPLICATE_CATEGORY');
+    }
+    await req2p(tx('expenseCategories', 'readwrite').put({ id: id, name: trimmed }));
+    return { id: id, name: trimmed };
+  }
+
+  async function deleteExpenseCategory(id) {
+    await open();
+    const used = await getExpensesByCategoryId(Number(id));
+    if (used.length > 0) {
+      throw new Error('CATEGORY_IN_USE');
+    }
+    return req2p(tx('expenseCategories', 'readwrite').delete(id));
+  }
+
+  async function clearExpenseCategories() {
+    await open();
+    return req2p(tx('expenseCategories', 'readwrite').clear());
+  }
+
+  async function initExpenseCategories() {
+    const existing = await getAllExpenseCategories();
+    if (existing.length > 0) return existing;
+    for (const name of DEFAULT_EXPENSE_CATEGORIES) {
+      await addExpenseCategory(name);
+    }
+    return getAllExpenseCategories();
+  }
+
   // Payment methods
 
   async function getAllPaymentMethods() {
@@ -411,15 +614,22 @@ const ShugenDB = (function () {
 
   async function addPaymentMethod(name) {
     await open();
-    const trimmed = name.trim();
+    const trimmed = String(name || '').trim();
     if (!trimmed) return null;
+    const existing = await getAllPaymentMethods();
+    const isDuplicate = existing.some(
+      (p) => String(p.name || '').toLowerCase() === trimmed.toLowerCase()
+    );
+    if (isDuplicate) {
+      throw new Error('DUPLICATE_PAYMENT');
+    }
     const key = await req2p(tx('paymentMethods', 'readwrite').add({ name: trimmed }));
     return { id: key, name: trimmed };
   }
 
   async function updatePaymentMethod(id, name) {
     await open();
-    const trimmed = name.trim();
+    const trimmed = String(name || '').trim();
     if (!trimmed) return null;
     await req2p(tx('paymentMethods', 'readwrite').put({ id: id, name: trimmed }));
     return { id: id, name: trimmed };
@@ -484,6 +694,24 @@ const ShugenDB = (function () {
       update: updateIncome,
       delete: deleteIncome,
       clear: clearIncomes
+    },
+    expenses: {
+      getAll: getAllExpenses,
+      get: getExpense,
+      getByOrderId: getExpensesByOrderId,
+      getByCategoryId: getExpensesByCategoryId,
+      add: addExpense,
+      update: updateExpense,
+      delete: deleteExpense,
+      clear: clearExpenses
+    },
+    categories: {
+      getAll: getAllExpenseCategories,
+      add: addExpenseCategory,
+      update: updateExpenseCategory,
+      delete: deleteExpenseCategory,
+      clear: clearExpenseCategories,
+      init: initExpenseCategories
     },
     payment: {
       getAll: getAllPaymentMethods,

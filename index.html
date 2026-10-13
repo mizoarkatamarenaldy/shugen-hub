@@ -41,6 +41,7 @@
     <div class="main-nav-inner">
       <button type="button" class="nav-tab active" data-view="orders" aria-current="page">Pesanan</button>
       <button type="button" class="nav-tab" data-view="incomes">Pemasukan</button>
+      <button type="button" class="nav-tab" data-view="expenses">Pengeluaran</button>
     </div>
   </nav>
 
@@ -122,6 +123,50 @@
       </div>
 
       <section id="income-list" class="income-list" aria-label="Daftar pemasukan"></section>
+    </div>
+
+    <div id="view-expenses" hidden>
+      <section class="income-controls" aria-label="Filter dan ringkasan pengeluaran">
+        <div class="income-filter-bar">
+          <div class="income-filter-fields">
+            <div class="income-filter-field">
+              <label class="form-label" for="expense-filter-start">Dari Tanggal</label>
+              <input type="date" id="expense-filter-start" class="form-input income-date-input">
+            </div>
+            <div class="income-filter-field">
+              <label class="form-label" for="expense-filter-end">Sampai Tanggal</label>
+              <input type="date" id="expense-filter-end" class="form-input income-date-input">
+            </div>
+            <div class="income-filter-field expense-filter-category-field">
+              <label class="form-label" for="expense-filter-category">Kategori</label>
+              <select id="expense-filter-category" class="form-select income-date-input">
+                <option value="semua">Semua Kategori</option>
+              </select>
+            </div>
+          </div>
+          <button type="button" id="btn-reset-expense-filter" class="btn btn-secondary btn-small btn-reset-filter" hidden>Reset Filter</button>
+        </div>
+
+        <div class="income-summary-bar" aria-live="polite">
+          <div class="income-summary-meta">
+            <span class="income-summary-label">Total Pengeluaran</span>
+            <span id="expense-summary-count" class="income-summary-count">0 pengeluaran</span>
+          </div>
+          <strong id="expense-summary-total" class="income-summary-total">Rp 0</strong>
+        </div>
+      </section>
+
+      <div id="expense-empty-state" class="app-state" hidden>
+        <p class="state-message">Belum ada pengeluaran</p>
+        <p class="state-hint">Tap tombol + di bawah untuk mencatat pengeluaran, atau muat data demo di Pengaturan.</p>
+      </div>
+
+      <div id="expense-empty-filtered" class="app-state" hidden>
+        <p class="state-message">Tidak ada pengeluaran yang sesuai filter</p>
+        <p class="state-hint">Coba ubah rentang tanggal, pilih kategori lain, atau tap Reset Filter.</p>
+      </div>
+
+      <section id="expense-list" class="income-list" aria-label="Daftar pengeluaran"></section>
     </div>
 
     <button type="button" class="fab" id="fab-add" aria-label="Tambah pesanan baru">
@@ -225,6 +270,14 @@
           <strong id="order-paid-total" class="order-paid-value">Rp 0</strong>
         </div>
 
+        <div id="order-expense-group" class="order-paid-box" hidden>
+          <div class="order-paid-meta">
+            <span class="order-paid-label">Total Pengeluaran</span>
+            <span id="order-expense-count" class="order-paid-count">Belum ada pengeluaran tercatat</span>
+          </div>
+          <strong id="order-expense-total" class="order-paid-value">Rp 0</strong>
+        </div>
+
         <div id="field-status-group" class="form-group" hidden>
           <label class="form-label" for="field-status">Status Pesanan</label>
           <select id="field-status" class="form-select">
@@ -301,6 +354,72 @@
     </form>
   </dialog>
 
+  <dialog id="expense-dialog" aria-labelledby="expense-form-title">
+    <div class="dialog-header">
+      <div class="dialog-header-titles">
+        <h2 id="expense-form-title" class="dialog-title">Tambah Pengeluaran</h2>
+        <div id="detail-expense-id-row" class="dialog-order-id-row" hidden>
+          <span id="detail-expense-id" class="dialog-order-id"></span>
+        </div>
+      </div>
+      <button type="button" class="btn-icon" id="btn-cancel-expense" aria-label="Tutup form pengeluaran">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <form id="expense-form">
+      <div class="dialog-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="expense-field-date">Tanggal *</label>
+            <input type="date" id="expense-field-date" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="expense-field-category">Kategori *</label>
+            <select id="expense-field-category" class="form-select" required>
+              <option value="">Pilih kategori</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="expense-field-amount">Jumlah (Rp) *</label>
+            <div class="form-price-wrap">
+              <span class="form-price-prefix">Rp</span>
+              <input type="number" id="expense-field-amount" class="form-input form-input-price" min="1" step="1" required placeholder="0">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="expense-field-payment">Metode Pembayaran *</label>
+            <select id="expense-field-payment" class="form-select" required>
+              <option value="">Pilih metode</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="expense-field-order">ID Pesanan (Opsional)</label>
+          <input type="text" id="expense-field-order" class="form-input" list="expense-order-datalist" placeholder="Contoh: SGN-261011-K7M4" autocomplete="off">
+          <datalist id="expense-order-datalist"></datalist>
+          <p id="expense-order-hint" class="form-hint">Kosongkan jika berdiri sendiri tanpa pesanan.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="expense-field-note">Catatan</label>
+          <textarea id="expense-field-note" class="form-textarea" placeholder="Contoh: Modal topup, kas toko, atau gaji worker"></textarea>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" id="btn-delete-expense" class="btn btn-danger" hidden>Hapus</button>
+        <button type="submit" id="btn-save-expense" class="btn btn-primary">Simpan</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Dialog Ubah Status Cepat -->
   <dialog id="status-dialog" class="dialog-status" aria-label="Ubah Status Pesanan">
     <div class="dialog-header">
@@ -338,6 +457,14 @@
         <div class="payment-add">
           <input type="text" id="payment-add-input" class="payment-add-input" placeholder="Tambah metode baru..." aria-label="Nama metode pembayaran baru">
           <button type="button" id="btn-add-payment" class="btn btn-secondary btn-small">Tambah</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Kategori Pengeluaran</div>
+        <ul id="category-list" class="payment-list"></ul>
+        <div class="payment-add">
+          <input type="text" id="category-add-input" class="payment-add-input" placeholder="Tambah kategori baru..." aria-label="Nama kategori pengeluaran baru">
+          <button type="button" id="btn-add-category" class="btn btn-secondary btn-small">Tambah</button>
         </div>
       </div>
       <div class="settings-section">

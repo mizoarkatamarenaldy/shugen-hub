@@ -4,6 +4,10 @@ const DummyData = (function () {
     'Transfer BCA', 'Transfer BRI', 'DANA', 'GoPay', 'Cash'
   ];
 
+  const EXPENSE_CATEGORIES = [
+    'Modal Topup', 'Gaji Worker', 'Kas', 'Operasional', 'Lainnya'
+  ];
+
   const ORDERS = [
     {
       orderId: 'SGN-261011-K7M4',
@@ -194,14 +198,97 @@ const DummyData = (function () {
     }
   ];
 
+  const EXPENSES = [
+    {
+      expenseId: 'MKL-261011-B3N7',
+      date: '2026-10-11',
+      amount: 76000,
+      categoryName: 'Modal Topup',
+      paymentMethod: 'DANA',
+      orderId: 'SGN-261011-R9W2',
+      note: 'Modal beli Welkin Moon + 300 GC di supplier',
+      createdAt: new Date('2026-10-11T11:25:00')
+    },
+    {
+      expenseId: 'MKL-261011-L9R2',
+      date: '2026-10-11',
+      amount: 50000,
+      categoryName: 'Kas',
+      paymentMethod: 'Cash',
+      orderId: null,
+      note: 'Isi kas kecil operasional harian toko',
+      createdAt: new Date('2026-10-11T13:00:00')
+    },
+    {
+      expenseId: 'MKL-261012-H5K9',
+      date: '2026-10-12',
+      amount: 105000,
+      categoryName: 'Gaji Worker',
+      paymentMethod: 'Transfer BCA',
+      orderId: 'SGN-261011-K7M4',
+      note: 'Fee worker joki Epic ke Legend',
+      createdAt: new Date('2026-10-12T14:15:00')
+    },
+    {
+      expenseId: 'MKL-261012-P8T4',
+      date: '2026-10-12',
+      amount: 30000,
+      categoryName: 'Gaji Worker',
+      paymentMethod: 'Cash',
+      orderId: 'SGN-261012-T5V9',
+      note: 'Kompensasi worker 1 langkah sebelum pesanan dibatalkan',
+      createdAt: new Date('2026-10-12T15:20:00')
+    },
+    {
+      expenseId: 'MKL-261012-W4M8',
+      date: '2026-10-12',
+      amount: 85000,
+      categoryName: 'Operasional',
+      paymentMethod: 'GoPay',
+      orderId: null,
+      note: 'Beli kuota internet cadangan untuk tim joki',
+      createdAt: new Date('2026-10-12T18:00:00')
+    },
+    {
+      expenseId: 'MKL-261013-D2W6',
+      date: '2026-10-13',
+      amount: 118000,
+      categoryName: 'Modal Topup',
+      paymentMethod: 'Transfer BCA',
+      orderId: 'SGN-261013-B6Q8',
+      note: 'Modal stok 571 Diamond Mobile Legends',
+      createdAt: new Date('2026-10-13T07:35:00')
+    },
+    {
+      expenseId: 'MKL-261013-K6J3',
+      date: '2026-10-13',
+      amount: 150000,
+      categoryName: 'Gaji Worker',
+      paymentMethod: 'Transfer BRI',
+      orderId: null,
+      note: 'Gaji shift admin jaga chat mingguan',
+      createdAt: new Date('2026-10-13T11:00:00')
+    }
+  ];
+
   async function load() {
     await ShugenDB.orders.clear();
     await ShugenDB.progress.clear();
     await ShugenDB.incomes.clear();
+    await ShugenDB.expenses.clear();
+    await ShugenDB.categories.clear();
     await ShugenDB.payment.clear();
 
     for (const name of PAYMENT_METHODS) {
       await ShugenDB.payment.add(name);
+    }
+
+    const categoryIdByName = {};
+    for (const name of EXPENSE_CATEGORIES) {
+      const cat = await ShugenDB.categories.add(name);
+      if (cat) {
+        categoryIdByName[cat.name] = cat.id;
+      }
     }
 
     for (const order of ORDERS) {
@@ -213,6 +300,19 @@ const DummyData = (function () {
 
     for (const income of INCOMES) {
       await ShugenDB.incomes.add(income);
+    }
+
+    for (const expense of EXPENSES) {
+      await ShugenDB.expenses.add({
+        expenseId: expense.expenseId,
+        date: expense.date,
+        amount: expense.amount,
+        categoryId: categoryIdByName[expense.categoryName],
+        paymentMethod: expense.paymentMethod,
+        orderId: expense.orderId,
+        note: expense.note,
+        createdAt: expense.createdAt
+      });
     }
   }
 
