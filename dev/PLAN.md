@@ -23,8 +23,8 @@ Spek lengkap fitur yang sudah selesai ada di dev/PLANSPEC.md.
 - [x] 12c. Backup otomatis sebelum import (unduh backup data saat ini dulu)
 - [x] 12d. Perbandingan jumlah data saat ini dengan isi file backup (di dialog konfirmasi import)
 - [x] 8. Rekap harian dan bulanan (omzet, pengeluaran, untung bersih)
-- [ ] 7. Template pesan WA (konfirmasi, update progress, selesai)  <- FOKUS SEKARANG
-- [ ] 10. Deadline pesanan dan pengingat
+- [x] 7. Template pesan WA (konfirmasi, update progress, selesai)
+- [ ] 10. Deadline pesanan dan pengingat  <- FOKUS SEKARANG
 - [ ] 9. Daftar penjoki/partner dan bagi hasil per pesanan
 - [ ] 11. Katalog harga (hanya template, harga bisa diubah per pesanan)
 - [ ] 15. Pengingat backup berkala (tunda, putuskan setelah rencana sinkron Google Drive jelas)

@@ -37,6 +37,22 @@ const App = (function () {
   let recapDailyDate = '';
   let recapMonthlyMonth = '';
 
+  const DEFAULT_WA_TEMPLATES = {
+    konfirmasi: 'Halo {nama_pelanggan}, pesanan game {game} ({id_pesanan}) sudah kami catat. Total tagihan: {total}. Silakan lakukan pembayaran agar pesanan dapat segera kami proses. Terima kasih!',
+    progress: 'Halo {nama_pelanggan}, pesanan {game} ({id_pesanan}) sedang kami kerjakan. Progress saat ini: {progress}. Kami akan kabari lagi saat ada perkembangan selanjutnya.',
+    selesai: 'Halo {nama_pelanggan}, pesanan {game} ({id_pesanan}) sudah selesai dikerjakan. Terima kasih banyak telah memesan di Shugen Store!'
+  };
+
+  let waTemplates = {
+    konfirmasi: DEFAULT_WA_TEMPLATES.konfirmasi,
+    progress: DEFAULT_WA_TEMPLATES.progress,
+    selesai: DEFAULT_WA_TEMPLATES.selesai
+  };
+  let currentWaOrderId = null;
+  let currentWaOrderSnapshot = null;
+  let currentWaTemplateType = 'konfirmasi';
+  let waCopyTimer = null;
+
   const STATUS_LABELS = {
     menunggu_bayar: 'Menunggu Bayar',
     diproses: 'Diproses',
@@ -149,6 +165,7 @@ const App = (function () {
       populateCustomerDatalist();
       recapDailyDate = todayYmd();
       recapMonthlyMonth = currentYm();
+      await loadWaTemplates();
       render();
       bindEvents();
       registerSW();
@@ -1425,6 +1442,30 @@ const App = (function () {
 
     $('#settings-shop-form').addEventListener('submit', handleSaveShopInfo);
 
+    // WhatsApp templates settings events
+    $('#btn-save-template-konfirmasi').addEventListener('click', () => saveWaTemplate('konfirmasi'));
+    $('#btn-reset-template-konfirmasi').addEventListener('click', () => resetWaTemplate('konfirmasi'));
+    $('#btn-save-template-progress').addEventListener('click', () => saveWaTemplate('progress'));
+    $('#btn-reset-template-progress').addEventListener('click', () => resetWaTemplate('progress'));
+    $('#btn-save-template-selesai').addEventListener('click', () => saveWaTemplate('selesai'));
+    $('#btn-reset-template-selesai').addEventListener('click', () => resetWaTemplate('selesai'));
+
+    // WhatsApp dialog events
+    $('#btn-close-wa-dialog').addEventListener('click', () => {
+      $('#wa-dialog').close();
+    });
+    $('#btn-copy-wa-message').addEventListener('click', copyWaMessage);
+
+    $$('.wa-template-tabs .wa-tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        selectWaTemplateTab(tab.dataset.template);
+      });
+    });
+
+    $('#wa-dialog').addEventListener('close', () => {
+      resetWaCopyButton();
+    });
+
     // Customer events
     $('#customer-form').addEventListener('submit', (e) => {
       e.preventDefault();
@@ -1576,6 +1617,11 @@ const App = (function () {
         $('#btn-create-invoice').onclick = () => handleCreateInvoiceForOrder(order);
       }
 
+      $('#order-wa-group').hidden = false;
+      $('#btn-open-wa-dialog').onclick = () => {
+        openWaDialog(order.orderId);
+      };
+
       const prog = progressMap[order.orderId];
       currentSteps = prog && Array.isArray(prog.steps)
         ? prog.steps.map((s) => ({
@@ -1600,6 +1646,7 @@ const App = (function () {
       $('#order-expense-total').textContent = 'Rp 0';
       $('#order-expense-count').textContent = 'Belum ada pengeluaran tercatat';
       $('#order-invoice-group').hidden = true;
+      $('#order-wa-group').hidden = true;
       $('#btn-delete-order').hidden = true;
       currentSteps = [];
     }
@@ -2465,6 +2512,7 @@ const App = (function () {
     renderPaymentList();
     renderGameList();
     renderCategoryList();
+    renderTemplateSettings();
     $('#settings-dialog').showModal();
   }
 
@@ -2991,6 +3039,275 @@ const App = (function () {
     }
   }
 
+  // WhatsApp Templates (Fitur 7)
+
+  async function loadWaTemplates() {
+    try {
+      const tplKonfirmasi = await ShugenDB.templates.get('konfirmasi');
+      const tplProgress = await ShugenDB.templates.get('progress');
+      const tplSelesai = await ShugenDB.templates.get('selesai');
+
+      waTemplates.konfirmasi = (tplKonfirmasi !== null && tplKonfirmasi !== undefined)
+        ? tplKonfirmasi
+        : DEFAULT_WA_TEMPLATES.konfirmasi;
+      waTemplates.progress = (tplProgress !== null && tplProgress !== undefined)
+        ? tplProgress
+        : DEFAULT_WA_TEMPLATES.progress;
+      waTemplates.selesai = (tplSelesai !== null && tplSelesai !== undefined)
+        ? tplSelesai
+        : DEFAULT_WA_TEMPLATES.selesai;
+    } catch (err) {
+      console.error(err);
+    }
+    renderTemplateSettings();
+  }
+
+  function renderTemplateSettings() {
+    const inputKonfirmasi = $('#setting-template-konfirmasi');
+    const inputProgress = $('#setting-template-progress');
+    const inputSelesai = $('#setting-template-selesai');
+    if (inputKonfirmasi) inputKonfirmasi.value = waTemplates.konfirmasi;
+    if (inputProgress) inputProgress.value = waTemplates.progress;
+    if (inputSelesai) inputSelesai.value = waTemplates.selesai;
+  }
+
+  function getTemplateLabel(type) {
+    if (type === 'konfirmasi') return 'konfirmasi';
+    if (type === 'progress') return 'update progress';
+    if (type === 'selesai') return 'selesai';
+    return type;
+  }
+
+  async function saveWaTemplate(type) {
+    const textarea = $('#setting-template-' + type);
+    if (!textarea) return;
+    const val = textarea.value.trim();
+    if (!val) {
+      toast('Teks template tidak boleh kosong');
+      textarea.focus();
+      return;
+    }
+    try {
+      await ShugenDB.templates.set(type, val);
+      waTemplates[type] = val;
+      toast('Template ' + getTemplateLabel(type) + ' disimpan');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal menyimpan template');
+    }
+  }
+
+  async function resetWaTemplate(type) {
+    const defaultText = DEFAULT_WA_TEMPLATES[type] || '';
+    try {
+      await ShugenDB.templates.set(type, defaultText);
+      waTemplates[type] = defaultText;
+      const textarea = $('#setting-template-' + type);
+      if (textarea) textarea.value = defaultText;
+      toast('Template ' + getTemplateLabel(type) + ' dikembalikan ke bawaan');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal mengembalikan template ke bawaan');
+    }
+  }
+
+  function extractPhoneNumber(contactStr) {
+    if (!contactStr || typeof contactStr !== 'string') return null;
+    const digits = contactStr.replace(/\D/g, '');
+    if (digits.length < 8) return null;
+    if (digits.startsWith('0')) {
+      return '62' + digits.slice(1);
+    }
+    if (digits.startsWith('62')) {
+      return digits;
+    }
+    return digits;
+  }
+
+  function findCustomerForOrder(order) {
+    if (!order) return null;
+    if (order.customerId) {
+      const byId = customers.find((c) => c.id === order.customerId || c.customerId === order.customerId);
+      if (byId) return byId;
+    }
+    if (order.customerName) {
+      return customers.find((c) => matchCustomerName(c.name, order.customerName)) || null;
+    }
+    return null;
+  }
+
+  function replacePlaceholders(templateText, order) {
+    if (!templateText) return '';
+    if (!order) return templateText;
+
+    const customerName = order.customerName ? String(order.customerName).trim() : '';
+    const orderId = order.orderId ? String(order.orderId).trim() : '';
+    const rawGame = order.gameId ? getGameName(order.gameId) : '';
+    const gameName = (rawGame && rawGame !== '-') ? rawGame : '';
+    const priceVal = Number(order.price) || 0;
+    const totalStr = priceVal > 0 ? ('Rp ' + formatPrice(priceVal)) : '';
+
+    let progressStr = '';
+    if (order.type === 'joki') {
+      const prog = progressMap[order.orderId];
+      const steps = prog && Array.isArray(prog.steps) ? prog.steps : [];
+      if (steps.length > 0) {
+        const pct = (prog && typeof prog.percentage === 'number')
+          ? prog.percentage
+          : ShugenDB.progress.calcPercentage(steps);
+        progressStr = pct + '%';
+      }
+    }
+
+    return templateText
+      .replace(/\{nama_pelanggan\}/gi, customerName)
+      .replace(/\{id_pesanan\}/gi, orderId)
+      .replace(/\{game\}/gi, gameName)
+      .replace(/\{total\}/gi, totalStr)
+      .replace(/\{progress\}/gi, progressStr)
+      .replace(/\{layanan\}/gi, '');
+  }
+
+  function openWaDialog(orderId) {
+    const order = orders.find((o) => o.orderId === orderId);
+    if (!order) {
+      toast('Data pesanan tidak ditemukan');
+      return;
+    }
+
+    const currentStatus = ($('#field-status') && !$('#field-status-group').hidden)
+      ? $('#field-status').value
+      : order.status;
+    const currentPrice = ($('#field-price') && $('#field-price').value !== '')
+      ? Number($('#field-price').value)
+      : order.price;
+    const currentCustomer = ($('#field-customer') && $('#field-customer').value.trim())
+      ? $('#field-customer').value.trim()
+      : order.customerName;
+    const currentGameId = ($('#field-game') && $('#field-game').value)
+      ? $('#field-game').value
+      : order.gameId;
+
+    const orderData = Object.assign({}, order, {
+      status: currentStatus,
+      price: currentPrice,
+      customerName: currentCustomer,
+      gameId: currentGameId
+    });
+
+    currentWaOrderId = order.orderId;
+    currentWaOrderSnapshot = orderData;
+
+    let suggested = 'konfirmasi';
+    if (orderData.status === 'diproses') {
+      suggested = 'progress';
+    } else if (orderData.status === 'selesai') {
+      suggested = 'selesai';
+    } else {
+      suggested = 'konfirmasi';
+    }
+    currentWaTemplateType = suggested;
+
+    $('#wa-dialog-order-id').textContent = orderData.orderId;
+
+    const customer = findCustomerForOrder(orderData);
+    const recipientName = orderData.customerName || (customer ? customer.name : '-');
+    const rawContact = customer && customer.contact ? customer.contact.trim() : '';
+    const phone = extractPhoneNumber(rawContact);
+
+    $('#wa-recipient-name').textContent = recipientName;
+    if (phone) {
+      $('#wa-recipient-phone').textContent = rawContact || ('+' + phone);
+      $('#wa-no-phone-warning').hidden = true;
+      $('#btn-open-wa-link').hidden = false;
+    } else {
+      $('#wa-recipient-phone').textContent = rawContact ? (rawContact + ' (bukan nomor HP)') : 'Tidak ada nomor HP';
+      $('#wa-no-phone-warning').hidden = false;
+      $('#btn-open-wa-link').hidden = true;
+    }
+
+    $('#wa-suggested-konfirmasi').hidden = (suggested !== 'konfirmasi');
+    $('#wa-suggested-progress').hidden = (suggested !== 'progress');
+    $('#wa-suggested-selesai').hidden = (suggested !== 'selesai');
+
+    selectWaTemplateTab(currentWaTemplateType);
+    resetWaCopyButton();
+    $('#wa-dialog').showModal();
+  }
+
+  function selectWaTemplateTab(type) {
+    currentWaTemplateType = type;
+    $$('.wa-template-tabs .wa-tab').forEach((tab) => {
+      const isSelected = tab.dataset.template === type;
+      tab.classList.toggle('active', isSelected);
+      tab.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+    });
+    updateWaPreview();
+  }
+
+  function updateWaPreview() {
+    if (!currentWaOrderId) return;
+    const order = currentWaOrderSnapshot || orders.find((o) => o.orderId === currentWaOrderId);
+    if (!order) return;
+
+    const rawTemplate = waTemplates[currentWaTemplateType] || DEFAULT_WA_TEMPLATES[currentWaTemplateType] || '';
+    const message = replacePlaceholders(rawTemplate, order);
+
+    $('#wa-preview-text').value = message;
+
+    const customer = findCustomerForOrder(order);
+    const phone = extractPhoneNumber(customer ? customer.contact : '');
+    const linkBtn = $('#btn-open-wa-link');
+
+    if (phone) {
+      linkBtn.hidden = false;
+      linkBtn.href = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(message);
+    } else {
+      linkBtn.hidden = true;
+      linkBtn.removeAttribute('href');
+    }
+  }
+
+  function resetWaCopyButton() {
+    clearTimeout(waCopyTimer);
+    const btn = $('#btn-copy-wa-message');
+    const label = $('#btn-copy-wa-label');
+    if (btn) btn.classList.remove('is-copied');
+    if (label) label.textContent = 'Salin pesan';
+  }
+
+  async function copyWaMessage() {
+    const text = $('#wa-preview-text').value;
+    if (!text) return;
+
+    try {
+      if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+        throw new Error('Clipboard tidak tersedia');
+      }
+      await navigator.clipboard.writeText(text);
+      const btn = $('#btn-copy-wa-message');
+      const label = $('#btn-copy-wa-label');
+      btn.classList.add('is-copied');
+      label.textContent = 'Tersalin!';
+      clearTimeout(waCopyTimer);
+      waCopyTimer = setTimeout(() => {
+        btn.classList.remove('is-copied');
+        label.textContent = 'Salin pesan';
+      }, 2000);
+      toast('Pesan berhasil disalin');
+    } catch (err) {
+      console.error(err);
+      try {
+        const textarea = $('#wa-preview-text');
+        textarea.select();
+        document.execCommand('copy');
+        toast('Pesan berhasil disalin');
+      } catch (fallbackErr) {
+        toast('Gagal menyalin pesan');
+      }
+    }
+  }
+
   // Customer actions
 
   function openCustomerDetail(customerId) {
@@ -3265,11 +3582,13 @@ const App = (function () {
     shopContact = savedShopContact || '';
     $('#setting-shop-name').value = shopName;
     $('#setting-shop-contact').value = shopContact;
+    await loadWaTemplates();
     await loadTheme();
     render();
     renderPaymentList();
     renderGameList();
     renderCategoryList();
+    renderTemplateSettings();
     showView('ready');
   }
 

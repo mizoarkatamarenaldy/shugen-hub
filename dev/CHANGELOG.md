@@ -19,6 +19,20 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #022 [2026-10-14] Implementasi Fitur 7 (Template pesan WA)
+- Fitur: Template pesan WA (konfirmasi, update progress, selesai)
+- Ringkasan: Menambahkan fitur pengelolaan dan pengiriman template pesan WhatsApp (Konfirmasi, Update progress, dan Selesai) yang dapat diakses langsung dari detail pesanan dengan saran otomatis sesuai status pesanan serta pratinjau pesan sebelum dikirim. Tim toko dapat melakukan aksi salin pesan atau buka langsung ke WhatsApp (wa.me) apabila data pelanggan memiliki nomor telepon valid, serta mengatur dan mengembalikan teks template ke bawaan melalui menu Pengaturan. Template disimpan lokal di IndexedDB dan otomatis tercakup dalam alur backup dan restore, spek fitur disalin ke dev/PLANSPEC.md, serta cache service worker dinaikkan ke shugen-v19.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - dev/PLANSPEC.md
+  - index.html
+  - js/app.js
+  - js/db.js
+  - sw.js
+- Catatan: Placeholder {layanan} tidak dibuat karena data entitas layanan belum tersedia di aplikasi dan berada di cakupan Fitur 11 (Katalog harga); skema IndexedDB tetap pada versi 8 tanpa penambahan store baru; versi cache service worker dinaikkan ke shugen-v19.
+
 ### #021 [2026-10-14] Pindah spek fitur selesai ke PLANSPEC.md dan tambah aturan baca spek
 - Fitur: Perapian dokumen (bukan fitur aplikasi)
 - Ringkasan: Memindahkan seluruh spesifikasi detail fitur yang telah selesai dari dev/PLAN.md ke file baru dev/PLANSPEC.md dengan urutan dan isi yang sama persis tanpa mengubah checklist maupun aturan umum di PLAN.md. Menambahkan baris penunjuk lokasi spek lengkap di bawah judul checklist dev/PLAN.md, serta mendaftarkan dev/PLANSPEC.md ke daftar file panduan dev/RULES.md. Menambahkan aturan nomor 11 dan 12 pada Aturan kerja di dev/RULES.md mengenai batasan pembacaan spek fitur fokus dan prosedur pemindahan spek setelah fitur selesai, serta memperbarui aturan nomor 4.

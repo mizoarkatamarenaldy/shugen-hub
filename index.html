@@ -460,6 +460,16 @@
           </div>
         </div>
 
+        <div id="order-wa-group" class="order-paid-box" hidden>
+          <div class="order-paid-meta">
+            <span class="order-paid-label">Pesan WhatsApp</span>
+            <span class="order-paid-count">Kirim atau salin template pesan ke pelanggan</span>
+          </div>
+          <div class="order-invoice-actions" style="margin-top:8px;">
+            <button type="button" id="btn-open-wa-dialog" class="btn btn-secondary btn-small">Pesan WA</button>
+          </div>
+        </div>
+
         <div id="field-status-group" class="form-group" hidden>
           <label class="form-label" for="field-status">Status Pesanan</label>
           <select id="field-status" class="form-select">
@@ -869,6 +879,58 @@
         </form>
       </div>
       <div class="settings-section">
+        <div class="settings-label">Template Pesan WhatsApp</div>
+        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Atur teks template pesan ke pelanggan. Placeholder bertanda <code>{...}</code> akan diganti otomatis dengan data pesanan.</p>
+
+        <div class="wa-placeholder-guide">
+          <div class="wa-placeholder-title">Daftar Placeholder Tersedia:</div>
+          <ul class="wa-placeholder-list">
+            <li><code>{nama_pelanggan}</code> : Nama pelanggan pesanan</li>
+            <li><code>{id_pesanan}</code> : ID pesanan (contoh: SGN-261011-K7M4)</li>
+            <li><code>{game}</code> : Nama game yang dipesan</li>
+            <li><code>{total}</code> : Total bayar pesanan (contoh: Rp 150.000)</li>
+            <li><code>{progress}</code> : Persentase progress joki (contoh: 50%)</li>
+          </ul>
+          <p class="wa-placeholder-hint">Jika sebuah data kosong, placeholder akan diganti dengan teks kosong.</p>
+        </div>
+
+        <div class="wa-template-card">
+          <div class="wa-template-card-header">
+            <span class="wa-template-card-title">1. Template Konfirmasi</span>
+            <span class="wa-template-card-hint">Disarankan untuk pesanan Menunggu Bayar</span>
+          </div>
+          <textarea id="setting-template-konfirmasi" class="form-textarea wa-template-textarea" rows="4" placeholder="Teks template konfirmasi..."></textarea>
+          <div class="wa-template-card-actions">
+            <button type="button" id="btn-reset-template-konfirmasi" class="btn btn-secondary btn-small">Kembalikan ke bawaan</button>
+            <button type="button" id="btn-save-template-konfirmasi" class="btn btn-secondary btn-small">Simpan</button>
+          </div>
+        </div>
+
+        <div class="wa-template-card">
+          <div class="wa-template-card-header">
+            <span class="wa-template-card-title">2. Template Update Progress</span>
+            <span class="wa-template-card-hint">Disarankan untuk pesanan Diproses</span>
+          </div>
+          <textarea id="setting-template-progress" class="form-textarea wa-template-textarea" rows="4" placeholder="Teks template update progress..."></textarea>
+          <div class="wa-template-card-actions">
+            <button type="button" id="btn-reset-template-progress" class="btn btn-secondary btn-small">Kembalikan ke bawaan</button>
+            <button type="button" id="btn-save-template-progress" class="btn btn-secondary btn-small">Simpan</button>
+          </div>
+        </div>
+
+        <div class="wa-template-card">
+          <div class="wa-template-card-header">
+            <span class="wa-template-card-title">3. Template Selesai</span>
+            <span class="wa-template-card-hint">Disarankan untuk pesanan Selesai</span>
+          </div>
+          <textarea id="setting-template-selesai" class="form-textarea wa-template-textarea" rows="4" placeholder="Teks template selesai..."></textarea>
+          <div class="wa-template-card-actions">
+            <button type="button" id="btn-reset-template-selesai" class="btn btn-secondary btn-small">Kembalikan ke bawaan</button>
+            <button type="button" id="btn-save-template-selesai" class="btn btn-secondary btn-small">Simpan</button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-section">
         <div class="settings-label">Metode Pembayaran</div>
         <ul id="payment-list" class="payment-list"></ul>
         <div class="payment-add">
@@ -1002,6 +1064,73 @@
     <div class="dialog-footer">
       <button type="button" id="btn-cancel-import-preview" class="btn btn-secondary">Batal</button>
       <button type="button" id="btn-confirm-import-preview" class="btn btn-danger">Ganti Semua Data</button>
+    </div>
+  </dialog>
+
+  <!-- Dialog Pesan WhatsApp -->
+  <dialog id="wa-dialog" class="dialog-wa" aria-labelledby="wa-dialog-title">
+    <div class="dialog-header">
+      <div class="dialog-header-titles">
+        <h2 id="wa-dialog-title" class="dialog-title">Pesan WhatsApp</h2>
+        <span id="wa-dialog-order-id" class="dialog-order-id"></span>
+      </div>
+      <button type="button" class="btn-icon" id="btn-close-wa-dialog" aria-label="Tutup pesan WhatsApp">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="dialog-body">
+      <div class="wa-template-tabs" role="tablist" aria-label="Pilih jenis template pesan">
+        <button type="button" class="wa-tab active" data-template="konfirmasi" role="tab" aria-selected="true">
+          <span class="wa-tab-name">Konfirmasi</span>
+          <span class="wa-tab-suggested" id="wa-suggested-konfirmasi" hidden>(Disarankan)</span>
+        </button>
+        <button type="button" class="wa-tab" data-template="progress" role="tab" aria-selected="false">
+          <span class="wa-tab-name">Update Progress</span>
+          <span class="wa-tab-suggested" id="wa-suggested-progress" hidden>(Disarankan)</span>
+        </button>
+        <button type="button" class="wa-tab" data-template="selesai" role="tab" aria-selected="false">
+          <span class="wa-tab-name">Selesai</span>
+          <span class="wa-tab-suggested" id="wa-suggested-selesai" hidden>(Disarankan)</span>
+        </button>
+      </div>
+
+      <div class="wa-recipient-box">
+        <div class="wa-recipient-info">
+          <span class="wa-recipient-label">Pelanggan</span>
+          <strong id="wa-recipient-name" class="wa-recipient-name">-</strong>
+        </div>
+        <div class="wa-recipient-phone-wrap">
+          <span class="wa-recipient-label">No. WhatsApp</span>
+          <span id="wa-recipient-phone" class="wa-recipient-phone">-</span>
+        </div>
+      </div>
+
+      <p id="wa-no-phone-warning" class="wa-no-phone-hint" hidden>
+        Data pelanggan tidak memiliki nomor HP. Tombol "Buka WhatsApp" tidak tersedia. Silakan gunakan tombol "Salin pesan".
+      </p>
+
+      <div class="wa-preview-section">
+        <label class="form-label" for="wa-preview-text">Pratinjau Pesan</label>
+        <textarea id="wa-preview-text" class="form-textarea wa-preview-textarea" rows="6" readonly aria-label="Pratinjau pesan WhatsApp"></textarea>
+      </div>
+    </div>
+    <div class="dialog-footer wa-dialog-footer">
+      <button type="button" id="btn-copy-wa-message" class="btn btn-secondary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        <span id="btn-copy-wa-label">Salin pesan</span>
+      </button>
+      <a id="btn-open-wa-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-open-wa" role="button">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;">
+          <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.63C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2M12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.67 12.05 3.67Z"/>
+        </svg>
+        Buka WhatsApp
+      </a>
     </div>
   </dialog>
 

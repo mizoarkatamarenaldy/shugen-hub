@@ -1392,6 +1392,10 @@ const ShugenDB = (function () {
       get: getSetting,
       set: setSetting
     },
+    templates: {
+      get: (key) => getSetting('wa_template_' + key),
+      set: (key, val) => setSetting('wa_template_' + key, val)
+    },
     cash: {
       get: getCashSetting,
       set: setCashSetting

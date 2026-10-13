@@ -152,3 +152,33 @@ Kebutuhan layar:
 - Kalau periode tidak punya transaksi, tampilkan 0 dan pesan yang jelas.
 - Menu Rekap hanya menampilkan dan tidak menambah atau mengubah data apa pun.
 - Tanpa grafik, tanpa library baru, tanpa perubahan skema IndexedDB. Tidak ada ekspor atau cetak rekap. Tidak ada rincian per kategori.
+
+## Fitur 7: Template pesan WA
+
+Tujuan: tim toko bisa membuat pesan WhatsApp ke pelanggan dengan cepat dari detail pesanan, tanpa mengetik ulang.
+
+### Tiga jenis template
+1. Konfirmasi: pesanan sudah dicatat, sebut ringkasan pesanan dan total bayar.
+2. Update progress: kabar perkembangan pesanan, sebut persentase progress.
+3. Selesai: pesanan sudah selesai, ucapan terima kasih.
+
+### Isi template
+- Setiap template punya teks bawaan dalam bahasa Indonesia yang sopan dan singkat.
+- Teks template memakai placeholder yang diganti otomatis dengan data pesanan: {nama_pelanggan}, {id_pesanan}, {game}, {layanan}, {total}, {progress}.
+- Pakai hanya placeholder yang datanya memang ada di aplikasi. Kalau ada yang datanya tidak ada, jangan dibuat. Sebutkan di laporan akhir.
+- Kalau sebuah nilai kosong, placeholder diganti teks kosong, bukan tampil mentah seperti {progress}.
+
+### Mengatur template (di Pengaturan)
+- Pemilik bisa mengedit teks tiap template.
+- Ada tombol "Kembalikan ke bawaan" per template.
+- Tampilkan daftar placeholder yang tersedia di dekat kolom edit, dengan penjelasan singkat untuk pengguna baru.
+- Template disimpan lokal di IndexedDB bersama data lain, ikut masuk backup dan restore yang sudah ada.
+
+### Memakai template (di detail pesanan)
+- Tombol "Pesan WA" di detail pesanan. Pengguna memilih salah satu dari tiga template.
+- Pratinjau hasil pesan ditampilkan sebelum dikirim.
+- Dua aksi: "Salin pesan" (selalu tersedia) dan "Buka WhatsApp" (hanya kalau data pelanggan punya nomor HP, pakai link wa.me dengan pesan terisi).
+- Template yang disarankan otomatis mengikuti status pesanan (Menunggu Bayar: konfirmasi, Diproses: update progress, Selesai: selesai), tapi pengguna tetap bisa memilih template lain.
+
+### Di luar cakupan
+Pengingat otomatis, kirim massal, dan integrasi WA API tidak dikerjakan.
