@@ -36,6 +36,8 @@ const App = (function () {
   let activeRecapTab = 'daily';
   let recapDailyDate = '';
   let recapMonthlyMonth = '';
+  let orderSortOption = 'terbaru';
+  let activeDeadlineAttentionFilter = false;
 
   const DEFAULT_WA_TEMPLATES = {
     konfirmasi: 'Halo {nama_pelanggan}, pesanan game {game} ({id_pesanan}) sudah kami catat. Total tagihan: {total}. Silakan lakukan pembayaran agar pesanan dapat segera kami proses. Terima kasih!',
@@ -111,6 +113,356 @@ const App = (function () {
     return 'Rp ' + formatPrice(val);
   }
 
+  // Deadline & Notification helpers (Fitur 10)
+
+  const NOTIF_STORAGE_ENABLED = 'shugen_notifications_enabled';
+  const NOTIF_STORAGE_REMINDED = 'shugen_notifications_reminded';
+
+  function parseDeadline(deadline) {
+    if (!deadline) return null;
+    let dateStr = '';
+    let timeStr = '';
+    if (typeof deadline === 'string') {
+      const trimmed = deadline.trim();
+      if (!trimmed) return null;
+      if (trimmed.includes('T')) {
+        const parts = trimmed.split('T');
+        dateStr = parts[0];
+        timeStr = parts[1] || '';
+      } else if (trimmed.includes(' ')) {
+        const parts = trimmed.split(' ');
+        dateStr = parts[0];
+        timeStr = parts[1] || '';
+      } else {
+        dateStr = trimmed;
+      }
+    } else if (typeof deadline === 'object') {
+      dateStr = deadline.date || '';
+      timeStr = deadline.time || '';
+    }
+    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+    if (timeStr) {
+      timeStr = timeStr.slice(0, 5);
+      if (!/^\d{2}:\d{2}$/.test(timeStr)) timeStr = '';
+    }
+    return { date: dateStr, time: timeStr };
+  }
+
+  function getDeadlineMoment(parsedDeadline) {
+    if (!parsedDeadline) return null;
+    const dateParts = parsedDeadline.date.split('-');
+    const y = Number(dateParts[0]);
+    const m = Number(dateParts[1]) - 1;
+    const d = Number(dateParts[2]);
+    if (parsedDeadline.time) {
+      const timeParts = parsedDeadline.time.split(':');
+      const hour = Number(timeParts[0]);
+      const min = Number(timeParts[1]);
+      return new Date(y, m, d, hour, min, 0, 0);
+    }
+    // Tanpa jam: lewat setelah hari itu berakhir (23:59:59.999 atau pergantian hari)
+    return new Date(y, m, d + 1, 0, 0, 0, 0);
+  }
+
+  function getDeadlineUrgency(order, nowInput) {
+    if (!order || !order.deadline) return null;
+    const parsed = parseDeadline(order.deadline);
+    if (!parsed) return null;
+
+    // Hanya pesanan berstatus Menunggu Bayar dan Diproses yang dihitung. Selesai dan Dibatalkan tidak pernah ditandai.
+    if (order.status !== 'menunggu_bayar' && order.status !== 'diproses') {
+      return { level: 'lainnya', parsed: parsed };
+    }
+
+    const now = nowInput || new Date();
+    const deadlineMoment = getDeadlineMoment(parsed);
+    if (!deadlineMoment) return null;
+
+    if (now.getTime() >= deadlineMoment.getTime()) {
+      return { level: 'terlambat', parsed: parsed };
+    }
+
+    const nowYear = now.getFullYear();
+    const nowMonth = now.getMonth();
+    const nowDate = now.getDate();
+
+    const dParts = parsed.date.split('-');
+    const dYear = Number(dParts[0]);
+    const dMonth = Number(dParts[1]) - 1;
+    const dDay = Number(dParts[2]);
+
+    // Hari ini
+    if (dYear === nowYear && dMonth === nowMonth && dDay === nowDate) {
+      return { level: 'hari_ini', parsed: parsed };
+    }
+
+    // Besok
+    const tomorrow = new Date(nowYear, nowMonth, nowDate + 1);
+    if (dYear === tomorrow.getFullYear() && dMonth === tomorrow.getMonth() && dDay === tomorrow.getDate()) {
+      return { level: 'besok', parsed: parsed };
+    }
+
+    return { level: 'lainnya', parsed: parsed };
+  }
+
+  function formatDeadlineDisplay(order, nowInput) {
+    if (!order || !order.deadline) return '';
+    const urgency = getDeadlineUrgency(order, nowInput);
+    if (!urgency) return '';
+    const parsed = urgency.parsed;
+    const timeFormatted = parsed.time ? parsed.time.replace(':', '.') : '';
+
+    if (urgency.level === 'terlambat') {
+      return 'Terlambat';
+    }
+    if (urgency.level === 'hari_ini') {
+      return timeFormatted ? ('Hari ini ' + timeFormatted) : 'Hari ini';
+    }
+    if (urgency.level === 'besok') {
+      return timeFormatted ? ('Besok ' + timeFormatted) : 'Besok';
+    }
+    // Lainnya: tampilkan tanggal deadline saja
+    const dateFormatted = formatYmd(parsed.date);
+    return timeFormatted ? (dateFormatted + ' ' + timeFormatted) : dateFormatted;
+  }
+
+  function updateDeadlineSummary() {
+    const wrap = $('#order-deadline-summary-wrap');
+    const textEl = $('#order-deadline-summary-text');
+    const hintEl = $('#order-deadline-summary-hint');
+    const btn = $('#btn-deadline-summary');
+    if (!wrap || !textEl || !btn) return;
+
+    const now = new Date();
+    let overdueCount = 0;
+    let todayCount = 0;
+
+    orders.forEach((o) => {
+      const urg = getDeadlineUrgency(o, now);
+      if (urg) {
+        if (urg.level === 'terlambat') overdueCount++;
+        else if (urg.level === 'hari_ini') todayCount++;
+      }
+    });
+
+    const totalAttention = overdueCount + todayCount;
+    if (totalAttention === 0) {
+      wrap.hidden = true;
+      activeDeadlineAttentionFilter = false;
+      btn.setAttribute('aria-pressed', 'false');
+      btn.classList.remove('order-deadline-summary-btn--active');
+      return;
+    }
+
+    const parts = [];
+    if (overdueCount > 0) {
+      parts.push(overdueCount + ' pesanan terlambat');
+    }
+    if (todayCount > 0) {
+      if (overdueCount > 0) {
+        parts.push(todayCount + ' deadline hari ini');
+      } else {
+        parts.push(todayCount + ' pesanan deadline hari ini');
+      }
+    }
+
+    textEl.textContent = parts.join(', ');
+    btn.setAttribute('aria-pressed', activeDeadlineAttentionFilter ? 'true' : 'false');
+    if (activeDeadlineAttentionFilter) {
+      btn.classList.add('order-deadline-summary-btn--active');
+      if (hintEl) hintEl.textContent = '(Filter aktif - ketuk untuk batalkan)';
+    } else {
+      btn.classList.remove('order-deadline-summary-btn--active');
+      if (hintEl) hintEl.textContent = '(Ketuk untuk filter)';
+    }
+    wrap.hidden = false;
+  }
+
+  function getRemindedRecords() {
+    try {
+      const raw = localStorage.getItem(NOTIF_STORAGE_REMINDED);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function markOrderReminded(orderId, level) {
+    try {
+      const records = getRemindedRecords();
+      if (!records[orderId]) records[orderId] = {};
+      records[orderId][level] = true;
+      localStorage.setItem(NOTIF_STORAGE_REMINDED, JSON.stringify(records));
+    } catch (e) {}
+  }
+
+  function isOrderReminded(orderId, level) {
+    const records = getRemindedRecords();
+    return Boolean(records[orderId] && records[orderId][level]);
+  }
+
+  function resetOrderNotificationReminders(orderId) {
+    try {
+      const records = getRemindedRecords();
+      delete records[orderId];
+      localStorage.setItem(NOTIF_STORAGE_REMINDED, JSON.stringify(records));
+    } catch (e) {}
+  }
+
+  function sendBrowserNotification(title, body) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+      new Notification(title, {
+        body: body,
+        icon: 'icons/icon-192.png'
+      });
+    } catch (err) {
+      console.error('Gagal menampilkan notifikasi:', err);
+    }
+  }
+
+  function checkNotifications() {
+    const isEnabled = localStorage.getItem(NOTIF_STORAGE_ENABLED) === 'true';
+    if (!isEnabled) return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+    const now = new Date();
+    // Hanya pesanan berstatus Menunggu Bayar dan Diproses yang dihitung
+    const activeOrders = orders.filter((o) =>
+      (o.status === 'menunggu_bayar' || o.status === 'diproses') && o.deadline
+    );
+
+    activeOrders.forEach((order) => {
+      const parsed = parseDeadline(order.deadline);
+      if (!parsed) return;
+      const deadlineMoment = getDeadlineMoment(parsed);
+      if (!deadlineMoment) return;
+
+      const diffMs = deadlineMoment.getTime() - now.getTime();
+
+      // Tingkat 1: Terlambat (diffMs <= 0)
+      if (diffMs <= 0) {
+        if (!isOrderReminded(order.orderId, 'overdue')) {
+          markOrderReminded(order.orderId, 'overdue');
+          sendBrowserNotification(
+            'Pesanan Terlambat: ' + order.orderId,
+            order.customerName + ' - Batas waktu pengerjaan sudah lewat.'
+          );
+        }
+      }
+      // Tingkat 2: Tinggal 1 jam (0 < diffMs <= 60 menit)
+      else if (diffMs <= 60 * 60 * 1000) {
+        if (!isOrderReminded(order.orderId, 'one_hour')) {
+          markOrderReminded(order.orderId, 'one_hour');
+          sendBrowserNotification(
+            'Deadline Tinggal 1 Jam: ' + order.orderId,
+            order.customerName + ' - Deadline pesanan jatuh dalam kurun waktu 1 jam.'
+          );
+        }
+      }
+    });
+  }
+
+  function renderNotificationSettings() {
+    const toggle = $('#setting-notification-toggle');
+    const statusHint = $('#setting-notification-status');
+    if (!toggle || !statusHint) return;
+
+    if (!('Notification' in window)) {
+      toggle.checked = false;
+      toggle.disabled = true;
+      statusHint.textContent = 'Browser ini tidak mendukung notifikasi. Pengingat tetap tersedia melalui ringkasan di atas daftar pesanan.';
+      statusHint.hidden = false;
+      return;
+    }
+
+    if (Notification.permission === 'denied') {
+      toggle.checked = false;
+      toggle.disabled = true;
+      statusHint.textContent = 'Izin notifikasi diblokir di browser. Buka setelan browser untuk mengizinkan, atau gunakan ringkasan di daftar pesanan.';
+      statusHint.hidden = false;
+      return;
+    }
+
+    toggle.disabled = false;
+    const isEnabled = localStorage.getItem(NOTIF_STORAGE_ENABLED) === 'true' && Notification.permission === 'granted';
+    toggle.checked = isEnabled;
+    if (isEnabled) {
+      statusHint.textContent = 'Notifikasi browser aktif saat aplikasi terbuka di perangkat ini.';
+      statusHint.hidden = false;
+    } else {
+      statusHint.hidden = true;
+    }
+  }
+
+  async function handleNotificationToggleChange(e) {
+    const toggle = e.target;
+    const statusHint = $('#setting-notification-status');
+
+    if (!('Notification' in window)) {
+      toggle.checked = false;
+      toggle.disabled = true;
+      if (statusHint) {
+        statusHint.textContent = 'Browser ini tidak mendukung notifikasi. Pengingat tetap tersedia melalui ringkasan di atas daftar pesanan.';
+        statusHint.hidden = false;
+      }
+      toast('Browser tidak mendukung notifikasi');
+      return;
+    }
+
+    if (toggle.checked) {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          localStorage.setItem(NOTIF_STORAGE_ENABLED, 'true');
+          toggle.checked = true;
+          if (statusHint) {
+            statusHint.textContent = 'Notifikasi browser aktif saat aplikasi terbuka di perangkat ini.';
+            statusHint.hidden = false;
+          }
+          toast('Notifikasi browser diaktifkan');
+          checkNotifications();
+        } else if (permission === 'denied') {
+          localStorage.setItem(NOTIF_STORAGE_ENABLED, 'false');
+          toggle.checked = false;
+          toggle.disabled = true;
+          if (statusHint) {
+            statusHint.textContent = 'Izin notifikasi ditolak di browser. Pengingat tetap berjalan melalui ringkasan di daftar pesanan.';
+            statusHint.hidden = false;
+          }
+          toast('Izin notifikasi ditolak oleh browser');
+        } else {
+          localStorage.setItem(NOTIF_STORAGE_ENABLED, 'false');
+          toggle.checked = false;
+          if (statusHint) {
+            statusHint.textContent = 'Izin belum diberikan. Nyalakan saklar kembali untuk meminta izin.';
+            statusHint.hidden = false;
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        localStorage.setItem(NOTIF_STORAGE_ENABLED, 'false');
+        toggle.checked = false;
+        toast('Gagal meminta izin notifikasi');
+      }
+    } else {
+      localStorage.setItem(NOTIF_STORAGE_ENABLED, 'false');
+      toggle.checked = false;
+      if (statusHint) {
+        statusHint.hidden = true;
+      }
+      toast('Notifikasi browser dimatikan');
+    }
+  }
+
+  function checkDeadlinesAndSummary() {
+    updateDeadlineSummary();
+    if (activeView === 'orders') {
+      renderOrders();
+    }
+    checkNotifications();
+  }
+
   // DOM helpers
 
   const $ = (sel) => document.querySelector(sel);
@@ -168,6 +520,7 @@ const App = (function () {
       await loadWaTemplates();
       render();
       bindEvents();
+      checkNotifications();
       registerSW();
       showView('ready');
     } catch (err) {
@@ -315,7 +668,38 @@ const App = (function () {
         getGameName(o.gameId).toLowerCase().includes(q)
       );
     }
-    list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    if (activeDeadlineAttentionFilter) {
+      list = list.filter((o) => {
+        const urg = getDeadlineUrgency(o);
+        return urg && (urg.level === 'terlambat' || urg.level === 'hari_ini');
+      });
+    }
+    if (orderSortOption === 'deadline') {
+      list.sort((a, b) => {
+        const aParsed = parseDeadline(a.deadline);
+        const bParsed = parseDeadline(b.deadline);
+        const aHas = Boolean(aParsed);
+        const bHas = Boolean(bParsed);
+
+        if (aHas && !bHas) return -1;
+        if (!aHas && bHas) return 1;
+        if (!aHas && !bHas) {
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        }
+
+        const aMoment = getDeadlineMoment(aParsed);
+        const bMoment = getDeadlineMoment(bParsed);
+        const aTime = aMoment ? aMoment.getTime() : Infinity;
+        const bTime = bMoment ? bMoment.getTime() : Infinity;
+
+        if (aTime !== bTime) {
+          return aTime - bTime;
+        }
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+    } else {
+      list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
     return list;
   }
 
@@ -561,6 +945,7 @@ const App = (function () {
     renderNav();
     renderTabs();
     renderCustomerTabs();
+    updateDeadlineSummary();
     renderOrders();
     renderCustomers();
     renderIncomes();
@@ -636,8 +1021,24 @@ const App = (function () {
           '</div>';
       }
 
+      let deadlineHtml = '';
+      let deadlineAria = '';
+      if (order.deadline) {
+        const urg = getDeadlineUrgency(order);
+        const deadlineLabel = formatDeadlineDisplay(order);
+        if (deadlineLabel) {
+          const urgClass = urg ? ('order-deadline--' + urg.level) : 'order-deadline--lainnya';
+          deadlineHtml =
+            '<div class="order-deadline ' + urgClass + '">' +
+              '<span class="order-deadline-prefix">Deadline:</span>' +
+              '<strong class="order-deadline-text">' + esc(deadlineLabel) + '</strong>' +
+            '</div>';
+          deadlineAria = ', Deadline: ' + deadlineLabel;
+        }
+      }
+
       card.setAttribute('aria-label',
-        order.orderId + ', ' + order.customerName + ', ' + STATUS_LABELS[order.status] + progressAria
+        order.orderId + ', ' + order.customerName + ', ' + STATUS_LABELS[order.status] + progressAria + deadlineAria
       );
 
       card.innerHTML =
@@ -657,6 +1058,7 @@ const App = (function () {
           '<span class="order-game">' + esc(getGameName(order.gameId)) + '</span>' +
         '</div>' +
         progressHtml +
+        deadlineHtml +
         '<div class="order-bottom">' +
           '<span class="order-price">Rp ' + formatPrice(order.price) + '</span>' +
           '<span class="order-date">' + formatDate(new Date(order.createdAt)) + '</span>' +
@@ -1038,9 +1440,27 @@ const App = (function () {
     $$('.status-tabs:not(.customer-filter-tabs):not(.recap-tabs) .tab').forEach((tab) => {
       tab.addEventListener('click', () => {
         activeFilter = tab.dataset.status;
+        activeDeadlineAttentionFilter = false;
         render();
       });
     });
+
+    const btnDeadlineSummary = $('#btn-deadline-summary');
+    if (btnDeadlineSummary) {
+      btnDeadlineSummary.addEventListener('click', () => {
+        activeDeadlineAttentionFilter = !activeDeadlineAttentionFilter;
+        renderOrders();
+        updateDeadlineSummary();
+      });
+    }
+
+    const orderSortSelect = $('#order-sort-select');
+    if (orderSortSelect) {
+      orderSortSelect.addEventListener('change', (e) => {
+        orderSortOption = e.target.value;
+        renderOrders();
+      });
+    }
 
     $('#customer-search-input').addEventListener('input', (e) => {
       customerSearchQuery = e.target.value;
@@ -1506,6 +1926,49 @@ const App = (function () {
       }
     });
 
+    const btnClearDeadline = $('#btn-clear-deadline');
+    const fieldDeadlineDate = $('#field-deadline-date');
+    const fieldDeadlineTime = $('#field-deadline-time');
+    const detailDeadlineBadge = $('#detail-deadline-badge');
+
+    if (btnClearDeadline) {
+      btnClearDeadline.addEventListener('click', () => {
+        if (fieldDeadlineDate) fieldDeadlineDate.value = '';
+        if (fieldDeadlineTime) fieldDeadlineTime.value = '';
+        if (detailDeadlineBadge) detailDeadlineBadge.hidden = true;
+        btnClearDeadline.hidden = true;
+      });
+    }
+
+    if (fieldDeadlineDate) {
+      fieldDeadlineDate.addEventListener('input', () => {
+        if (btnClearDeadline) {
+          btnClearDeadline.hidden = !fieldDeadlineDate.value && (!fieldDeadlineTime || !fieldDeadlineTime.value);
+        }
+      });
+    }
+
+    if (fieldDeadlineTime) {
+      fieldDeadlineTime.addEventListener('input', () => {
+        if (btnClearDeadline) {
+          btnClearDeadline.hidden = (!fieldDeadlineDate || !fieldDeadlineDate.value) && !fieldDeadlineTime.value;
+        }
+      });
+    }
+
+    const settingNotifToggle = $('#setting-notification-toggle');
+    if (settingNotifToggle) {
+      settingNotifToggle.addEventListener('change', handleNotificationToggleChange);
+    }
+
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        checkDeadlinesAndSummary();
+      }
+    });
+    window.addEventListener('focus', checkDeadlinesAndSummary);
+    setInterval(checkDeadlinesAndSummary, 60000);
+
     // Close dialogs on Escape (native <dialog> handles this)
     // Close dialogs on backdrop click
     $$('dialog').forEach((d) => {
@@ -1622,6 +2085,29 @@ const App = (function () {
         openWaDialog(order.orderId);
       };
 
+      const deadlineDateInput = $('#field-deadline-date');
+      const deadlineTimeInput = $('#field-deadline-time');
+      const deadlineBadge = $('#detail-deadline-badge');
+      const btnClearDeadline = $('#btn-clear-deadline');
+      const parsedDeadline = parseDeadline(order.deadline);
+      if (parsedDeadline) {
+        if (deadlineDateInput) deadlineDateInput.value = parsedDeadline.date;
+        if (deadlineTimeInput) deadlineTimeInput.value = parsedDeadline.time || '';
+        const deadlineLabel = formatDeadlineDisplay(order);
+        const urg = getDeadlineUrgency(order);
+        if (deadlineBadge) {
+          deadlineBadge.textContent = deadlineLabel;
+          deadlineBadge.className = 'detail-deadline-badge' + (urg ? (' detail-deadline-badge--' + urg.level) : '');
+          deadlineBadge.hidden = false;
+        }
+        if (btnClearDeadline) btnClearDeadline.hidden = false;
+      } else {
+        if (deadlineDateInput) deadlineDateInput.value = '';
+        if (deadlineTimeInput) deadlineTimeInput.value = '';
+        if (deadlineBadge) deadlineBadge.hidden = true;
+        if (btnClearDeadline) btnClearDeadline.hidden = true;
+      }
+
       const prog = progressMap[order.orderId];
       currentSteps = prog && Array.isArray(prog.steps)
         ? prog.steps.map((s) => ({
@@ -1637,6 +2123,14 @@ const App = (function () {
       $('#detail-order-id').hidden = true;
       $('#detail-order-id-row').hidden = true;
       populateGameSelect('');
+      const deadlineDateInput = $('#field-deadline-date');
+      const deadlineTimeInput = $('#field-deadline-time');
+      const deadlineBadge = $('#detail-deadline-badge');
+      const btnClearDeadline = $('#btn-clear-deadline');
+      if (deadlineDateInput) deadlineDateInput.value = '';
+      if (deadlineTimeInput) deadlineTimeInput.value = '';
+      if (deadlineBadge) deadlineBadge.hidden = true;
+      if (btnClearDeadline) btnClearDeadline.hidden = true;
       $('#field-status').value = 'menunggu_bayar';
       $('#field-status-group').hidden = true;
       $('#order-paid-group').hidden = true;
@@ -1944,11 +2438,26 @@ const App = (function () {
       return;
     }
 
+    const deadlineDateVal = ($('#field-deadline-date') ? $('#field-deadline-date').value.trim() : '');
+    const deadlineTimeVal = ($('#field-deadline-time') ? $('#field-deadline-time').value.trim() : '');
+
+    if (deadlineTimeVal && !deadlineDateVal) {
+      toast('Tanggal deadline wajib diisi jika jam diisi');
+      if ($('#field-deadline-date')) $('#field-deadline-date').focus();
+      return;
+    }
+
+    let deadlineVal = null;
+    if (deadlineDateVal) {
+      deadlineVal = deadlineTimeVal ? (deadlineDateVal + 'T' + deadlineTimeVal) : deadlineDateVal;
+    }
+
     const data = {
       customerName: $('#field-customer').value.trim(),
       type: $('#field-type').value,
       gameId: $('#field-game').value,
       detail: $('#field-detail').value.trim(),
+      deadline: deadlineVal,
       price: Number($('#field-price').value) || 0,
       paymentMethod: $('#field-payment').value,
       status: $('#field-status').value
@@ -1975,6 +2484,7 @@ const App = (function () {
     try {
       if (editingId !== null) {
         const updated = await ShugenDB.orders.update(editingId, data);
+        resetOrderNotificationReminders(updated.orderId);
         if (data.type === 'joki') {
           await ShugenDB.progress.save(updated.orderId, currentSteps);
         } else {
@@ -1991,6 +2501,7 @@ const App = (function () {
       orders = await ShugenDB.orders.getAll();
       await refreshProgressMap();
       render();
+      checkNotifications();
       $('#order-dialog').close();
     } catch (err) {
       console.error(err);
@@ -2513,6 +3024,7 @@ const App = (function () {
     renderGameList();
     renderCategoryList();
     renderTemplateSettings();
+    renderNotificationSettings();
     $('#settings-dialog').showModal();
   }
 
@@ -3589,6 +4101,8 @@ const App = (function () {
     renderGameList();
     renderCategoryList();
     renderTemplateSettings();
+    renderNotificationSettings();
+    checkNotifications();
     showView('ready');
   }
 

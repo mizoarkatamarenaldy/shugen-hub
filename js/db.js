@@ -198,6 +198,7 @@ const ShugenDB = (function () {
               price: Number(order.price) || 0,
               status: order.status || 'menunggu_bayar',
               paymentMethod: order.paymentMethod || '',
+              deadline: order.deadline || null,
               createdAt: order.createdAt || now,
               updatedAt: now,
               customerId: null

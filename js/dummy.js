@@ -72,6 +72,7 @@ const DummyData = (function () {
       price: 200000,
       status: 'diproses',
       paymentMethod: 'Transfer BRI',
+      deadline: '2026-10-13T14:00',
       createdAt: new Date('2026-10-12T08:00:00'),
       updatedAt: new Date('2026-10-12T08:30:00')
     },
@@ -84,6 +85,7 @@ const DummyData = (function () {
       price: 300000,
       status: 'menunggu_bayar',
       paymentMethod: 'GoPay',
+      deadline: null,
       createdAt: new Date('2026-10-12T10:45:00'),
       updatedAt: new Date('2026-10-12T10:45:00')
     },
@@ -96,6 +98,7 @@ const DummyData = (function () {
       price: 100000,
       status: 'dibatalkan',
       paymentMethod: 'Cash',
+      deadline: null,
       createdAt: new Date('2026-10-12T13:00:00'),
       updatedAt: new Date('2026-10-12T15:00:00')
     },
@@ -108,6 +111,7 @@ const DummyData = (function () {
       price: 140000,
       status: 'menunggu_bayar',
       paymentMethod: 'Transfer BCA',
+      deadline: '2026-10-15',
       createdAt: new Date('2026-10-13T07:20:00'),
       updatedAt: new Date('2026-10-13T07:20:00')
     },
@@ -120,6 +124,7 @@ const DummyData = (function () {
       price: 250000,
       status: 'diproses',
       paymentMethod: 'DANA',
+      deadline: '2026-10-14T15:00',
       createdAt: new Date('2026-10-13T08:10:00'),
       updatedAt: new Date('2026-10-13T08:30:00')
     },
@@ -132,6 +137,7 @@ const DummyData = (function () {
       price: 800000,
       status: 'menunggu_bayar',
       paymentMethod: 'Transfer BRI',
+      deadline: '2026-10-19',
       createdAt: new Date('2026-10-13T09:00:00'),
       updatedAt: new Date('2026-10-13T09:00:00')
     }
@@ -429,8 +435,31 @@ const DummyData = (function () {
       await ShugenDB.customers.add(cust);
     }
 
+    function formatRelativeYmd(daysOffset) {
+      const d = new Date();
+      d.setDate(d.getDate() + daysOffset);
+      const yyyy = String(d.getFullYear());
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return yyyy + '-' + mm + '-' + dd;
+    }
+
+    const now = new Date();
+    const todayHour = now.getHours() < 15 ? '15:00' : (now.getHours() < 23 ? '23:00' : '23:59');
+    const dynamicDeadlines = {
+      'SGN-261012-4H8P': formatRelativeYmd(-1) + 'T14:00', // Terlambat
+      'SGN-261013-L2C7': formatRelativeYmd(0) + 'T' + todayHour, // Hari ini
+      'SGN-261013-B6Q8': formatRelativeYmd(1), // Besok
+      'SGN-261013-J4Z3': formatRelativeYmd(5), // Jauh
+      'SGN-261012-X3N6': null // Tanpa deadline
+    };
+
     for (const order of ORDERS) {
-      await ShugenDB.orders.add(order);
+      const orderCopy = Object.assign({}, order);
+      if (Object.prototype.hasOwnProperty.call(dynamicDeadlines, order.orderId)) {
+        orderCopy.deadline = dynamicDeadlines[order.orderId];
+      }
+      await ShugenDB.orders.add(orderCopy);
       if (order.type === 'joki' && PROGRESS[order.orderId]) {
         await ShugenDB.progress.save(order.orderId, PROGRESS[order.orderId]);
       }

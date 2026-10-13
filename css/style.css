@@ -2963,3 +2963,270 @@ dialog.dialog-wa {
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* ==========================================================================
+   Fitur 10: Deadline pesanan dan pengingat
+   ========================================================================== */
+
+/* Summary bar di atas daftar pesanan */
+.order-deadline-summary-wrap {
+  max-width: 640px;
+  margin: 0 auto 8px;
+  padding: 0 16px;
+}
+
+.order-deadline-summary-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.order-deadline-summary-btn:hover {
+  border-color: var(--text-secondary);
+}
+
+.order-deadline-summary-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.order-deadline-summary-btn[aria-pressed="true"],
+.order-deadline-summary-btn--active {
+  border-color: var(--accent);
+  background: var(--surface-raised);
+}
+
+.order-deadline-summary-icon {
+  display: flex;
+  align-items: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.order-deadline-summary-text {
+  flex: 1;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.order-deadline-summary-hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Toolbar & Sort */
+.order-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  max-width: 640px;
+  margin: 0 auto 8px;
+  padding: 0 16px;
+}
+
+.order-sort-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.order-sort-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.order-sort-select {
+  padding: 4px 8px;
+  font-size: 12px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* Deadline di Kartu Pesanan */
+.order-deadline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  margin-bottom: 6px;
+  padding-top: 2px;
+}
+
+.order-deadline-prefix {
+  color: var(--text-secondary);
+}
+
+.order-deadline-text {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Penekanan tipografi sesuai urgensi (tanpa warna baru sesuai dev/DESIGN.md) */
+.order-deadline--terlambat .order-deadline-text {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text);
+}
+
+.order-deadline--hari_ini .order-deadline-text {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.order-deadline--besok .order-deadline-text {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.order-deadline--lainnya .order-deadline-text {
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+/* Form Deadline */
+.deadline-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.detail-deadline-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.detail-deadline-badge--terlambat {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.form-sublabel {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.deadline-helper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn-clear-deadline {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+/* Settings: Notifikasi Browser Switch */
+.setting-toggle-box {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.setting-toggle-content {
+  flex: 1;
+}
+
+.setting-toggle-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+
+.setting-toggle-desc {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.setting-toggle-control {
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.setting-toggle-input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 44px;
+  height: 24px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.setting-toggle-input:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.setting-toggle-input::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: #FFFFFF;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.setting-toggle-input:checked::after {
+  transform: translateX(20px);
+}
+
+.setting-toggle-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.setting-status-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  padding: 0 4px;
+}
+

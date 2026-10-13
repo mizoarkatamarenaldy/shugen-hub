@@ -19,6 +19,21 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #023 [2026-10-14] Implementasi Fitur 10 (Deadline pesanan dan pengingat)
+- Fitur: Deadline pesanan dan pengingat
+- Ringkasan: Menambahkan field deadline opsional (tanggal wajib jika diisi, jam opsional) pada pesanan yang dapat diisi saat pembuatan serta diubah atau dihapus melalui detail pesanan, lengkap dengan penandaan tingkat urgensi (Terlambat, Hari ini, Besok, atau tanggal lainnya) yang disajikan lewat penekanan tipografi tanpa menambah warna baru sesuai dev/DESIGN.md. Di atas daftar pesanan kini terdapat ringkasan satu baris ("N pesanan terlambat, M deadline hari ini") yang dapat diketuk untuk memfilter pesanan yang perlu perhatian, pilihan pengurutan "Deadline terdekat" dengan pesanan tanpa deadline di paling bawah, serta pengingat notifikasi browser opsional di Pengaturan untuk pesanan yang mendekati 1 jam atau terlambat. Data contoh (dummy) diperbarui dengan variasi lengkap status deadline, spek fitur 10 disalin ke dev/PLANSPEC.md dan dicentang di dev/PLAN.md, serta versi cache service worker dinaikkan ke shugen-v20.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - dev/PLANSPEC.md
+  - index.html
+  - js/app.js
+  - js/db.js
+  - js/dummy.js
+  - sw.js
+- Catatan: Skema IndexedDB tetap pada versi 8 tanpa perubahan skema; pelacakan notifikasi yang sudah diingatkan disimpan lokal per perangkat di localStorage sehingga tidak membebani alur backup; versi cache service worker dinaikkan ke shugen-v20.
+
 ### #022 [2026-10-14] Implementasi Fitur 7 (Template pesan WA)
 - Fitur: Template pesan WA (konfirmasi, update progress, selesai)
 - Ringkasan: Menambahkan fitur pengelolaan dan pengiriman template pesan WhatsApp (Konfirmasi, Update progress, dan Selesai) yang dapat diakses langsung dari detail pesanan dengan saran otomatis sesuai status pesanan serta pratinjau pesan sebelum dikirim. Tim toko dapat melakukan aksi salin pesan atau buka langsung ke WhatsApp (wa.me) apabila data pelanggan memiliki nomor telepon valid, serta mengatur dan mengembalikan teks template ke bawaan melalui menu Pengaturan. Template disimpan lokal di IndexedDB dan otomatis tercakup dalam alur backup dan restore, spek fitur disalin ke dev/PLANSPEC.md, serta cache service worker dinaikkan ke shugen-v19.

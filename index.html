@@ -78,6 +78,29 @@
         <button type="button" class="tab" data-status="dibatalkan" aria-selected="false">Dibatalkan</button>
       </nav>
 
+      <div id="order-deadline-summary-wrap" class="order-deadline-summary-wrap" hidden>
+        <button type="button" id="btn-deadline-summary" class="order-deadline-summary-btn" aria-label="Filter pesanan yang butuh perhatian" aria-pressed="false">
+          <span class="order-deadline-summary-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </span>
+          <span id="order-deadline-summary-text" class="order-deadline-summary-text"></span>
+          <span id="order-deadline-summary-hint" class="order-deadline-summary-hint">(Ketuk untuk filter)</span>
+        </button>
+      </div>
+
+      <div class="order-toolbar">
+        <div class="order-sort-wrap">
+          <label class="order-sort-label" for="order-sort-select">Urutan:</label>
+          <select id="order-sort-select" class="form-select order-sort-select" aria-label="Pilihan urutan daftar pesanan">
+            <option value="terbaru">Terbaru</option>
+            <option value="deadline">Deadline terdekat</option>
+          </select>
+        </div>
+      </div>
+
       <div id="empty-state" class="app-state" hidden>
         <p class="state-message">Belum ada pesanan</p>
         <p class="state-hint">Tap tombol + di bawah untuk menambah pesanan, atau muat data demo di Pengaturan.</p>
@@ -395,6 +418,27 @@
         <div class="form-group">
           <label class="form-label" for="field-detail">Detail / Catatan</label>
           <textarea id="field-detail" class="form-textarea" placeholder="Contoh: Push Epic ke Legend, hero Lancelot"></textarea>
+        </div>
+
+        <div class="form-group" id="order-deadline-group">
+          <div class="deadline-form-header">
+            <label class="form-label" for="field-deadline-date">Deadline (Opsional)</label>
+            <span id="detail-deadline-badge" class="detail-deadline-badge" hidden></span>
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-sublabel" for="field-deadline-date">Tanggal</label>
+              <input type="date" id="field-deadline-date" class="form-input" aria-label="Tanggal deadline">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-sublabel" for="field-deadline-time">Jam (Opsional)</label>
+              <input type="time" id="field-deadline-time" class="form-input" aria-label="Jam deadline (opsional)">
+            </div>
+          </div>
+          <div class="deadline-helper-row">
+            <span class="form-hint">Tanggal wajib jika deadline diisi, jam opsional.</span>
+            <button type="button" id="btn-clear-deadline" class="btn btn-secondary btn-small btn-clear-deadline" hidden>Hapus deadline</button>
+          </div>
         </div>
 
         <div id="joki-progress-section" class="progress-section">
@@ -877,6 +921,21 @@
           </div>
           <button type="submit" id="btn-save-shop-info" class="btn btn-secondary btn-small">Simpan Info Toko</button>
         </form>
+      </div>
+      <div class="settings-section">
+        <div class="settings-label">Notifikasi Pengingat</div>
+        <div class="setting-toggle-box">
+          <div class="setting-toggle-content">
+            <label class="setting-toggle-title" for="setting-notification-toggle">Notifikasi browser</label>
+            <p class="setting-toggle-desc">
+              Tampilkan notifikasi di perangkat ini saat pesanan baru menjadi Terlambat atau deadline-nya tinggal 1 jam. Notifikasi hanya muncul saat aplikasi sedang terbuka di browser.
+            </p>
+          </div>
+          <div class="setting-toggle-control">
+            <input type="checkbox" id="setting-notification-toggle" class="setting-toggle-input" role="switch" aria-label="Saklar notifikasi browser">
+          </div>
+        </div>
+        <p id="setting-notification-status" class="setting-status-hint" hidden></p>
       </div>
       <div class="settings-section">
         <div class="settings-label">Template Pesan WhatsApp</div>

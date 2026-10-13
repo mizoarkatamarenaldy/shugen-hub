@@ -182,3 +182,39 @@ Tujuan: tim toko bisa membuat pesan WhatsApp ke pelanggan dengan cepat dari deta
 
 ### Di luar cakupan
 Pengingat otomatis, kirim massal, dan integrasi WA API tidak dikerjakan.
+## Fitur 10: Deadline pesanan dan pengingat
+
+Tujuan: tim toko tahu pesanan mana yang harus segera dikerjakan atau sudah lewat waktu, tanpa mengecek satu per satu.
+
+### Data deadline
+- Setiap pesanan punya field deadline yang opsional: tanggal wajib kalau diisi, jam opsional.
+- Waktu memakai zona waktu lokal perangkat.
+- Pesanan lama yang belum punya deadline tetap valid dan tidak boleh rusak. Kalau skema IndexedDB perlu naik versi, ikuti pola migrasi yang sudah ada dan pastikan data lama aman.
+- Deadline bisa diisi di form pesanan dan diubah atau dihapus di detail pesanan.
+- Field deadline ikut masuk backup, restore, dan pratinjau backup yang sudah ada.
+
+### Tingkat urgensi
+Hanya pesanan berstatus Menunggu Bayar dan Diproses yang dihitung. Selesai dan Dibatalkan tidak pernah ditandai.
+- Terlambat: waktu deadline sudah lewat. Kalau deadline hanya tanggal tanpa jam, dianggap lewat setelah hari itu berakhir.
+- Hari ini: deadline jatuh hari ini dan belum lewat.
+- Besok: deadline jatuh besok.
+- Lainnya: tampilkan tanggal deadline saja, tanpa tanda khusus.
+
+### Tampilan
+- Di kartu daftar pesanan dan detail pesanan, tampilkan deadline dengan label teks yang jelas (misalnya "Terlambat", "Hari ini 15.00", "Besok", atau tanggalnya).
+- Ikuti dev/DESIGN.md. Warna hanya untuk badge status, jadi jangan menambah warna baru untuk urgensi. Bedakan urgensi lewat label teks dan penekanan tipografi. Kalau ini bertentangan dengan kebutuhan fitur, berhenti dan tanya pemilik (aturan 6).
+- Di atas daftar pesanan, tampilkan ringkasan satu baris bila ada yang perlu perhatian, contoh: "2 pesanan terlambat, 1 deadline hari ini". Ketuk ringkasan untuk memfilter daftar ke pesanan tersebut. Kalau tidak ada, ringkasan tidak ditampilkan.
+- Tambahkan pilihan urutan "Deadline terdekat" di daftar pesanan. Pesanan tanpa deadline ditaruh paling bawah.
+
+### Pengingat
+- Pengingat utama adalah ringkasan di atas daftar pesanan. Ringkasan dihitung ulang saat app dibuka, saat app kembali aktif, dan secara berkala (sekitar tiap menit) selama app terbuka.
+- Di Pengaturan ada saklar "Notifikasi browser" (default mati). Izin notifikasi hanya diminta saat pengguna menyalakan saklar itu.
+- Kalau saklar menyala dan app sedang terbuka, tampilkan satu notifikasi untuk pesanan yang baru menjadi Terlambat atau deadline-nya tinggal 1 jam. Satu pesanan hanya diingatkan sekali per tingkat. Catatan "sudah diingatkan" disimpan lokal per perangkat dan tidak perlu ikut backup.
+- Kalau izin ditolak atau browser tidak mendukung, saklar menampilkan penjelasan singkat dan app tetap jalan dengan ringkasan saja.
+- Teks di Pengaturan harus jelas untuk pengguna baru, termasuk penjelasan bahwa notifikasi hanya muncul saat app terbuka.
+
+### Data contoh
+Perbarui data contoh (dummy) supaya ada pesanan dengan deadline terlambat, hari ini, besok, jauh, dan tanpa deadline.
+
+### Di luar cakupan
+Push notification saat app tertutup, server atau background sync, pengingat lewat WhatsApp atau email, dan deadline berulang tidak dikerjakan. Kalau ada ide tambahan, tulis di laporan akhir.
