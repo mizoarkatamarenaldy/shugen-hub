@@ -19,6 +19,7 @@ Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 10. Deadline pesanan dan pengingat
 11. Katalog harga (hanya template, harga bisa diubah per pesanan)
 12. Backup dan restore manual (export/import file)
+13. Kas toko (saldo gabungan, menu sendiri)
 
 ## Fitur 1: Pesanan + Status
 Data pesanan:
@@ -61,9 +62,9 @@ Kebutuhan layar:
 - Tidak ada rekap harian/bulanan di fitur ini (itu Fitur 8).
 
 ## Fitur 4: Pengeluaran
-- Mencatat uang keluar toko. Satu pengeluaran bisa terhubung ke satu pesanan (lewat ID pesanan dari Fitur 1, misalnya modal topup) atau berdiri sendiri (misalnya kas, gaji worker, biaya operasional).
+- Mencatat uang keluar toko. Satu pengeluaran bisa terhubung ke satu pesanan (lewat ID pesanan dari Fitur 1, misalnya modal topup) atau berdiri sendiri (misalnya gaji worker, biaya operasional).
 - Satu pesanan boleh punya beberapa pengeluaran.
-- Setiap pengeluaran wajib punya kategori. Kategori bisa diatur sendiri di Pengaturan (tambah, hapus, ganti nama), bukan daftar tetap. Kategori awal: Modal Topup, Gaji Worker, Kas, Operasional, Lainnya.
+- Setiap pengeluaran wajib punya kategori. Kategori bisa diatur sendiri di Pengaturan (tambah, hapus, ganti nama), bukan daftar tetap. Kategori awal: Modal Topup, Gaji Worker, Operasional, Lainnya.
 - Kategori yang sudah dipakai oleh minimal satu pengeluaran tidak boleh dihapus (tampilkan pesan yang jelas). Ganti nama boleh dan otomatis berlaku di semua pengeluaran yang memakainya. Nama kategori tidak boleh kembar.
 - Data pengeluaran: ID unik (ikuti Aturan umum soal keunikan ID lintas perangkat, awalan MKL-YYMMDD), tanggal, jumlah (rupiah), kategori (wajib), metode pembayaran (dari daftar di Pengaturan), ID pesanan (opsional), catatan (opsional).
 - Kebutuhan layar: daftar pengeluaran (urut tanggal terbaru, filter rentang tanggal, filter kategori, total pengeluaran dari hasil filter, kategori tampil di tiap baris), form tambah/edit/hapus pengeluaran, pengelolaan kategori di Pengaturan, dan di detail pesanan tampil total pengeluaran yang terhubung ke pesanan itu.
@@ -71,6 +72,15 @@ Kebutuhan layar:
 - Mengubah status pesanan tidak otomatis membuat atau mengubah pengeluaran. Semua pencatatan dilakukan manual oleh pengguna.
 - Pesanan Dibatalkan tetap menyimpan pengeluarannya.
 - Tidak ada perhitungan untung bersih dan tidak ada rekap harian/bulanan di fitur ini (itu Fitur 8).
+
+## Fitur 13: Kas toko
+- Satu saldo gabungan untuk seluruh toko. Kas berfungsi sebagai penampung: uang pelanggan masuk ke kas, uang keluar ke worker dan biaya lain dari kas.
+- Saldo dihitung otomatis: saldo awal + total pemasukan - total pengeluaran. Tidak ada pencatatan kas terpisah dan tidak ada transfer antar kas.
+- Saldo awal bisa diisi dan diubah di menu Kas (angka rupiah, default 0).
+- Menu Kas menampilkan: saldo saat ini, dan daftar mutasi gabungan pemasukan dan pengeluaran (urut tanggal terbaru, filter rentang tanggal, tiap baris menandai masuk atau keluar beserta jumlahnya). Mengetuk baris membuka form pemasukan atau pengeluaran aslinya.
+- Menu Kas hanya menampilkan dan tidak menambah atau mengubah data baru selain saldo awal. Pencatatan tetap lewat Fitur 3 dan 4.
+- Pesanan Dibatalkan tetap menghitung pemasukan dan pengeluaran yang sudah tercatat.
+- Tidak ada perhitungan untung bersih dan tidak ada rekap harian/bulanan (itu Fitur 8). Tidak ada hitungan gaji otomatis (itu Fitur 9).
 
 ## Aturan umum
 - Metode pembayaran bisa diatur sendiri (tambah, hapus, ganti nama), bukan daftar tetap
