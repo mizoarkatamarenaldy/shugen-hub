@@ -9,7 +9,7 @@ Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 2. Progress joki (checklist + persentase)
 3. Pemasukan
 4. Pengeluaran
-5. Invoice
+5. Invoice  <- FOKUS SEKARANG
 
 ## Fitur tambahan (setelah fitur inti)
 6. Data pelanggan (riwayat order, tandai langganan)
@@ -19,7 +19,7 @@ Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 10. Deadline pesanan dan pengingat
 11. Katalog harga (hanya template, harga bisa diubah per pesanan)
 12. Backup dan restore manual (export/import file)
-13. Kas toko (saldo gabungan, menu sendiri)  <- FOKUS SEKARANG
+13. Kas toko (saldo gabungan, menu sendiri)
 
 ## Fitur 1: Pesanan + Status
 Data pesanan:
@@ -71,7 +71,18 @@ Kebutuhan layar:
 - Gaji worker di fitur ini hanya dicatat lewat kategori dan catatan. Tidak ada data worker dan tidak ada bagi hasil (itu Fitur 9).
 - Mengubah status pesanan tidak otomatis membuat atau mengubah pengeluaran. Semua pencatatan dilakukan manual oleh pengguna.
 - Pesanan Dibatalkan tetap menyimpan pengeluarannya.
-- Tidak ada perhitungan untung bersih dan tidak ada rekap harian/bulanan di fitur ini (itu Fitur 8).
+
+## Fitur 5: Invoice
+- Invoice dibuat dari satu pesanan (lewat ID pesanan dari Fitur 1). Satu pesanan punya paling banyak satu invoice.
+- Invoice dibuat manual lewat tombol di detail pesanan. Tidak dibuat otomatis saat pesanan dibuat atau status berubah.
+- Nomor invoice: INV-YYMMDD-XXXX (4 karakter acak dengan crypto.getRandomValues, ikuti Aturan umum soal keunikan ID lintas perangkat).
+- Data invoice yang disimpan: nomor invoice, ID pesanan, tanggal terbit, catatan invoice (opsional).
+- Isi tampilan invoice diambil langsung dari data terkini: nama toko dan kontak toko, nomor dan tanggal invoice, nama pelanggan, jenis, game, detail pesanan, harga, total yang sudah dibayar (dari Fitur 3), sisa tagihan (harga dikurangi total dibayar), dan label LUNAS atau BELUM LUNAS.
+- Nama toko dan kontak toko bisa diisi dan diubah di Pengaturan.
+- Kebutuhan layar: tombol Buat Invoice atau Lihat Invoice di detail pesanan, tampilan invoice yang rapi, tombol Cetak/Simpan PDF memakai window.print() dengan CSS print (tanpa library), form edit catatan invoice, tombol hapus invoice (pesanan tidak ikut terhapus), dan menu Invoice berisi daftar invoice (urut tanggal terbaru, pencarian berdasarkan nomor invoice atau nama pelanggan). Mengetuk baris membuka tampilan invoice.
+- Menghapus pesanan juga menghapus invoice-nya, dan pesan konfirmasi hapus harus menyebutkan hal itu.
+- Pesanan Dibatalkan tetap boleh punya invoice.
+- Tidak ada pajak, diskon, atau banyak item per invoice. Tidak ada kirim otomatis ke WA (itu Fitur 7).
 
 ## Fitur 13: Kas toko
 - Satu saldo gabungan untuk seluruh toko. Kas berfungsi sebagai penampung: uang pelanggan masuk ke kas, uang keluar ke worker dan biaya lain dari kas.

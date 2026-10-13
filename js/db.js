@@ -1,6 +1,6 @@
 const ShugenDB = (function () {
   const DB_NAME = 'shugen-hub';
-  const DB_VERSION = 5;
+  const DB_VERSION = 6;
   let _db = null;
 
   const DEFAULT_PAYMENT_METHODS = [
@@ -68,6 +68,16 @@ const ShugenDB = (function () {
         }
         if (!db.objectStoreNames.contains('cashSettings')) {
           db.createObjectStore('cashSettings', { keyPath: 'key' });
+        }
+        if (!db.objectStoreNames.contains('invoices')) {
+          const invoiceStore = db.createObjectStore('invoices', {
+            keyPath: 'id',
+            autoIncrement: true
+          });
+          invoiceStore.createIndex('invoiceNumber', 'invoiceNumber', { unique: true });
+          invoiceStore.createIndex('orderId', 'orderId', { unique: true });
+          invoiceStore.createIndex('issueDate', 'issueDate');
+          invoiceStore.createIndex('createdAt', 'createdAt');
         }
       };
 
@@ -205,6 +215,7 @@ const ShugenDB = (function () {
     const existing = await getOrder(id);
     if (existing && existing.orderId) {
       await deleteProgress(existing.orderId);
+      await deleteInvoiceByOrderId(existing.orderId);
     }
     return req2p(tx('orders', 'readwrite').delete(id));
   }
@@ -683,6 +694,143 @@ const ShugenDB = (function () {
     return req2p(tx('cashSettings', 'readwrite').put({ key: key, value: value }));
   }
 
+  // Invoices
+
+  let _addInvoiceQueue = Promise.resolve();
+
+  function buildCandidateInvoiceId(dateStr) {
+    const cleanDate = normalizeDateStr(dateStr);
+    const yy = cleanDate.slice(2, 4);
+    const mm = cleanDate.slice(5, 7);
+    const dd = cleanDate.slice(8, 10);
+    return 'INV-' + yy + mm + dd + '-' + randomIdCode(4);
+  }
+
+  async function getAllInvoices() {
+    await open();
+    return req2p(tx('invoices', 'readonly').getAll());
+  }
+
+  async function getInvoice(id) {
+    await open();
+    return req2p(tx('invoices', 'readonly').get(id));
+  }
+
+  async function getInvoiceByOrderId(orderId) {
+    await open();
+    if (!orderId) return null;
+    const idx = tx('invoices', 'readonly').index('orderId');
+    const list = await req2p(idx.getAll(orderId));
+    return list.length > 0 ? list[0] : null;
+  }
+
+  async function getInvoiceByNumber(invoiceNumber) {
+    await open();
+    if (!invoiceNumber) return null;
+    const idx = tx('invoices', 'readonly').index('invoiceNumber');
+    return req2p(idx.get(invoiceNumber));
+  }
+
+  function addInvoice(inv) {
+    const run = _addInvoiceQueue.then(async () => {
+      await open();
+      return new Promise((resolve, reject) => {
+        const transaction = _db.transaction('invoices', 'readwrite');
+        const store = transaction.objectStore('invoices');
+        const numIdx = store.index('invoiceNumber');
+        const orderIdx = store.index('orderId');
+        const now = new Date();
+        const dateStr = normalizeDateStr(inv.issueDate || inv.date);
+        let savedRecord = null;
+
+        transaction.oncomplete = () => resolve(savedRecord);
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error || new Error('Transaksi dibatalkan'));
+
+        const cleanOrderId = String(inv.orderId || '').trim();
+        if (!cleanOrderId) {
+          reject(new Error('ID pesanan wajib diisi'));
+          return;
+        }
+
+        const orderCheck = orderIdx.getKey(cleanOrderId);
+        orderCheck.onsuccess = () => {
+          if (orderCheck.result !== undefined) {
+            reject(new Error('Pesanan sudah memiliki invoice'));
+            return;
+          }
+
+          function tryInsert(preferredNumber) {
+            const candidate = preferredNumber || buildCandidateInvoiceId(dateStr);
+            const checkReq = numIdx.getKey(candidate);
+            checkReq.onsuccess = () => {
+              if (checkReq.result !== undefined) {
+                tryInsert(null);
+                return;
+              }
+              const record = {
+                invoiceNumber: candidate,
+                orderId: cleanOrderId,
+                issueDate: dateStr,
+                note: String(inv.note || inv.notes || '').trim(),
+                createdAt: inv.createdAt || now,
+                updatedAt: now
+              };
+              const addReq = store.add(record);
+              addReq.onsuccess = () => {
+                record.id = addReq.result;
+                savedRecord = record;
+              };
+              addReq.onerror = (e) => {
+                if (addReq.error && addReq.error.name === 'ConstraintError') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  tryInsert(null);
+                }
+              };
+            };
+          }
+
+          tryInsert(inv.invoiceNumber || null);
+        };
+      });
+    });
+    _addInvoiceQueue = run.catch(() => {});
+    return run;
+  }
+
+  async function updateInvoiceNote(id, note) {
+    await open();
+    const store = tx('invoices', 'readwrite');
+    const existing = await req2p(store.get(id));
+    if (!existing) throw new Error('Invoice tidak ditemukan');
+    const updated = Object.assign({}, existing, {
+      note: String(note || '').trim(),
+      updatedAt: new Date()
+    });
+    await req2p(store.put(updated));
+    return updated;
+  }
+
+  async function deleteInvoice(id) {
+    await open();
+    return req2p(tx('invoices', 'readwrite').delete(id));
+  }
+
+  async function deleteInvoiceByOrderId(orderId) {
+    await open();
+    if (!orderId) return;
+    const existing = await getInvoiceByOrderId(orderId);
+    if (existing && existing.id) {
+      return req2p(tx('invoices', 'readwrite').delete(existing.id));
+    }
+  }
+
+  async function clearInvoices() {
+    await open();
+    return req2p(tx('invoices', 'readwrite').clear());
+  }
+
   return {
     open: open,
     orders: {
@@ -720,6 +868,17 @@ const ShugenDB = (function () {
       update: updateExpense,
       delete: deleteExpense,
       clear: clearExpenses
+    },
+    invoices: {
+      getAll: getAllInvoices,
+      get: getInvoice,
+      getByOrderId: getInvoiceByOrderId,
+      getByNumber: getInvoiceByNumber,
+      add: addInvoice,
+      updateNote: updateInvoiceNote,
+      delete: deleteInvoice,
+      deleteByOrderId: deleteInvoiceByOrderId,
+      clear: clearInvoices
     },
     categories: {
       getAll: getAllExpenseCategories,

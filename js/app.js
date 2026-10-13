@@ -21,6 +21,11 @@ const App = (function () {
   let editingIncomeId = null;
   let editingExpenseId = null;
   let statusChangeId = null;
+  let invoices = [];
+  let invoiceSearchQuery = '';
+  let activeInvoiceId = null;
+  let shopName = 'Shugen Store';
+  let shopContact = '';
 
   const STATUS_LABELS = {
     menunggu_bayar: 'Menunggu Bayar',
@@ -69,8 +74,13 @@ const App = (function () {
       orders = await ShugenDB.orders.getAll();
       incomes = await ShugenDB.incomes.getAll();
       expenses = await ShugenDB.expenses.getAll();
+      invoices = await ShugenDB.invoices.getAll();
       const savedBalance = await ShugenDB.cash.get('initialBalance');
       cashInitialBalance = (savedBalance !== null && savedBalance !== undefined) ? Number(savedBalance) : 0;
+      const savedShopName = await ShugenDB.settings.get('shopName');
+      shopName = savedShopName || 'Shugen Store';
+      const savedShopContact = await ShugenDB.settings.get('shopContact');
+      shopContact = savedShopContact || '';
       await refreshProgressMap();
       await loadTheme();
       render();
@@ -106,7 +116,8 @@ const App = (function () {
     $('#view-incomes').hidden = state !== 'ready' || activeView !== 'incomes';
     $('#view-expenses').hidden = state !== 'ready' || activeView !== 'expenses';
     $('#view-cash').hidden = state !== 'ready' || activeView !== 'cash';
-    $('#fab-add').hidden = state !== 'ready' || activeView === 'cash';
+    $('#view-invoices').hidden = state !== 'ready' || activeView !== 'invoices';
+    $('#fab-add').hidden = state !== 'ready' || activeView === 'cash' || activeView === 'invoices';
 
     $('#empty-state').hidden = true;
     $('#empty-filtered').hidden = true;
@@ -123,6 +134,10 @@ const App = (function () {
     $('#cash-empty-state').hidden = true;
     $('#cash-empty-filtered').hidden = true;
     $('#cash-mutation-list').hidden = state !== 'ready';
+
+    $('#invoice-empty-state').hidden = true;
+    $('#invoice-empty-filtered').hidden = true;
+    $('#invoice-list').hidden = state !== 'ready';
 
     if (state === 'ready') {
       const fabLabel = activeView === 'incomes'
@@ -167,6 +182,15 @@ const App = (function () {
       } else if (filteredMutations.length === 0) {
         $('#cash-empty-filtered').hidden = false;
         $('#cash-mutation-list').hidden = true;
+      }
+
+      const filteredInvoices = getFilteredInvoices();
+      if (invoices.length === 0) {
+        $('#invoice-empty-state').hidden = false;
+        $('#invoice-list').hidden = true;
+      } else if (filteredInvoices.length === 0) {
+        $('#invoice-empty-filtered').hidden = false;
+        $('#invoice-list').hidden = true;
       }
     }
   }
@@ -259,6 +283,27 @@ const App = (function () {
     return list;
   }
 
+  function getFilteredInvoices() {
+    let list = invoices.slice();
+    if (invoiceSearchQuery) {
+      const q = invoiceSearchQuery.toLowerCase();
+      list = list.filter((inv) => {
+        const order = orders.find((o) => o.orderId === inv.orderId);
+        const customer = order ? order.customerName.toLowerCase() : '';
+        const num = (inv.invoiceNumber || '').toLowerCase();
+        return num.includes(q) || customer.includes(q);
+      });
+    }
+    list.sort((a, b) => {
+      const cmp = String(b.issueDate || '').localeCompare(String(a.issueDate || ''));
+      if (cmp !== 0) return cmp;
+      const timeDiff = new Date(b.createdAt) - new Date(a.createdAt);
+      if (timeDiff !== 0) return timeDiff;
+      return (b.id || 0) - (a.id || 0);
+    });
+    return list;
+  }
+
   function renderCash() {
     const totalIncome = incomes.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
     const totalExpense = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
@@ -335,6 +380,58 @@ const App = (function () {
     showView('ready');
   }
 
+  function renderInvoices() {
+    const list = getFilteredInvoices();
+    const container = $('#invoice-list');
+    container.innerHTML = '';
+
+    list.forEach((inv) => {
+      const order = orders.find((o) => o.orderId === inv.orderId);
+      const orderIncomes = incomes.filter((inc) => inc.orderId === inv.orderId);
+      const totalPaid = orderIncomes.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
+      const price = order ? Number(order.price) || 0 : 0;
+      const isPaidOff = totalPaid >= price && price > 0;
+
+      const card = document.createElement('article');
+      card.className = 'invoice-card';
+      card.tabIndex = 0;
+      card.dataset.id = inv.id;
+      card.setAttribute('role', 'button');
+
+      const dateLabel = formatYmd(inv.issueDate);
+      const customerName = order ? order.customerName : '(Pesanan tidak ditemukan)';
+      const serviceName = order ? ((order.type === 'joki' ? 'Joki' : 'Topup') + ' · ' + order.game) : '-';
+      const badgeText = isPaidOff ? 'LUNAS' : 'BELUM LUNAS';
+      const badgeClass = isPaidOff ? 'inv-badge--lunas' : 'inv-badge--belum-lunas';
+
+      card.setAttribute(
+        'aria-label',
+        inv.invoiceNumber + ', ' + customerName + ', Rp ' + formatPrice(price) + ', ' + badgeText + ', ' + dateLabel
+      );
+
+      card.innerHTML =
+        '<div class="invoice-card-header">' +
+          '<span class="invoice-card-number">' + esc(inv.invoiceNumber) + '</span>' +
+          '<span class="invoice-card-date">' + esc(dateLabel) + '</span>' +
+        '</div>' +
+        '<div class="invoice-card-body">' +
+          '<div>' +
+            '<div class="invoice-card-customer">' + esc(customerName) + '</div>' +
+            '<div class="invoice-card-service">' + esc(serviceName) + '</div>' +
+          '</div>' +
+          '<span class="inv-status-badge ' + badgeClass + '">' + badgeText + '</span>' +
+        '</div>' +
+        '<div class="invoice-card-footer">' +
+          '<span class="invoice-card-date">ID: ' + esc(inv.orderId) + '</span>' +
+          '<strong class="invoice-card-price">Rp ' + formatPrice(price) + '</strong>' +
+        '</div>';
+
+      container.appendChild(card);
+    });
+
+    showView('ready');
+  }
+
   // Rendering
 
   function render() {
@@ -344,6 +441,7 @@ const App = (function () {
     renderIncomes();
     renderExpenses();
     renderCash();
+    renderInvoices();
   }
 
   function renderNav() {
@@ -868,6 +966,45 @@ const App = (function () {
     // Theme
     $('#btn-theme').addEventListener('click', toggleTheme);
 
+    // Invoices
+    $('#invoice-search-input').addEventListener('input', (e) => {
+      invoiceSearchQuery = e.target.value;
+      renderInvoices();
+    });
+
+    $('#invoice-list').addEventListener('click', (e) => {
+      const card = e.target.closest('.invoice-card');
+      if (card) openInvoiceView(Number(card.dataset.id));
+    });
+
+    $('#invoice-list').addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('.invoice-card');
+      if (!card) return;
+      e.preventDefault();
+      openInvoiceView(Number(card.dataset.id));
+    });
+
+    $('#btn-print-invoice').addEventListener('click', () => {
+      window.print();
+    });
+
+    $('#btn-close-invoice').addEventListener('click', () => {
+      $('#invoice-detail-dialog').close();
+    });
+
+    $('#btn-delete-invoice').addEventListener('click', handleDeleteInvoice);
+
+    $('#invoice-note-form').addEventListener('submit', handleSaveInvoiceNote);
+
+    $('#invoice-detail-dialog').addEventListener('close', () => {
+      activeInvoiceId = null;
+      $('#btn-delete-invoice').disabled = false;
+      $('#btn-save-invoice-note').disabled = false;
+    });
+
+    $('#settings-shop-form').addEventListener('submit', handleSaveShopInfo);
+
     // Close dialogs on Escape (native <dialog> handles this)
     // Close dialogs on backdrop click
     $$('dialog').forEach((d) => {
@@ -959,6 +1096,25 @@ const App = (function () {
         : (orderExpenses.length + ' catatan pengeluaran');
       $('#order-expense-group').hidden = false;
 
+      const orderInvoice = invoices.find((inv) => inv.orderId === order.orderId);
+      $('#order-invoice-group').hidden = false;
+      if (orderInvoice) {
+        $('#order-invoice-count').textContent = 'Nomor: ' + orderInvoice.invoiceNumber;
+        $('#btn-create-invoice').hidden = true;
+        $('#btn-view-invoice').hidden = false;
+        $('#btn-view-invoice').textContent = 'Lihat Invoice';
+        $('#btn-view-invoice').onclick = () => {
+          $('#order-dialog').close();
+          openInvoiceView(orderInvoice.id);
+        };
+      } else {
+        $('#order-invoice-count').textContent = 'Belum ada invoice untuk pesanan ini';
+        $('#btn-create-invoice').hidden = false;
+        $('#btn-create-invoice').textContent = 'Buat Invoice';
+        $('#btn-view-invoice').hidden = true;
+        $('#btn-create-invoice').onclick = () => handleCreateInvoiceForOrder(order);
+      }
+
       const prog = progressMap[order.orderId];
       currentSteps = prog && Array.isArray(prog.steps)
         ? prog.steps.map((s) => ({
@@ -981,6 +1137,7 @@ const App = (function () {
       $('#order-expense-group').hidden = true;
       $('#order-expense-total').textContent = 'Rp 0';
       $('#order-expense-count').textContent = 'Belum ada pengeluaran tercatat';
+      $('#order-invoice-group').hidden = true;
       $('#btn-delete-order').hidden = true;
       currentSteps = [];
     }
@@ -1296,13 +1453,14 @@ const App = (function () {
     const deleteBtn = $('#btn-delete-order');
     if (deleteBtn.disabled) return;
     if (editingId === null) return;
-    if (!confirm('Hapus pesanan ini?')) return;
+    if (!confirm('Hapus pesanan ini? Invoice dan progress yang terhubung juga akan ikut terhapus.')) return;
 
     deleteBtn.disabled = true;
 
     try {
       await ShugenDB.orders.delete(editingId);
       orders = await ShugenDB.orders.getAll();
+      invoices = await ShugenDB.invoices.getAll();
       await refreshProgressMap();
       render();
       $('#order-dialog').close();
@@ -1794,6 +1952,9 @@ const App = (function () {
     $('#btn-load-demo').disabled = false;
     $('#btn-add-payment').disabled = false;
     $('#btn-add-category').disabled = false;
+    $('#btn-save-shop-info').disabled = false;
+    $('#setting-shop-name').value = shopName || 'Shugen Store';
+    $('#setting-shop-contact').value = shopContact || '';
     renderPaymentList();
     renderCategoryList();
     $('#settings-dialog').showModal();
@@ -2035,6 +2196,153 @@ const App = (function () {
     }
   }
 
+  // Invoice actions
+
+  async function handleCreateInvoiceForOrder(order) {
+    if (!order || !order.orderId) return;
+    const btn = $('#btn-create-invoice');
+    if (btn.disabled) return;
+    btn.disabled = true;
+
+    try {
+      const created = await ShugenDB.invoices.add({
+        orderId: order.orderId,
+        issueDate: todayYmd(),
+        note: ''
+      });
+      invoices = await ShugenDB.invoices.getAll();
+      render();
+      $('#order-dialog').close();
+      toast('Invoice berhasil dibuat');
+      openInvoiceView(created.id);
+    } catch (err) {
+      console.error(err);
+      toast('Gagal membuat invoice');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function openInvoiceView(invoiceId) {
+    activeInvoiceId = invoiceId;
+    const inv = invoices.find((x) => x.id === invoiceId);
+    if (!inv) return;
+
+    const order = orders.find((o) => o.orderId === inv.orderId);
+    const orderIncomes = incomes.filter((inc) => inc.orderId === inv.orderId);
+    const totalPaid = orderIncomes.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
+    const price = order ? Number(order.price) || 0 : 0;
+    const remainingBalance = Math.max(0, price - totalPaid);
+    const isPaidOff = totalPaid >= price && price > 0;
+
+    $('#invoice-header-num').textContent = inv.invoiceNumber;
+    $('#inv-store-name').textContent = shopName || 'Shugen Store';
+    $('#inv-store-contact').textContent = shopContact || '-';
+
+    const badge = $('#inv-status-badge');
+    if (isPaidOff) {
+      badge.textContent = 'LUNAS';
+      badge.className = 'inv-status-badge inv-badge--lunas';
+    } else {
+      badge.textContent = 'BELUM LUNAS';
+      badge.className = 'inv-status-badge inv-badge--belum-lunas';
+    }
+
+    $('#inv-number').textContent = inv.invoiceNumber;
+    $('#inv-date').textContent = formatYmd(inv.issueDate);
+    $('#inv-order-id').textContent = inv.orderId;
+    $('#inv-customer-name').textContent = order ? order.customerName : '(Pesanan tidak ditemukan)';
+
+    const serviceType = order ? (order.type === 'joki' ? 'Joki' : 'Topup') : '-';
+    const serviceGame = order ? order.game : '-';
+    $('#inv-order-service').textContent = serviceType + ' - ' + serviceGame;
+    $('#inv-order-desc').textContent = order && order.detail ? order.detail : '-';
+    $('#inv-order-price-val').textContent = 'Rp ' + formatPrice(price);
+
+    $('#inv-total-price').textContent = 'Rp ' + formatPrice(price);
+    $('#inv-total-paid').textContent = 'Rp ' + formatPrice(totalPaid);
+    $('#inv-remaining-balance').textContent = 'Rp ' + formatPrice(remainingBalance);
+
+    $('#inv-note-text').textContent = inv.note ? inv.note : '-';
+    $('#inv-note-edit-input').value = inv.note || '';
+
+    $('#btn-print-invoice').disabled = false;
+    $('#btn-delete-invoice').disabled = false;
+    $('#btn-save-invoice-note').disabled = false;
+
+    $('#invoice-detail-dialog').showModal();
+  }
+
+  async function handleDeleteInvoice() {
+    if (!activeInvoiceId) return;
+    const btn = $('#btn-delete-invoice');
+    if (btn.disabled) return;
+    if (!confirm('Hapus invoice ini? Pesanan tidak akan terhapus.')) return;
+
+    btn.disabled = true;
+
+    try {
+      await ShugenDB.invoices.delete(activeInvoiceId);
+      invoices = await ShugenDB.invoices.getAll();
+      render();
+      $('#invoice-detail-dialog').close();
+      toast('Invoice dihapus');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal menghapus invoice');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function handleSaveInvoiceNote(e) {
+    e.preventDefault();
+    if (!activeInvoiceId) return;
+    const btn = $('#btn-save-invoice-note');
+    if (btn.disabled) return;
+
+    const newNote = $('#inv-note-edit-input').value.trim();
+    btn.disabled = true;
+
+    try {
+      await ShugenDB.invoices.updateNote(activeInvoiceId, newNote);
+      invoices = await ShugenDB.invoices.getAll();
+      const updatedInv = invoices.find((x) => x.id === activeInvoiceId);
+      $('#inv-note-text').textContent = updatedInv && updatedInv.note ? updatedInv.note : '-';
+      render();
+      toast('Catatan invoice diperbarui');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal menyimpan catatan invoice');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function handleSaveShopInfo(e) {
+    e.preventDefault();
+    const btn = $('#btn-save-shop-info');
+    if (btn.disabled) return;
+
+    const nameVal = $('#setting-shop-name').value.trim() || 'Shugen Store';
+    const contactVal = $('#setting-shop-contact').value.trim();
+    btn.disabled = true;
+
+    try {
+      await ShugenDB.settings.set('shopName', nameVal);
+      await ShugenDB.settings.set('shopContact', contactVal);
+      shopName = nameVal;
+      shopContact = contactVal;
+      render();
+      toast('Informasi toko disimpan');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal menyimpan informasi toko');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   // Demo data actions
 
   async function loadDemoData() {
@@ -2049,11 +2357,18 @@ const App = (function () {
       orders = await ShugenDB.orders.getAll();
       incomes = await ShugenDB.incomes.getAll();
       expenses = await ShugenDB.expenses.getAll();
+      invoices = await ShugenDB.invoices.getAll();
       expenseCategories = await ShugenDB.categories.getAll();
       await refreshProgressMap();
       paymentMethods = await ShugenDB.payment.getAll();
       const savedBalance = await ShugenDB.cash.get('initialBalance');
       cashInitialBalance = (savedBalance !== null && savedBalance !== undefined) ? Number(savedBalance) : 0;
+      const savedShopName = await ShugenDB.settings.get('shopName');
+      shopName = savedShopName || 'Shugen Store';
+      const savedShopContact = await ShugenDB.settings.get('shopContact');
+      shopContact = savedShopContact || '';
+      $('#setting-shop-name').value = shopName;
+      $('#setting-shop-contact').value = shopContact;
       render();
       renderPaymentList();
       renderCategoryList();

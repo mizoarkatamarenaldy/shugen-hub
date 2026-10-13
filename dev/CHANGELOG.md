@@ -19,6 +19,20 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #012 [2026-10-13] Implementasi Fitur 5 (Invoice)
+- Fitur: Invoice
+- Ringkasan: Menambahkan pembuatan invoice manual dari detail pesanan dengan nomor unik berformat INV-YYMMDD-XXXX (4 karakter acak crypto.getRandomValues), tampilan invoice dengan data terkini toko dan pesanan serta badge status LUNAS/BELUM LUNAS, tombol cetak atau simpan PDF melalui window.print() dengan CSS print bersih latar putih tanpa library, form edit catatan invoice, tombol hapus invoice tanpa menghapus pesanan, serta sinkronisasi penghapusan invoice saat pesanan dihapus. Menambahkan menu Invoice berisi daftar invoice urut tanggal terbaru dan pencarian nomor invoice atau nama pelanggan, pengaturan nama dan kontak toko di Pengaturan dengan pengaman tombol selama operasi IndexedDB, skema IndexedDB versi 6 dengan object store `invoices`, data contoh invoice di `js/dummy.js`, pembaruan cache service worker ke `shugen-v11`, dan pemindahan penanda fokus di `dev/PLAN.md`.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - index.html
+  - js/app.js
+  - js/db.js
+  - js/dummy.js
+  - sw.js
+- Catatan: Skema IndexedDB dinaikkan ke versi 6 dengan object store `invoices` secara aman tanpa menghapus data lama, nomor invoice menggunakan format INV-YYMMDD-XXXX, dan versi cache service worker dinaikkan ke shugen-v11.
+
 ### #011 [2026-10-13] Implementasi Fitur 13 (Kas toko)
 - Fitur: Kas toko (saldo gabungan, menu sendiri)
 - Ringkasan: Menambahkan menu Kas untuk menampilkan saldo kas saat ini secara otomatis (saldo awal ditambah total pemasukan dikurangi total pengeluaran) yang tidak terpengaruh filter tanggal, input dan penyimpanan saldo awal dengan pengaman tombol selama operasi IndexedDB, serta daftar mutasi gabungan pemasukan dan pengeluaran urut tanggal terbaru dengan filter rentang tanggal. Mengetuk baris mutasi membuka form pemasukan atau pengeluaran aslinya, memigrasi skema IndexedDB ke versi 5 dengan object store `cashSettings`, menambahkan saldo awal contoh di `js/dummy.js`, menaikkan cache service worker ke `shugen-v10`, dan memperbarui penanda fokus di `dev/PLAN.md`.

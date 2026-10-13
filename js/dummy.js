@@ -273,13 +273,44 @@ const DummyData = (function () {
     }
   ];
 
+  const INVOICES = [
+    {
+      invoiceNumber: 'INV-261011-K7M4',
+      orderId: 'SGN-261011-K7M4',
+      issueDate: '2026-10-11',
+      note: 'Terima kasih atas pesanannya. Garansi rank bintang bertahan 7 hari.'
+    },
+    {
+      invoiceNumber: 'INV-261011-R9W2',
+      orderId: 'SGN-261011-R9W2',
+      issueDate: '2026-10-11',
+      note: 'Topup via UID resmi server Asia, 100% legal dan anti-minus.'
+    },
+    {
+      invoiceNumber: 'INV-261012-4H8P',
+      orderId: 'SGN-261012-4H8P',
+      issueDate: '2026-10-12',
+      note: 'DP 50% diterima (Rp 100.000). Sisa pelunasan saat rank Gold 1 tercapai.'
+    },
+    {
+      invoiceNumber: 'INV-261012-T5V9',
+      orderId: 'SGN-261012-T5V9',
+      issueDate: '2026-10-12',
+      note: 'Pesanan dibatalkan oleh pelanggan. Dokumen arsip internal toko.'
+    }
+  ];
+
   async function load() {
     await ShugenDB.orders.clear();
     await ShugenDB.progress.clear();
     await ShugenDB.incomes.clear();
     await ShugenDB.expenses.clear();
+    await ShugenDB.invoices.clear();
     await ShugenDB.categories.clear();
     await ShugenDB.payment.clear();
+
+    await ShugenDB.settings.set('shopName', 'Shugen Store');
+    await ShugenDB.settings.set('shopContact', 'WhatsApp: 0812-3456-7890');
 
     for (const name of PAYMENT_METHODS) {
       await ShugenDB.payment.add(name);
@@ -315,6 +346,10 @@ const DummyData = (function () {
         note: expense.note,
         createdAt: expense.createdAt
       });
+    }
+
+    for (const inv of INVOICES) {
+      await ShugenDB.invoices.add(inv);
     }
 
     await ShugenDB.cash.set('initialBalance', INITIAL_CASH_BALANCE);

@@ -38,11 +38,12 @@
   </header>
 
   <nav class="main-nav" aria-label="Menu utama">
-    <div class="main-nav-inner main-nav-inner--4">
+    <div class="main-nav-inner main-nav-inner--5">
       <button type="button" class="nav-tab active" data-view="orders" aria-current="page">Pesanan</button>
       <button type="button" class="nav-tab" data-view="incomes">Pemasukan</button>
       <button type="button" class="nav-tab" data-view="expenses">Pengeluaran</button>
       <button type="button" class="nav-tab" data-view="cash">Kas</button>
+      <button type="button" class="nav-tab" data-view="invoices">Invoice</button>
     </div>
   </nav>
 
@@ -228,6 +229,30 @@
       <section id="cash-mutation-list" class="income-list" aria-label="Daftar mutasi kas"></section>
     </div>
 
+    <div id="view-invoices" hidden>
+      <div class="search-bar">
+        <div class="search-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="search" id="invoice-search-input" class="search-input" placeholder="Cari nomor invoice atau pelanggan..." aria-label="Cari invoice berdasarkan nomor invoice atau nama pelanggan">
+        </div>
+      </div>
+
+      <div id="invoice-empty-state" class="app-state" hidden>
+        <p class="state-message">Belum ada invoice</p>
+        <p class="state-hint">Buka detail pesanan di tab Pesanan lalu tap "Buat Invoice".</p>
+      </div>
+
+      <div id="invoice-empty-filtered" class="app-state" hidden>
+        <p class="state-message">Tidak ada invoice yang sesuai</p>
+        <p class="state-hint">Coba ubah kata kunci pencarian nomor invoice atau nama pelanggan.</p>
+      </div>
+
+      <section id="invoice-list" class="income-list" aria-label="Daftar invoice"></section>
+    </div>
+
     <button type="button" class="fab" id="fab-add" aria-label="Tambah pesanan baru">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
         <line x1="12" y1="5" x2="12" y2="19"/>
@@ -335,6 +360,17 @@
             <span id="order-expense-count" class="order-paid-count">Belum ada pengeluaran tercatat</span>
           </div>
           <strong id="order-expense-total" class="order-paid-value">Rp 0</strong>
+        </div>
+
+        <div id="order-invoice-group" class="order-paid-box" hidden>
+          <div class="order-paid-meta">
+            <span class="order-paid-label">Invoice Pesanan</span>
+            <span id="order-invoice-count" class="order-paid-count">Belum ada invoice</span>
+          </div>
+          <div class="order-invoice-actions" style="margin-top:8px;">
+            <button type="button" id="btn-create-invoice" class="btn btn-secondary btn-small">Buat Invoice</button>
+            <button type="button" id="btn-view-invoice" class="btn btn-secondary btn-small" hidden>Lihat Invoice</button>
+          </div>
         </div>
 
         <div id="field-status-group" class="form-group" hidden>
@@ -498,6 +534,116 @@
     </div>
   </dialog>
 
+  <!-- Dialog Tampilan Invoice -->
+  <dialog id="invoice-detail-dialog" class="dialog-invoice" aria-labelledby="invoice-view-title">
+    <div class="dialog-header">
+      <div class="dialog-header-titles">
+        <h2 id="invoice-view-title" class="dialog-title">Invoice</h2>
+        <span id="invoice-header-num" class="dialog-order-id"></span>
+      </div>
+      <button type="button" class="btn-icon" id="btn-close-invoice" aria-label="Tutup tampilan invoice">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="dialog-body">
+      <div class="invoice-toolbar no-print">
+        <button type="button" id="btn-print-invoice" class="btn btn-primary btn-small">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:16px;height:16px;margin-right:6px;">
+            <polyline points="6 9 6 2 18 2 18 9"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect x="6" y="14" width="12" height="8"/>
+          </svg>
+          Cetak / Simpan PDF
+        </button>
+        <button type="button" id="btn-delete-invoice" class="btn btn-danger btn-small">Hapus Invoice</button>
+      </div>
+
+      <div id="invoice-paper" class="invoice-paper">
+        <header class="invoice-paper-header">
+          <div class="invoice-store-info">
+            <h3 id="inv-store-name" class="inv-store-name">Shugen Store</h3>
+            <p id="inv-store-contact" class="inv-store-contact">WhatsApp: 0812-3456-7890</p>
+          </div>
+          <div class="invoice-badge-wrap">
+            <span id="inv-status-badge" class="inv-status-badge inv-badge--lunas">LUNAS</span>
+          </div>
+        </header>
+
+        <div class="inv-divider"></div>
+
+        <div class="inv-meta-grid">
+          <div class="inv-meta-item">
+            <span class="inv-meta-label">Nomor Invoice</span>
+            <strong id="inv-number" class="inv-meta-val">INV-261013-XXXX</strong>
+          </div>
+          <div class="inv-meta-item">
+            <span class="inv-meta-label">Tanggal Terbit</span>
+            <span id="inv-date" class="inv-meta-val">13 Okt 2026</span>
+          </div>
+          <div class="inv-meta-item">
+            <span class="inv-meta-label">ID Pesanan</span>
+            <span id="inv-order-id" class="inv-meta-val">SGN-261011-K7M4</span>
+          </div>
+          <div class="inv-meta-item">
+            <span class="inv-meta-label">Pelanggan</span>
+            <strong id="inv-customer-name" class="inv-meta-val">Budi Santoso</strong>
+          </div>
+        </div>
+
+        <div class="inv-divider"></div>
+
+        <div class="inv-details-section">
+          <h4 class="inv-section-title">Detail Layanan</h4>
+          <div class="inv-order-row">
+            <div class="inv-order-main">
+              <span id="inv-order-service" class="inv-order-title">Joki - Mobile Legends</span>
+              <p id="inv-order-desc" class="inv-order-desc">Push rank Epic ke Legend</p>
+            </div>
+            <div class="inv-order-price">
+              <span class="inv-price-label">Harga</span>
+              <strong id="inv-order-price-val" class="inv-price-val">Rp 150.000</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="inv-divider"></div>
+
+        <div class="inv-financial-summary">
+          <div class="inv-summary-row">
+            <span>Total Harga:</span>
+            <strong id="inv-total-price">Rp 150.000</strong>
+          </div>
+          <div class="inv-summary-row">
+            <span>Total Sudah Dibayar:</span>
+            <strong id="inv-total-paid" class="inv-text-green">Rp 150.000</strong>
+          </div>
+          <div class="inv-summary-row inv-summary-row--highlight">
+            <span>Sisa Tagihan:</span>
+            <strong id="inv-remaining-balance">Rp 0</strong>
+          </div>
+        </div>
+
+        <div id="inv-note-display-wrap" class="inv-note-display-wrap">
+          <h4 class="inv-section-title">Catatan</h4>
+          <p id="inv-note-text" class="inv-note-text">-</p>
+        </div>
+      </div>
+
+      <div class="invoice-note-edit-section no-print">
+        <form id="invoice-note-form">
+          <div class="form-group" style="margin-bottom:10px;">
+            <label class="form-label" for="inv-note-edit-input">Edit Catatan Invoice</label>
+            <textarea id="inv-note-edit-input" class="form-textarea" placeholder="Tambahkan catatan khusus invoice..."></textarea>
+          </div>
+          <button type="submit" id="btn-save-invoice-note" class="btn btn-secondary btn-small">Simpan Catatan</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Dialog Pengaturan -->
   <dialog id="settings-dialog" class="dialog-settings" aria-label="Pengaturan">
     <div class="dialog-header">
@@ -510,6 +656,20 @@
       </button>
     </div>
     <div class="dialog-body">
+      <div class="settings-section">
+        <div class="settings-label">Informasi Toko</div>
+        <form id="settings-shop-form">
+          <div class="form-group" style="margin-bottom:10px;">
+            <label class="form-label" for="setting-shop-name">Nama Toko</label>
+            <input type="text" id="setting-shop-name" class="form-input" placeholder="Shugen Store" value="Shugen Store">
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="form-label" for="setting-shop-contact">Kontak Toko</label>
+            <input type="text" id="setting-shop-contact" class="form-input" placeholder="Contoh: WhatsApp: 0812-3456-7890">
+          </div>
+          <button type="submit" id="btn-save-shop-info" class="btn btn-secondary btn-small">Simpan Info Toko</button>
+        </form>
+      </div>
       <div class="settings-section">
         <div class="settings-label">Metode Pembayaran</div>
         <ul id="payment-list" class="payment-list"></ul>
