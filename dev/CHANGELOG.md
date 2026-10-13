@@ -19,6 +19,16 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #019 [2026-10-13] Implementasi Fitur 12d (Perbandingan jumlah data saat import)
+- Fitur: Perbandingan jumlah data saat import
+- Ringkasan: Menampilkan perbandingan jumlah data di perangkat saat ini dengan data di dalam file backup pada setiap baris ringkasan dialog konfirmasi import (contoh: "8 -> 12 (+4)"), di mana data saat ini dibaca langsung dari IndexedDB saat dialog dibuka. Menyertakan selisih angka secara tekstual saat jumlahnya berbeda tanpa mengandalkan warna semata sesuai dev/DESIGN.md, memperbarui checklist dan penanda fokus pengerjaan di PLAN.md ke Fitur 8, serta menaikkan versi cache service worker ke shugen-v17.
+- File diubah:
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - js/app.js
+  - sw.js
+- Catatan: Skema IndexedDB tetap pada versi 8 tanpa perubahan; alur validasi, Fitur 12c, dan proses import tidak diubah; versi cache service worker dinaikkan ke shugen-v17.
+
 ### #018 [2026-10-13] Implementasi Fitur 12c (Backup otomatis sebelum import)
 - Fitur: Backup otomatis sebelum import
 - Ringkasan: Menambahkan opsi kotak centang "Unduh backup data saat ini dulu" yang tercentang secara default pada dialog pratinjau dan konfirmasi import. Memanfaatkan ulang logika fungsi export untuk secara otomatis mengunduh file backup berformat shugen-backup-sebelum-import-YYYYMMDD-HHMM.json sebelum proses import dijalankan, membatalkan import dan menjaga data tetap utuh jika proses pengunduhan gagal, memperbarui checklist dan fokus pengerjaan di PLAN.md, serta menaikkan versi cache service worker ke shugen-v16.

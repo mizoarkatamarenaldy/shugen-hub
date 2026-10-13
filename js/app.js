@@ -3149,9 +3149,53 @@ const App = (function () {
     fileInput.click();
   }
 
-  function openImportPreview(backupData) {
+  function formatCountComparison(currentCount, backupCount) {
+    const cur = Number(currentCount) || 0;
+    const target = Number(backupCount) || 0;
+    const base = formatPrice(cur) + ' -> ' + formatPrice(target);
+    if (cur === target) {
+      return base;
+    }
+    const diff = target - cur;
+    const diffStr = diff > 0 ? '(+' + formatPrice(diff) + ')' : '(' + formatPrice(diff) + ')';
+    return base + ' ' + diffStr;
+  }
+
+  async function openImportPreview(backupData) {
     pendingImportData = backupData;
     const stores = (backupData && backupData.stores) || {};
+
+    const [
+      curOrders,
+      curCustomers,
+      curIncomes,
+      curExpenses,
+      curInvoices,
+      curGames,
+      curProgress,
+      curCategories,
+      curPayments
+    ] = await Promise.all([
+      ShugenDB.orders.getAll().catch(() => []),
+      ShugenDB.customers.getAll().catch(() => []),
+      ShugenDB.incomes.getAll().catch(() => []),
+      ShugenDB.expenses.getAll().catch(() => []),
+      ShugenDB.invoices.getAll().catch(() => []),
+      ShugenDB.games.getAll().catch(() => []),
+      ShugenDB.progress.getAll().catch(() => []),
+      ShugenDB.categories.getAll().catch(() => []),
+      ShugenDB.payment.getAll().catch(() => [])
+    ]);
+
+    const curOrderCount = Array.isArray(curOrders) ? curOrders.length : 0;
+    const curCustCount = Array.isArray(curCustomers) ? curCustomers.length : 0;
+    const curIncCount = Array.isArray(curIncomes) ? curIncomes.length : 0;
+    const curExpCount = Array.isArray(curExpenses) ? curExpenses.length : 0;
+    const curInvCount = Array.isArray(curInvoices) ? curInvoices.length : 0;
+    const curGameCount = Array.isArray(curGames) ? curGames.length : 0;
+    const curProgCount = Array.isArray(curProgress) ? curProgress.length : 0;
+    const curCatCount = Array.isArray(curCategories) ? curCategories.length : 0;
+    const curPayCount = Array.isArray(curPayments) ? curPayments.length : 0;
 
     $('#import-preview-date').textContent = formatBackupDateTime(backupData.exportedAt);
 
@@ -3181,15 +3225,15 @@ const App = (function () {
       }
     }
 
-    $('#import-preview-orders').textContent = formatPrice(orderCount);
-    $('#import-preview-customers').textContent = formatPrice(custCount);
-    $('#import-preview-incomes').textContent = formatPrice(incCount);
-    $('#import-preview-expenses').textContent = formatPrice(expCount);
-    $('#import-preview-invoices').textContent = formatPrice(invCount);
-    $('#import-preview-games').textContent = formatPrice(gameCount);
-    $('#import-preview-progress').textContent = formatPrice(progCount);
-    $('#import-preview-categories').textContent = formatPrice(catCount);
-    $('#import-preview-payments').textContent = formatPrice(payCount);
+    $('#import-preview-orders').textContent = formatCountComparison(curOrderCount, orderCount);
+    $('#import-preview-customers').textContent = formatCountComparison(curCustCount, custCount);
+    $('#import-preview-incomes').textContent = formatCountComparison(curIncCount, incCount);
+    $('#import-preview-expenses').textContent = formatCountComparison(curExpCount, expCount);
+    $('#import-preview-invoices').textContent = formatCountComparison(curInvCount, invCount);
+    $('#import-preview-games').textContent = formatCountComparison(curGameCount, gameCount);
+    $('#import-preview-progress').textContent = formatCountComparison(curProgCount, progCount);
+    $('#import-preview-categories').textContent = formatCountComparison(curCatCount, catCount);
+    $('#import-preview-payments').textContent = formatCountComparison(curPayCount, payCount);
     $('#import-preview-cash-balance').textContent = 'Rp ' + formatPrice(cashBal);
     $('#import-preview-shop-name').textContent = shopNameVal;
 
@@ -3299,7 +3343,7 @@ const App = (function () {
         return;
       }
 
-      openImportPreview(parsed);
+      await openImportPreview(parsed);
     } catch (err) {
       console.error(err);
       toast('Gagal membaca file backup: ' + (err.message || 'terjadi kesalahan'));

@@ -1,4 +1,4 @@
-const CACHE = 'shugen-v16';
+const CACHE = 'shugen-v17';
 const ASSETS = [
   './',
   './index.html',
