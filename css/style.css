@@ -784,13 +784,18 @@ dialog.dialog-settings {
   touch-action: manipulation;
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-primary {
   background: var(--accent);
   color: var(--accent-text);
   flex: 1;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
 }
 

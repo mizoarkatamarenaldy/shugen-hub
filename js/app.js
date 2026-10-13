@@ -256,6 +256,7 @@ const App = (function () {
     $('#order-dialog').addEventListener('close', () => {
       editingId = null;
       currentSteps = [];
+      $('#btn-save-order').disabled = false;
     });
 
     // Status picker
@@ -306,6 +307,7 @@ const App = (function () {
     const dialog = $('#order-dialog');
     const form = $('#order-form');
     form.reset();
+    $('#btn-save-order').disabled = false;
     $('#step-add-input').value = '';
     populatePaymentSelect();
 
@@ -592,6 +594,9 @@ const App = (function () {
   }
 
   async function saveOrder() {
+    const saveBtn = $('#btn-save-order');
+    if (saveBtn.disabled) return;
+
     const data = {
       customerName: $('#field-customer').value.trim(),
       type: $('#field-type').value,
@@ -606,6 +611,8 @@ const App = (function () {
       toast('Nama pelanggan dan game wajib diisi');
       return;
     }
+
+    saveBtn.disabled = true;
 
     const pendingStepName = $('#step-add-input').value.trim();
     if (data.type === 'joki' && pendingStepName) {
@@ -641,6 +648,8 @@ const App = (function () {
     } catch (err) {
       console.error(err);
       toast('Gagal menyimpan pesanan');
+    } finally {
+      saveBtn.disabled = false;
     }
   }
 

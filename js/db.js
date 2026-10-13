@@ -75,16 +75,28 @@ const ShugenDB = (function () {
   const ID_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
   let _addOrderQueue = Promise.resolve();
 
+  function randomIdCode(length) {
+    const charCount = ID_CHARS.length;
+    const maxValid = 256 - (256 % charCount);
+    const buf = new Uint8Array(length);
+    let code = '';
+    while (code.length < length) {
+      crypto.getRandomValues(buf);
+      for (let i = 0; i < buf.length && code.length < length; i++) {
+        if (buf[i] < maxValid) {
+          code += ID_CHARS.charAt(buf[i] % charCount);
+        }
+      }
+    }
+    return code;
+  }
+
   function buildCandidateOrderId(date) {
     const now = date || new Date();
     const yy = String(now.getFullYear()).slice(-2);
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
-    let code = '';
-    for (let i = 0; i < 4; i++) {
-      code += ID_CHARS.charAt(Math.floor(Math.random() * ID_CHARS.length));
-    }
-    return 'SGN-' + yy + mm + dd + '-' + code;
+    return 'SGN-' + yy + mm + dd + '-' + randomIdCode(4);
   }
 
   function addOrder(order) {
@@ -126,6 +138,13 @@ const ShugenDB = (function () {
             addReq.onsuccess = () => {
               record.id = addReq.result;
               savedRecord = record;
+            };
+            addReq.onerror = (e) => {
+              if (addReq.error && addReq.error.name === 'ConstraintError') {
+                e.preventDefault();
+                e.stopPropagation();
+                tryInsert(null);
+              }
             };
           };
         }

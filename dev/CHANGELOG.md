@@ -19,6 +19,18 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #006 [2026-10-13] Pengacakan ID dengan crypto.getRandomValues dan pengaman tombol Simpan
+- Fitur: Pesanan + Status
+- Ringkasan: Mengganti pemilihan karakter acak ID pesanan dari Math.random() ke crypto.getRandomValues() tanpa bias distribusi serta menangani ConstraintError saat penyimpanan berurutan di IndexedDB. Menonaktifkan tombol Simpan di dialog form pesanan selama proses penyimpanan berlangsung untuk mencegah penyimpanan ganda akibat tap cepat, dan mengaktifkannya kembali jika penyimpanan gagal.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - index.html
+  - js/app.js
+  - js/db.js
+  - sw.js
+- Catatan: Data pesanan yang sudah ada di IndexedDB tidak diubah, dan versi cache service worker dinaikkan ke shugen-v5.
+
 ### #005 [2026-10-13] Perbaikan keunikan ID pesanan dan pembaruan ID data contoh
 - Fitur: Pesanan + Status
 - Ringkasan: Mengamankan pembuatan ID pesanan dan penyimpanan ke IndexedDB dalam satu transaksi readwrite berurutan agar bebas kondisi balapan serta mengacak ulang otomatis jika ID sudah terpakai. Mengubah seluruh ID pesanan di data contoh dari format urutan ke format acak 4 karakter beserta referensi progress jokinya.
