@@ -1,16 +1,18 @@
 # RULES untuk Agy (Antigravity)
 
-File panduan ada di folder dev/: dev/PLAN.md, dev/RULES.md, dev/CHANGELOG.md.
+File panduan ada di folder dev/: dev/PLAN.md, dev/RULES.md, dev/CHANGELOG.md, dev/DESIGN.md.
 
 ## Aturan kerja
 1. Satu tugas satu sesi. Kerjakan hanya fitur yang bertanda FOKUS SEKARANG di dev/PLAN.md.
 2. Dilarang membuat Implementation Plan. Rencana sudah ada di dev/PLAN.md, ikuti itu.
 3. Dilarang menambah fitur, langkah, atau refactor di luar tugas. Kalau punya ide tambahan, tulis di laporan akhir, jangan dikerjakan.
-4. Dilarang mengubah dev/PLAN.md dan dev/RULES.md kecuali pemilik yang meminta.
+4. Dilarang mengubah dev/PLAN.md, dev/RULES.md, dan dev/DESIGN.md kecuali pemilik yang meminta.
 5. Dilarang menambah library atau dependency baru tanpa izin pemilik. Pakai JavaScript, HTML, dan CSS biasa.
 6. Kalau instruksi tidak jelas atau bertentangan dengan dev/PLAN.md, berhenti dan tanya pemilik. Jangan menebak.
 7. Sebelum commit, jalankan app dan pastikan tidak ada error di console.
 8. Jangan pernah menyentuh atau meng-commit data toko, backup, file .env, atau secret apa pun.
+9. Semua tampilan baru wajib mengikuti dev/DESIGN.md.
+10. Kalau skill antislop dipakai, selalu pilih mode 1 (terapkan selama pengerjaan). Jangan tanya pemilik dan jangan buat audit tambahan.
 
 ## Aturan CHANGELOG
 1. Setiap tugas selesai = satu entri baru di paling atas bagian Riwayat di dev/CHANGELOG.md.

@@ -30,7 +30,7 @@
   --text-secondary: #6B6D78;
   --accent: #24A574;
   --accent-hover: #1E8F63;
-  --accent-text: #FFFFFF;
+  --accent-text: #1A1A1E;
 
   --status-waiting-bg: rgba(245, 166, 35, 0.1);
   --status-processing-bg: rgba(74, 158, 255, 0.1);
@@ -764,6 +764,10 @@ dialog.dialog-settings {
   padding-right: 32px;
 }
 
+[data-theme="light"] .form-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%236B6D78' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
 .form-textarea {
   resize: vertical;
   min-height: 80px;
@@ -1166,7 +1170,7 @@ dialog.dialog-settings {
 
 .nav-tab.active {
   background: var(--accent);
-  color: #0F1117;
+  color: var(--accent-text);
   border-color: var(--accent);
 }
 
@@ -1314,7 +1318,7 @@ dialog.dialog-settings {
   padding: 2px 8px;
   background: var(--surface-raised);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
   color: var(--text);
   font-weight: 600;
 }
@@ -1324,7 +1328,7 @@ dialog.dialog-settings {
   padding: 2px 8px;
   background: var(--surface-raised);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
@@ -1437,11 +1441,12 @@ dialog.dialog-settings {
 
   dialog:not(.dialog-status):not(.dialog-settings) {
     width: 90%;
-    max-width: 560px;
+    max-width: 640px;
     height: auto;
     max-height: 90vh;
     margin: auto;
-    border-radius: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
   }
 
   dialog.dialog-status {
