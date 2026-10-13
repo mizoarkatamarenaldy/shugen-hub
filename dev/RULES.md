@@ -1,18 +1,20 @@
 # RULES untuk Agy (Antigravity)
 
-File panduan ada di folder dev/: dev/PLAN.md, dev/RULES.md, dev/CHANGELOG.md, dev/DESIGN.md.
+File panduan ada di folder dev/: dev/PLAN.md, dev/PLANSPEC.md, dev/RULES.md, dev/CHANGELOG.md, dev/DESIGN.md.
 
 ## Aturan kerja
 1. Satu tugas satu sesi. Kerjakan hanya fitur yang bertanda FOKUS SEKARANG di dev/PLAN.md.
 2. Dilarang membuat Implementation Plan. Rencana sudah ada di dev/PLAN.md, ikuti itu.
 3. Dilarang menambah fitur, langkah, atau refactor di luar tugas. Kalau punya ide tambahan, tulis di laporan akhir, jangan dikerjakan.
-4. Dilarang mengubah dev/PLAN.md, dev/RULES.md, dan dev/DESIGN.md kecuali pemilik yang meminta.
+4. Dilarang mengubah dev/PLAN.md, dev/RULES.md, dan dev/DESIGN.md kecuali pemilik yang meminta, atau sesuai aturan 12.
 5. Dilarang menambah library atau dependency baru tanpa izin pemilik. Pakai JavaScript, HTML, dan CSS biasa.
 6. Kalau instruksi tidak jelas atau bertentangan dengan dev/PLAN.md, berhenti dan tanya pemilik. Jangan menebak.
 7. Sebelum commit, jalankan app dan pastikan tidak ada error di console.
 8. Jangan pernah menyentuh atau meng-commit data toko, backup, file .env, atau secret apa pun.
 9. Semua tampilan baru wajib mengikuti dev/DESIGN.md.
 10. Kalau skill antislop dipakai, selalu pilih mode 1 (terapkan selama pengerjaan). Jangan tanya pemilik dan jangan buat audit tambahan.
+11. Baca hanya spek fitur yang bertanda FOKUS SEKARANG. Spek itu diberikan pemilik di prompt tugas, atau ada di dev/PLAN.md (bagian "## Fitur N") kalau tidak ada di prompt. Jangan membuka atau membaca spek fitur lain, dan jangan membuka dev/PLANSPEC.md. Satu pengecualian: kalau spek fitur fokus menyebut fitur lain secara eksplisit, buka hanya bagian fitur yang disebut itu di dev/PLANSPEC.md.
+12. Setelah fitur selesai, sebagai bagian dari tugas itu: centang fiturnya di checklist dev/PLAN.md, pindahkan bagian "## Fitur N" miliknya persis tanpa diubah ke akhir dev/PLANSPEC.md, lalu hapus bagian itu dari dev/PLAN.md. Ini pengecualian dari aturan 4, hanya untuk dua perubahan ini.
 
 ## Aturan CHANGELOG
 1. Setiap tugas selesai = satu entri baru di paling atas bagian Riwayat di dev/CHANGELOG.md.

@@ -19,6 +19,16 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #021 [2026-10-14] Pindah spek fitur selesai ke PLANSPEC.md dan tambah aturan baca spek
+- Fitur: Perapian dokumen (bukan fitur aplikasi)
+- Ringkasan: Memindahkan seluruh spesifikasi detail fitur yang telah selesai dari dev/PLAN.md ke file baru dev/PLANSPEC.md dengan urutan dan isi yang sama persis tanpa mengubah checklist maupun aturan umum di PLAN.md. Menambahkan baris penunjuk lokasi spek lengkap di bawah judul checklist dev/PLAN.md, serta mendaftarkan dev/PLANSPEC.md ke daftar file panduan dev/RULES.md. Menambahkan aturan nomor 11 dan 12 pada Aturan kerja di dev/RULES.md mengenai batasan pembacaan spek fitur fokus dan prosedur pemindahan spek setelah fitur selesai, serta memperbarui aturan nomor 4.
+- File diubah:
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - dev/PLANSPEC.md
+  - dev/RULES.md
+- Catatan: -
+
 ### #020 [2026-10-13] Implementasi Fitur 8 (Rekap harian dan bulanan)
 - Fitur: Rekap harian dan bulanan (omzet, pengeluaran, untung bersih)
 - Ringkasan: Menambahkan menu navigasi baru "Rekap" dengan dua mode periode Harian dan Bulanan yang menyajikan tiga metrik keuangan utama: omzet, pengeluaran, dan untung bersih tanpa memodifikasi data toko atau skema IndexedDB. Mode Harian menyajikan angka pada tanggal yang dipilih (default hari ini), sedangkan mode Bulanan menyajikan akumulasi bulanan (default bulan ini) beserta daftar rincian per hari yang memiliki transaksi urut tanggal terbaru, format angka rupiah minus yang jelas tanpa mengandalkan warna semata sesuai dev/DESIGN.md, pembaruan checklist dan fokus pengerjaan di PLAN.md ke Fitur 7, serta peningkatan cache service worker ke shugen-v18.
