@@ -19,6 +19,14 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #014 [2026-10-13] Rapikan daftar fitur di PLAN.md menjadi checklist prioritas
+- Fitur: Persiapan
+- Ringkasan: Mengubah daftar fitur di dev/PLAN.md menjadi checklist prioritas yang memisahkan fitur selesai (berdasarkan implementasi di CHANGELOG) dan fitur berikutnya. Memindahkan fokus pengerjaan ke Fitur 12 (Backup dan restore manual).
+- File diubah:
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+- Catatan: -
+
 ### #013 [2026-10-13] Implementasi Fitur 6 (Data pelanggan)
 - Fitur: Data pelanggan
 - Ringkasan: Menambahkan menu Pelanggan berisi daftar pelanggan toko yang diurutkan sesuai abjad, pencarian berdasarkan nama atau kontak, filter Semua atau Langganan saja, tanda langganan, dan tombol toggle status langganan satu tap. Menambahkan tampilan detail pelanggan lengkap dengan ringkasan statistik (jumlah order, total harga order, dan total bayar dari pemasukan tidak termasuk pesanan dibatalkan) serta riwayat pesanan yang dapat dibuka ke detail pesanan, form tambah/edit/hapus pelanggan dengan validasi nama unik dan pengaman tombol, sinkronisasi otomatis nama pelanggan pada pesanan saat nama diganti dalam satu transaksi IndexedDB, serta saran datalist nama pelanggan pada form pesanan tanpa pembuatan otomatis. Memperbarui skema IndexedDB ke versi 7 dengan store `customers`, menambahkan data dummy pelanggan di `js/dummy.js` yang cocok dengan nama pelanggan di pesanan demo, menaikkan cache service worker ke `shugen-v12`, dan memindahkan penanda fokus di `dev/PLAN.md`.

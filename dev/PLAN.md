@@ -4,22 +4,24 @@
 PWA untuk membantu operasional Shugen Store (joki dan topup).
 Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 
-## Fitur inti (dikerjakan satu per satu, urut)
-1. Pesanan + Status
-2. Progress joki (checklist + persentase)
-3. Pemasukan
-4. Pengeluaran
-5. Invoice
+## Checklist fitur (urut prioritas)
 
-## Fitur tambahan (setelah fitur inti)
-6. Data pelanggan (riwayat order, tandai langganan)  <- FOKUS SEKARANG
-7. Template pesan WA (konfirmasi, update progress, selesai)
-8. Rekap harian dan bulanan (omzet, pengeluaran, untung bersih)
-9. Daftar penjoki/partner dan bagi hasil per pesanan
-10. Deadline pesanan dan pengingat
-11. Katalog harga (hanya template, harga bisa diubah per pesanan)
-12. Backup dan restore manual (export/import file)
-13. Kas toko (saldo gabungan, menu sendiri)
+### Selesai
+- [x] 1. Pesanan + Status
+- [x] 2. Progress joki (checklist + persentase)
+- [x] 3. Pemasukan
+- [x] 4. Pengeluaran
+- [x] 5. Invoice
+- [x] 6. Data pelanggan (riwayat order, tandai langganan)
+- [x] 13. Kas toko (saldo gabungan, menu sendiri)
+
+### Berikutnya
+- [ ] 12. Backup dan restore manual (export/import file)  <- FOKUS SEKARANG
+- [ ] 8. Rekap harian dan bulanan (omzet, pengeluaran, untung bersih)
+- [ ] 7. Template pesan WA (konfirmasi, update progress, selesai)
+- [ ] 10. Deadline pesanan dan pengingat
+- [ ] 9. Daftar penjoki/partner dan bagi hasil per pesanan
+- [ ] 11. Katalog harga (hanya template, harga bisa diubah per pesanan)
 
 ## Fitur 1: Pesanan + Status
 Data pesanan:
