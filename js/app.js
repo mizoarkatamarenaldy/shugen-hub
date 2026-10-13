@@ -32,6 +32,12 @@ const App = (function () {
   let customerFilter = 'semua';
   let activeCustomerId = null;
   let editingCustomerId = null;
+  let partners = [];
+  let partnerSearchQuery = '';
+  let partnerFilter = 'semua';
+  let activePartnerId = null;
+  let editingPartnerId = null;
+  let partnerOrderFilter = 'semua';
   let pendingImportData = null;
   let activeRecapTab = 'daily';
   let recapDailyDate = '';
@@ -474,6 +480,36 @@ const App = (function () {
     return found ? found.name : '-';
   }
 
+  function getPartnerName(partnerId) {
+    if (!partnerId) return '-';
+    const found = partners.find((p) => p.partnerId === partnerId);
+    return found ? found.name : partnerId;
+  }
+
+  function getPartner(partnerId) {
+    if (!partnerId) return null;
+    return partners.find((p) => p.partnerId === partnerId) || null;
+  }
+
+  function calculatePartnerShare(totalPrice, shareType, shareValue) {
+    const total = Math.max(0, Number(totalPrice) || 0);
+    const val = Number(shareValue) || 0;
+    if (!shareType) {
+      return { partnerAmount: 0, shopAmount: total };
+    }
+    if (shareType === 'percent') {
+      const partnerAmount = Math.round((val / 100) * total);
+      const shopAmount = total - partnerAmount;
+      return { partnerAmount, shopAmount };
+    }
+    if (shareType === 'nominal') {
+      const partnerAmount = Math.round(val);
+      const shopAmount = total - partnerAmount;
+      return { partnerAmount, shopAmount };
+    }
+    return { partnerAmount: 0, shopAmount: total };
+  }
+
   function matchCustomerName(name1, name2) {
     return String(name1 || '').trim().toLowerCase() === String(name2 || '').trim().toLowerCase();
   }
@@ -503,6 +539,7 @@ const App = (function () {
       games = await ShugenDB.games.getAll();
       orders = await ShugenDB.orders.getAll();
       customers = await ShugenDB.customers.getAll();
+      partners = await ShugenDB.partners.getAll();
       incomes = await ShugenDB.incomes.getAll();
       expenses = await ShugenDB.expenses.getAll();
       invoices = await ShugenDB.invoices.getAll();
@@ -550,6 +587,7 @@ const App = (function () {
     $('#error-state').hidden = state !== 'error';
     $('#view-orders').hidden = state !== 'ready' || activeView !== 'orders';
     $('#view-customers').hidden = state !== 'ready' || activeView !== 'customers';
+    $('#view-partners').hidden = state !== 'ready' || activeView !== 'partners';
     $('#view-incomes').hidden = state !== 'ready' || activeView !== 'incomes';
     $('#view-expenses').hidden = state !== 'ready' || activeView !== 'expenses';
     $('#view-cash').hidden = state !== 'ready' || activeView !== 'cash';
@@ -564,6 +602,10 @@ const App = (function () {
     $('#customer-empty-state').hidden = true;
     $('#customer-empty-filtered').hidden = true;
     $('#customer-list').hidden = state !== 'ready';
+
+    $('#partner-empty-state').hidden = true;
+    $('#partner-empty-filtered').hidden = true;
+    $('#partner-list').hidden = state !== 'ready';
 
     $('#income-empty-state').hidden = true;
     $('#income-empty-filtered').hidden = true;
@@ -593,7 +635,9 @@ const App = (function () {
           ? 'Tambah pengeluaran baru'
           : activeView === 'customers'
             ? 'Tambah pelanggan baru'
-            : 'Tambah pesanan baru';
+            : activeView === 'partners'
+              ? 'Tambah partner baru'
+              : 'Tambah pesanan baru';
       $('#fab-add').setAttribute('aria-label', fabLabel);
 
       const filteredOrders = getFilteredOrders();
@@ -612,6 +656,15 @@ const App = (function () {
       } else if (filteredCustomers.length === 0) {
         $('#customer-empty-filtered').hidden = false;
         $('#customer-list').hidden = true;
+      }
+
+      const filteredPartners = getFilteredPartners();
+      if (partners.length === 0) {
+        $('#partner-empty-state').hidden = false;
+        $('#partner-list').hidden = true;
+      } else if (filteredPartners.length === 0) {
+        $('#partner-empty-filtered').hidden = false;
+        $('#partner-list').hidden = true;
       }
 
       const filteredIncomes = getFilteredIncomes();
@@ -713,6 +766,27 @@ const App = (function () {
       list = list.filter((c) =>
         (c.name || '').toLowerCase().includes(q) ||
         (c.contact || '').toLowerCase().includes(q)
+      );
+    }
+    list.sort((a, b) =>
+      (a.name || '').localeCompare(b.name || '', 'id', { sensitivity: 'base' })
+    );
+    return list;
+  }
+
+  function getFilteredPartners() {
+    let list = partners.slice();
+    if (partnerFilter === 'aktif') {
+      list = list.filter((p) => p.isActive !== false);
+    } else if (partnerFilter === 'nonaktif') {
+      list = list.filter((p) => p.isActive === false);
+    }
+    if (partnerSearchQuery) {
+      const q = partnerSearchQuery.toLowerCase();
+      list = list.filter((p) =>
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.phone || '').toLowerCase().includes(q) ||
+        (p.note || '').toLowerCase().includes(q)
       );
     }
     list.sort((a, b) =>
@@ -945,9 +1019,11 @@ const App = (function () {
     renderNav();
     renderTabs();
     renderCustomerTabs();
+    renderPartnerTabs();
     updateDeadlineSummary();
     renderOrders();
     renderCustomers();
+    renderPartners();
     renderIncomes();
     renderExpenses();
     renderCash();
@@ -1037,8 +1113,16 @@ const App = (function () {
         }
       }
 
+      let partnerTagHtml = '';
+      let partnerAria = '';
+      if (order.partnerId) {
+        const pName = getPartnerName(order.partnerId);
+        partnerTagHtml = '<span class="order-partner-tag">Partner: ' + esc(pName) + '</span>';
+        partnerAria = ', Partner: ' + pName;
+      }
+
       card.setAttribute('aria-label',
-        order.orderId + ', ' + order.customerName + ', ' + STATUS_LABELS[order.status] + progressAria + deadlineAria
+        order.orderId + ', ' + order.customerName + ', ' + STATUS_LABELS[order.status] + progressAria + deadlineAria + partnerAria
       );
 
       card.innerHTML =
@@ -1056,6 +1140,7 @@ const App = (function () {
             (order.type === 'joki' ? 'Joki' : 'Topup') +
           '</span>' +
           '<span class="order-game">' + esc(getGameName(order.gameId)) + '</span>' +
+          partnerTagHtml +
         '</div>' +
         progressHtml +
         deadlineHtml +
@@ -1118,6 +1203,80 @@ const App = (function () {
           '<button type="button" class="' + toggleClass + '" data-id="' + cust.id + '" aria-label="' + esc(toggleAria) + '">' +
             esc(toggleLabel) +
           '</button>' +
+        '</div>';
+
+      container.appendChild(card);
+    });
+
+    showView('ready');
+  }
+
+  function renderPartnerTabs() {
+    $$('.partner-filter-tabs .tab').forEach((tab) => {
+      const isSelected = tab.dataset.partnerFilter === partnerFilter;
+      tab.classList.toggle('active', isSelected);
+      tab.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+    });
+  }
+
+  function renderPartners() {
+    renderPartnerTabs();
+    const list = getFilteredPartners();
+    const container = $('#partner-list');
+    container.innerHTML = '';
+
+    list.forEach((part) => {
+      const card = document.createElement('article');
+      card.className = 'partner-card';
+      card.tabIndex = 0;
+      card.dataset.id = part.id;
+      card.dataset.partnerId = part.partnerId;
+      card.setAttribute('role', 'button');
+
+      const isInactive = part.isActive === false;
+      const inactiveBadgeHtml = isInactive
+        ? '<span class="partner-inactive-badge">Nonaktif</span>'
+        : '';
+
+      const matchedOrders = orders.filter((o) => o.partnerId === part.partnerId && o.status !== 'dibatalkan');
+      const orderCountLabel = matchedOrders.length + ' pesanan';
+
+      const readyOrders = matchedOrders.filter((o) => o.status === 'selesai' && !o.partnerPaid);
+      const readyUnpaidAmount = readyOrders.reduce((sum, o) => sum + (Number(o.partnerShareAmount) || 0), 0);
+
+      const paidOrders = matchedOrders.filter((o) => o.partnerPaid);
+      const paidAmount = paidOrders.reduce((sum, o) => sum + (Number(o.partnerShareAmount) || 0), 0);
+
+      const phoneHtml = part.phone
+        ? '<div class="partner-card-contact">' + esc(part.phone) + '</div>'
+        : '';
+
+      card.setAttribute(
+        'aria-label',
+        part.name + (isInactive ? ', Nonaktif' : '') + (part.phone ? (', ' + part.phone) : '') +
+        ', ' + orderCountLabel + ', Siap dibayar Rp ' + formatPrice(readyUnpaidAmount) +
+        ', Sudah dibayar Rp ' + formatPrice(paidAmount) + '. Tap untuk buka detail.'
+      );
+
+      card.innerHTML =
+        '<div class="partner-card-header">' +
+          '<div class="partner-card-name">' + esc(part.name) + '</div>' +
+          inactiveBadgeHtml +
+        '</div>' +
+        phoneHtml +
+        '<div class="partner-card-stats-row">' +
+          '<div class="partner-stat-col">' +
+            '<span class="partner-stat-col-label">Pesanan</span>' +
+            '<span class="partner-stat-col-val">' + esc(orderCountLabel) + '</span>' +
+          '</div>' +
+          '<div class="partner-stat-col">' +
+            '<span class="partner-stat-col-label">Siap Dibayar</span>' +
+            '<span class="partner-stat-col-val">Rp ' + formatPrice(readyUnpaidAmount) + '</span>' +
+          '</div>' +
+          '<div class="partner-stat-col">' +
+            '<span class="partner-stat-col-label">Sudah Dibayar</span>' +
+            '<span class="partner-stat-col-val">Rp ' + formatPrice(paidAmount) + '</span>' +
+          '</div>' +
         '</div>';
 
       container.appendChild(card);
@@ -1437,7 +1596,7 @@ const App = (function () {
       renderOrders();
     });
 
-    $$('.status-tabs:not(.customer-filter-tabs):not(.recap-tabs) .tab').forEach((tab) => {
+    $$('#view-orders .status-tabs .tab').forEach((tab) => {
       tab.addEventListener('click', () => {
         activeFilter = tab.dataset.status;
         activeDeadlineAttentionFilter = false;
@@ -1471,6 +1630,19 @@ const App = (function () {
       tab.addEventListener('click', () => {
         customerFilter = tab.dataset.customerFilter;
         render();
+      });
+    });
+
+    $('#partner-search-input').addEventListener('input', (e) => {
+      partnerSearchQuery = e.target.value.trim();
+      renderPartners();
+    });
+
+    $$('.partner-filter-tabs .tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        partnerFilter = tab.dataset.partnerFilter;
+        renderPartnerTabs();
+        renderPartners();
       });
     });
 
@@ -1525,6 +1697,20 @@ const App = (function () {
       if (card) {
         e.preventDefault();
         openCustomerDetail(Number(card.dataset.id));
+      }
+    });
+
+    $('#partner-list').addEventListener('click', (e) => {
+      const card = e.target.closest('.partner-card');
+      if (card && card.dataset.partnerId) openPartnerDetail(card.dataset.partnerId);
+    });
+
+    $('#partner-list').addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('.partner-card');
+      if (card && card.dataset.partnerId) {
+        e.preventDefault();
+        openPartnerDetail(card.dataset.partnerId);
       }
     });
 
@@ -1679,13 +1865,48 @@ const App = (function () {
         openExpenseForm(null);
       } else if (activeView === 'customers') {
         openCustomerForm(null);
+      } else if (activeView === 'partners') {
+        openPartnerForm(null);
       } else {
         openOrderForm(null);
       }
     });
 
     $('#field-type').addEventListener('change', toggleProgressSection);
-    $('#field-status').addEventListener('change', updateCompletePrompt);
+    $('#field-status').addEventListener('change', () => {
+      updateCompletePrompt();
+      if (editingId !== null) {
+        const currentOrder = orders.find((o) => o.id === editingId);
+        if (currentOrder) {
+          const tempOrder = Object.assign({}, currentOrder, { status: $('#field-status').value });
+          updateOrderPartnerPayoutUI(tempOrder);
+        }
+      }
+    });
+
+    $('#field-partner').addEventListener('change', () => {
+      const selectedId = $('#field-partner').value;
+      if (selectedId) {
+        const part = getPartner(selectedId);
+        if (part && part.defaultShareType) {
+          $('#field-share-type').value = part.defaultShareType;
+          $('#field-share-value').value = part.defaultShareValue != null ? part.defaultShareValue : '';
+        }
+      }
+      updateOrderShareInputs();
+      if (editingId !== null) {
+        const currentOrder = orders.find((o) => o.id === editingId);
+        updateOrderPartnerPayoutUI(currentOrder);
+      }
+    });
+
+    $('#field-share-type').addEventListener('change', updateOrderShareInputs);
+    $('#field-share-value').addEventListener('input', updateOrderShareSummary);
+    $('#field-price').addEventListener('input', () => {
+      updateOrderShareSummary();
+    });
+
+    $('#btn-toggle-partner-paid').addEventListener('click', toggleOrderPartnerPaid);
 
     $('#btn-add-step').addEventListener('click', addStep);
     $('#step-add-input').addEventListener('keydown', (e) => {
@@ -1715,6 +1936,9 @@ const App = (function () {
       currentSteps = [];
       $('#btn-save-order').disabled = false;
       $('#btn-delete-order').disabled = false;
+      $('#field-partner').value = '';
+      $('#order-share-config').hidden = true;
+      $('#order-partner-payout-box').hidden = true;
       resetCopyButton();
     });
 
@@ -1926,6 +2150,64 @@ const App = (function () {
       }
     });
 
+    // Partner dialog events
+    $('#partner-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      savePartner();
+    });
+
+    $('#btn-cancel-partner').addEventListener('click', () => {
+      $('#partner-dialog').close();
+    });
+
+    $('#btn-delete-partner').addEventListener('click', handleDeletePartner);
+
+    $('#partner-dialog').addEventListener('close', () => {
+      editingPartnerId = null;
+      $('#btn-save-partner').disabled = false;
+      $('#btn-delete-partner').disabled = false;
+    });
+
+    $('#partner-field-share-type').addEventListener('change', updatePartnerFormShareInputs);
+
+    $('#btn-close-partner-detail').addEventListener('click', () => {
+      $('#partner-detail-dialog').close();
+    });
+
+    $('#partner-detail-dialog').addEventListener('close', () => {
+      activePartnerId = null;
+      partnerOrderFilter = 'semua';
+      $('#btn-partner-detail-toggle-active').disabled = false;
+      $('#btn-partner-detail-edit').disabled = false;
+    });
+
+    $('#btn-partner-detail-edit').addEventListener('click', () => {
+      if (activePartnerId !== null) {
+        openPartnerForm(activePartnerId);
+      }
+    });
+
+    $('#btn-partner-detail-toggle-active').addEventListener('click', (e) => {
+      if (activePartnerId !== null) {
+        togglePartnerActive(activePartnerId, e.target);
+      }
+    });
+
+    $('#btn-partner-mark-all-paid').addEventListener('click', () => {
+      if (activePartnerId !== null) {
+        batchMarkPartnerOrdersPaid(activePartnerId);
+      }
+    });
+
+    $$('.partner-orders-tabs .tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        partnerOrderFilter = tab.dataset.partnerOrderFilter;
+        renderPartnerOrdersTabs();
+        const part = getPartner(activePartnerId);
+        if (part) renderPartnerOrdersList(part);
+      });
+    });
+
     const btnClearDeadline = $('#btn-clear-deadline');
     const fieldDeadlineDate = $('#field-deadline-date');
     const fieldDeadlineTime = $('#field-deadline-time');
@@ -2016,6 +2298,115 @@ const App = (function () {
     }
   }
 
+  function populatePartnerSelect(selectedPartnerId) {
+    const sel = $('#field-partner');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Tanpa partner (Dikerjakan sendiri)</option>';
+
+    partners.forEach((p) => {
+      if (p.isActive !== false) {
+        const opt = document.createElement('option');
+        opt.value = p.partnerId;
+        opt.textContent = p.name;
+        sel.appendChild(opt);
+      }
+    });
+
+    if (selectedPartnerId) {
+      const selectedPartner = partners.find((p) => p.partnerId === selectedPartnerId);
+      if (selectedPartner && selectedPartner.isActive === false) {
+        const opt = document.createElement('option');
+        opt.value = selectedPartner.partnerId;
+        opt.textContent = selectedPartner.name + ' (Nonaktif)';
+        sel.appendChild(opt);
+      }
+    }
+
+    sel.value = selectedPartnerId || '';
+  }
+
+  function updateOrderShareInputs() {
+    const partnerId = $('#field-partner').value;
+    const configBox = $('#order-share-config');
+    if (!partnerId) {
+      configBox.hidden = true;
+      $('#order-partner-payout-box').hidden = true;
+      return;
+    }
+
+    configBox.hidden = false;
+    const type = $('#field-share-type').value;
+    const label = $('#field-share-value-label');
+    const prefix = $('#field-share-value-prefix');
+    const input = $('#field-share-value');
+
+    if (type === 'percent') {
+      label.textContent = 'Nilai Persen (%)';
+      prefix.hidden = true;
+      input.setAttribute('max', '100');
+      input.setAttribute('placeholder', 'Contoh: 70');
+    } else {
+      label.textContent = 'Nominal Tetap (Rp)';
+      prefix.hidden = false;
+      input.removeAttribute('max');
+      input.setAttribute('placeholder', 'Contoh: 15000');
+    }
+
+    updateOrderShareSummary();
+  }
+
+  function updateOrderShareSummary() {
+    const partnerId = $('#field-partner').value;
+    if (!partnerId) return;
+
+    const totalPrice = Math.max(0, Number($('#field-price').value) || 0);
+    const shareType = $('#field-share-type').value;
+    const shareVal = Number($('#field-share-value').value) || 0;
+    const { partnerAmount, shopAmount } = calculatePartnerShare(totalPrice, shareType, shareVal);
+
+    $('#order-share-calc-total').textContent = 'Rp ' + formatPrice(totalPrice);
+    $('#order-share-calc-partner').textContent = 'Rp ' + formatPrice(partnerAmount);
+    $('#order-share-calc-shop').textContent = 'Rp ' + formatPrice(shopAmount);
+  }
+
+  function updateOrderPartnerPayoutUI(order) {
+    const box = $('#order-partner-payout-box');
+    const partnerId = $('#field-partner').value;
+    if (!order || !order.id || !partnerId) {
+      box.hidden = true;
+      return;
+    }
+
+    box.hidden = false;
+    const isPaid = Boolean(order.partnerPaid);
+    const statusEl = $('#order-partner-paid-status');
+    const btn = $('#btn-toggle-partner-paid');
+    const hint = $('#order-partner-paid-hint');
+    const currentStatus = ($('#field-status') && !$('#field-status-group').hidden)
+      ? $('#field-status').value
+      : order.status;
+    const isSelesai = currentStatus === 'selesai';
+
+    if (isPaid) {
+      const paidDateStr = order.partnerPaidAt ? (' (' + formatYmd(order.partnerPaidAt.slice(0, 10)) + ')') : '';
+      statusEl.textContent = 'Sudah dibayar' + paidDateStr;
+      btn.textContent = 'Batalkan Sudah Dibayar';
+      btn.disabled = false;
+      hint.hidden = true;
+    } else {
+      statusEl.textContent = 'Belum dibayar';
+      btn.textContent = 'Tandai Sudah Dibayar';
+      if (!isSelesai) {
+        btn.disabled = true;
+        hint.hidden = false;
+        hint.textContent = 'Bagian partner hanya bisa ditandai sudah dibayar jika status pesanan Selesai.';
+      } else {
+        btn.disabled = false;
+        hint.hidden = true;
+      }
+    }
+  }
+
   function openOrderForm(id) {
     editingId = id;
     const dialog = $('#order-dialog');
@@ -2044,6 +2435,12 @@ const App = (function () {
       $('#field-status').value = order.status;
       $('#field-status-group').hidden = false;
       $('#btn-delete-order').hidden = false;
+
+      populatePartnerSelect(order.partnerId || '');
+      $('#field-share-type').value = order.partnerShareType || 'percent';
+      $('#field-share-value').value = order.partnerShareValue != null ? order.partnerShareValue : '';
+      updateOrderShareInputs();
+      updateOrderPartnerPayoutUI(order);
 
       const orderIncomes = incomes.filter((inc) => inc.orderId === order.orderId);
       const totalPaid = orderIncomes.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
@@ -2133,6 +2530,13 @@ const App = (function () {
       if (btnClearDeadline) btnClearDeadline.hidden = true;
       $('#field-status').value = 'menunggu_bayar';
       $('#field-status-group').hidden = true;
+
+      populatePartnerSelect('');
+      $('#field-share-type').value = 'percent';
+      $('#field-share-value').value = '';
+      $('#order-share-config').hidden = true;
+      $('#order-partner-payout-box').hidden = true;
+
       $('#order-paid-group').hidden = true;
       $('#order-paid-total').textContent = 'Rp 0';
       $('#order-paid-count').textContent = 'Belum ada pemasukan tercatat';
@@ -2452,6 +2856,47 @@ const App = (function () {
       deadlineVal = deadlineTimeVal ? (deadlineDateVal + 'T' + deadlineTimeVal) : deadlineDateVal;
     }
 
+    const partnerId = $('#field-partner').value || null;
+    let partnerShareType = null;
+    let partnerShareValue = null;
+    let partnerShareAmount = null;
+
+    if (partnerId) {
+      partnerShareType = $('#field-share-type').value || 'percent';
+      const rawShareVal = $('#field-share-value').value.trim();
+      const shareValNum = Number(rawShareVal);
+      const totalPrice = Number($('#field-price').value) || 0;
+
+      if (rawShareVal === '' || isNaN(shareValNum)) {
+        toast('Nilai bagi hasil partner wajib diisi');
+        $('#field-share-value').focus();
+        return;
+      }
+
+      if (partnerShareType === 'percent') {
+        if (shareValNum < 0 || shareValNum > 100) {
+          toast('Persentase bagi hasil harus antara 0% sampai 100%');
+          $('#field-share-value').focus();
+          return;
+        }
+        partnerShareValue = shareValNum;
+        partnerShareAmount = Math.round((shareValNum / 100) * totalPrice);
+      } else if (partnerShareType === 'nominal') {
+        if (shareValNum < 0) {
+          toast('Nominal bagi hasil tidak boleh negatif');
+          $('#field-share-value').focus();
+          return;
+        }
+        if (shareValNum > totalPrice) {
+          toast('Bagian partner (Rp ' + formatPrice(shareValNum) + ') tidak boleh melebihi total pesanan (Rp ' + formatPrice(totalPrice) + ')');
+          $('#field-share-value').focus();
+          return;
+        }
+        partnerShareValue = shareValNum;
+        partnerShareAmount = Math.round(shareValNum);
+      }
+    }
+
     const data = {
       customerName: $('#field-customer').value.trim(),
       type: $('#field-type').value,
@@ -2460,8 +2905,23 @@ const App = (function () {
       deadline: deadlineVal,
       price: Number($('#field-price').value) || 0,
       paymentMethod: $('#field-payment').value,
-      status: $('#field-status').value
+      status: $('#field-status').value,
+      partnerId: partnerId,
+      partnerShareType: partnerShareType,
+      partnerShareValue: partnerShareValue,
+      partnerShareAmount: partnerShareAmount
     };
+
+    if (editingId !== null) {
+      const existing = orders.find((o) => o.id === editingId);
+      if (existing) {
+        data.partnerPaid = partnerId ? Boolean(existing.partnerPaid) : false;
+        data.partnerPaidAt = partnerId ? (existing.partnerPaidAt || null) : null;
+      }
+    } else {
+      data.partnerPaid = false;
+      data.partnerPaidAt = null;
+    }
 
     if (!data.customerName || !data.gameId) {
       toast('Nama pelanggan dan game wajib diisi');
@@ -4073,6 +4533,461 @@ const App = (function () {
     }
   }
 
+  // Partner actions
+
+  function openPartnerDetail(partnerId) {
+    activePartnerId = partnerId;
+    const part = getPartner(partnerId);
+    if (!part) return;
+
+    $('#partner-detail-id').textContent = part.partnerId || '';
+    $('#partner-detail-name').textContent = part.name;
+    $('#partner-detail-phone').textContent = part.phone || '-';
+    $('#partner-detail-note').textContent = part.note || '-';
+
+    const isInactive = part.isActive === false;
+    $('#partner-detail-inactive-badge').hidden = !isInactive;
+
+    const toggleActiveBtn = $('#btn-partner-detail-toggle-active');
+    toggleActiveBtn.textContent = isInactive ? 'Aktifkan' : 'Nonaktifkan';
+    toggleActiveBtn.setAttribute(
+      'aria-label',
+      isInactive ? ('Aktifkan partner ' + part.name) : ('Nonaktifkan partner ' + part.name)
+    );
+    toggleActiveBtn.disabled = false;
+    $('#btn-partner-detail-edit').disabled = false;
+
+    let shareDefaultLabel = '-';
+    if (part.defaultShareType === 'percent') {
+      shareDefaultLabel = part.defaultShareValue + '%';
+    } else if (part.defaultShareType === 'nominal') {
+      shareDefaultLabel = 'Rp ' + formatPrice(part.defaultShareValue);
+    }
+    $('#partner-detail-share').textContent = shareDefaultLabel;
+
+    // Filter orders
+    const matchedOrders = orders.filter((o) => o.partnerId === partnerId && o.status !== 'dibatalkan');
+    const orderCount = matchedOrders.length;
+
+    const readyOrders = matchedOrders.filter((o) => o.status === 'selesai' && !o.partnerPaid);
+    const readyUnpaidAmount = readyOrders.reduce((sum, o) => sum + (Number(o.partnerShareAmount) || 0), 0);
+
+    const paidOrders = matchedOrders.filter((o) => o.partnerPaid);
+    const paidAmount = paidOrders.reduce((sum, o) => sum + (Number(o.partnerShareAmount) || 0), 0);
+
+    $('#partner-detail-order-count').textContent = String(orderCount);
+    $('#partner-detail-ready-unpaid').textContent = 'Rp ' + formatPrice(readyUnpaidAmount);
+    $('#partner-detail-total-paid').textContent = 'Rp ' + formatPrice(paidAmount);
+
+    const batchBtn = $('#btn-partner-mark-all-paid');
+    if (readyOrders.length === 0) {
+      batchBtn.disabled = true;
+      batchBtn.textContent = 'Tidak ada pesanan siap bayar';
+    } else {
+      batchBtn.disabled = false;
+      batchBtn.textContent = 'Tandai Semua Siap Bayar (' + readyOrders.length + ' pesanan · Rp ' + formatPrice(readyUnpaidAmount) + ')';
+    }
+
+    renderPartnerOrdersTabs();
+    renderPartnerOrdersList(part);
+
+    $('#partner-detail-dialog').showModal();
+  }
+
+  function renderPartnerOrdersTabs() {
+    $$('.partner-orders-tabs .tab').forEach((tab) => {
+      const isSelected = tab.dataset.partnerOrderFilter === partnerOrderFilter;
+      tab.classList.toggle('active', isSelected);
+      tab.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+    });
+  }
+
+  function renderPartnerOrdersList(part) {
+    let matchedOrders = orders.filter((o) => o.partnerId === part.partnerId);
+    if (partnerOrderFilter === 'belum_dibayar') {
+      matchedOrders = matchedOrders.filter((o) => !o.partnerPaid);
+    } else if (partnerOrderFilter === 'sudah_dibayar') {
+      matchedOrders = matchedOrders.filter((o) => o.partnerPaid);
+    }
+
+    const sortedOrders = matchedOrders.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const container = $('#partner-orders-list');
+    container.innerHTML = '';
+
+    if (sortedOrders.length === 0) {
+      $('#partner-orders-empty').hidden = false;
+      container.hidden = true;
+    } else {
+      $('#partner-orders-empty').hidden = true;
+      container.hidden = false;
+
+      sortedOrders.forEach((order) => {
+        const item = document.createElement('article');
+        item.className = 'customer-order-item';
+        item.tabIndex = 0;
+        item.dataset.orderId = order.id;
+        item.setAttribute('role', 'button');
+
+        const serviceType = order.type === 'joki' ? 'Joki' : 'Topup';
+        const serviceLabel = serviceType + ' · ' + getGameName(order.gameId) + ' (' + order.customerName + ')';
+        const statusLabel = STATUS_LABELS[order.status] || order.status;
+        const priceLabel = 'Total: Rp ' + formatPrice(order.price);
+        const shareAmountLabel = 'Bagian: Rp ' + formatPrice(order.partnerShareAmount || 0);
+
+        const isPaid = Boolean(order.partnerPaid);
+        const payoutText = isPaid
+          ? ('Sudah dibayar' + (order.partnerPaidAt ? ' (' + formatYmd(order.partnerPaidAt.slice(0, 10)) + ')' : ''))
+          : 'Belum dibayar';
+
+        item.setAttribute(
+          'aria-label',
+          order.orderId + ', ' + serviceLabel + ', ' + statusLabel + ', ' + shareAmountLabel + ', ' + payoutText + '. Tap untuk buka pesanan.'
+        );
+
+        item.innerHTML =
+          '<div class="customer-order-item-header">' +
+            '<span class="order-id">' + esc(order.orderId) + '</span>' +
+            '<span class="status-badge status-' + order.status + '">' + esc(statusLabel) + '</span>' +
+          '</div>' +
+          '<div class="customer-order-item-body">' +
+            '<span class="customer-order-item-service">' + esc(serviceLabel) + '</span>' +
+            '<strong class="customer-order-item-price">' + esc(shareAmountLabel) + '</strong>' +
+          '</div>' +
+          '<div class="partner-order-item-desc">' +
+            '<span>' + esc(priceLabel) + '</span>' +
+            '<span>' + esc(payoutText) + '</span>' +
+          '</div>';
+
+        item.addEventListener('click', () => {
+          $('#partner-detail-dialog').close();
+          openOrderForm(order.id);
+        });
+
+        item.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            $('#partner-detail-dialog').close();
+            openOrderForm(order.id);
+          }
+        });
+
+        container.appendChild(item);
+      });
+    }
+  }
+
+  function openPartnerForm(partnerId) {
+    editingPartnerId = partnerId;
+    const dialog = $('#partner-dialog');
+    const form = $('#partner-form');
+    form.reset();
+    $('#btn-save-partner').disabled = false;
+    $('#btn-delete-partner').disabled = false;
+
+    if (partnerId !== null) {
+      const part = getPartner(partnerId);
+      if (!part) return;
+      $('#partner-form-title').textContent = 'Edit Partner';
+      $('#partner-id-val').textContent = part.partnerId || '';
+      $('#partner-id-row').hidden = false;
+      $('#partner-field-name').value = part.name;
+      $('#partner-field-phone').value = part.phone || '';
+      $('#partner-field-share-type').value = part.defaultShareType || '';
+      $('#partner-field-share-val').value = part.defaultShareValue != null ? part.defaultShareValue : '';
+      $('#partner-field-status').value = part.isActive === false ? 'nonaktif' : 'aktif';
+      $('#partner-field-note').value = part.note || '';
+
+      const hasOrders = orders.some((o) => o.partnerId === part.partnerId);
+      $('#btn-delete-partner').hidden = hasOrders;
+    } else {
+      $('#partner-form-title').textContent = 'Tambah Partner';
+      $('#partner-id-val').textContent = '';
+      $('#partner-id-row').hidden = true;
+      $('#partner-field-name').value = '';
+      $('#partner-field-phone').value = '';
+      $('#partner-field-share-type').value = '';
+      $('#partner-field-share-val').value = '';
+      $('#partner-field-status').value = 'aktif';
+      $('#partner-field-note').value = '';
+      $('#btn-delete-partner').hidden = true;
+    }
+
+    updatePartnerFormShareInputs();
+    dialog.showModal();
+    $('#partner-field-name').focus();
+  }
+
+  function updatePartnerFormShareInputs() {
+    const type = $('#partner-field-share-type').value;
+    const group = $('#partner-field-share-val-group');
+    const label = $('#partner-field-share-val-label');
+    const prefix = $('#partner-share-val-prefix');
+    const input = $('#partner-field-share-val');
+
+    if (!type) {
+      group.hidden = true;
+      input.value = '';
+      return;
+    }
+
+    group.hidden = false;
+    if (type === 'percent') {
+      label.textContent = 'Nilai Persen (%)';
+      prefix.hidden = true;
+      input.setAttribute('max', '100');
+      input.setAttribute('placeholder', 'Contoh: 70');
+    } else {
+      label.textContent = 'Nominal Tetap (Rp)';
+      prefix.hidden = false;
+      input.removeAttribute('max');
+      input.setAttribute('placeholder', 'Contoh: 15000');
+    }
+  }
+
+  async function savePartner() {
+    const saveBtn = $('#btn-save-partner');
+    if (saveBtn.disabled) return;
+
+    const nameVal = $('#partner-field-name').value.trim();
+    const phoneVal = $('#partner-field-phone').value.trim();
+    const shareTypeVal = $('#partner-field-share-type').value || null;
+    const rawShareVal = $('#partner-field-share-val').value.trim();
+    const isActiveVal = $('#partner-field-status').value === 'aktif';
+    const noteVal = $('#partner-field-note').value.trim();
+
+    if (!nameVal) {
+      toast('Nama partner wajib diisi');
+      $('#partner-field-name').focus();
+      return;
+    }
+
+    const isDup = partners.some(
+      (p) => p.partnerId !== editingPartnerId && p.name.trim().toLowerCase() === nameVal.toLowerCase()
+    );
+    if (isDup) {
+      toast('Nama partner sudah digunakan');
+      $('#partner-field-name').focus();
+      return;
+    }
+
+    let shareVal = null;
+    if (shareTypeVal) {
+      const num = Number(rawShareVal);
+      if (rawShareVal === '' || isNaN(num)) {
+        toast('Nilai bagi hasil bawaan wajib diisi');
+        $('#partner-field-share-val').focus();
+        return;
+      }
+      if (shareTypeVal === 'percent') {
+        if (num < 0 || num > 100) {
+          toast('Persentase bagi hasil harus antara 0% sampai 100%');
+          $('#partner-field-share-val').focus();
+          return;
+        }
+        shareVal = num;
+      } else if (shareTypeVal === 'nominal') {
+        if (num < 0) {
+          toast('Nominal bagi hasil tidak boleh negatif');
+          $('#partner-field-share-val').focus();
+          return;
+        }
+        shareVal = num;
+      }
+    }
+
+    saveBtn.disabled = true;
+
+    try {
+      if (editingPartnerId !== null) {
+        await ShugenDB.partners.update(editingPartnerId, {
+          name: nameVal,
+          phone: phoneVal,
+          defaultShareType: shareTypeVal,
+          defaultShareValue: shareVal,
+          isActive: isActiveVal,
+          note: noteVal
+        });
+        partners = await ShugenDB.partners.getAll();
+        render();
+        $('#partner-dialog').close();
+        if (activePartnerId === editingPartnerId) {
+          openPartnerDetail(editingPartnerId);
+        }
+        toast('Data partner diperbarui');
+      } else {
+        await ShugenDB.partners.add({
+          name: nameVal,
+          phone: phoneVal,
+          defaultShareType: shareTypeVal,
+          defaultShareValue: shareVal,
+          isActive: isActiveVal,
+          note: noteVal
+        });
+        partners = await ShugenDB.partners.getAll();
+        render();
+        $('#partner-dialog').close();
+        toast('Partner ditambahkan');
+      }
+    } catch (err) {
+      console.error(err);
+      if (err && err.message === 'DUPLICATE_PARTNER_NAME') {
+        toast('Nama partner sudah digunakan');
+        $('#partner-field-name').focus();
+      } else {
+        toast('Gagal menyimpan partner');
+      }
+    } finally {
+      saveBtn.disabled = false;
+    }
+  }
+
+  async function handleDeletePartner() {
+    const deleteBtn = $('#btn-delete-partner');
+    if (deleteBtn.disabled) return;
+    if (editingPartnerId === null) return;
+
+    const hasOrders = orders.some((o) => o.partnerId === editingPartnerId);
+    if (hasOrders) {
+      toast('Partner yang sudah memiliki pesanan tidak dapat dihapus');
+      return;
+    }
+
+    const part = getPartner(editingPartnerId);
+    if (!confirm('Hapus partner "' + (part ? part.name : '') + '"? Data yang dihapus tidak dapat dikembalikan.')) return;
+
+    deleteBtn.disabled = true;
+
+    try {
+      await ShugenDB.partners.delete(editingPartnerId);
+      partners = await ShugenDB.partners.getAll();
+      render();
+      $('#partner-dialog').close();
+      if (activePartnerId === editingPartnerId) {
+        $('#partner-detail-dialog').close();
+        activePartnerId = null;
+      }
+      toast('Partner dihapus');
+    } catch (err) {
+      console.error(err);
+      if (err && err.message === 'PARTNER_IN_USE') {
+        toast('Partner yang sudah memiliki pesanan tidak dapat dihapus');
+      } else {
+        toast('Gagal menghapus partner');
+      }
+    } finally {
+      deleteBtn.disabled = false;
+    }
+  }
+
+  async function togglePartnerActive(partnerId, btnElement) {
+    if (btnElement && btnElement.disabled) return;
+    const part = getPartner(partnerId);
+    if (!part) return;
+
+    if (btnElement) btnElement.disabled = true;
+
+    const nextStatus = part.isActive === false;
+    try {
+      await ShugenDB.partners.update(partnerId, { isActive: nextStatus });
+      partners = await ShugenDB.partners.getAll();
+      render();
+      if (activePartnerId === partnerId) {
+        openPartnerDetail(partnerId);
+      }
+      toast(nextStatus ? 'Partner diaktifkan' : 'Partner dinonaktifkan');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal mengubah status partner');
+    } finally {
+      if (btnElement) btnElement.disabled = false;
+    }
+  }
+
+  async function batchMarkPartnerOrdersPaid(partnerId) {
+    const part = getPartner(partnerId);
+    if (!part) return;
+
+    const readyOrders = orders.filter((o) => o.partnerId === partnerId && o.status === 'selesai' && !o.partnerPaid);
+    if (readyOrders.length === 0) {
+      toast('Tidak ada pesanan siap bayar');
+      return;
+    }
+
+    const totalNominal = readyOrders.reduce((sum, o) => sum + (Number(o.partnerShareAmount) || 0), 0);
+    const confirmed = confirm(
+      'Tandai ' + readyOrders.length + ' pesanan Selesai dengan total bagian Rp ' + formatPrice(totalNominal) + ' sebagai sudah dibayar?'
+    );
+    if (!confirmed) return;
+
+    const btn = $('#btn-partner-mark-all-paid');
+    btn.disabled = true;
+
+    try {
+      const nowIso = new Date().toISOString();
+      for (const ord of readyOrders) {
+        await ShugenDB.orders.update(ord.id, {
+          partnerPaid: true,
+          partnerPaidAt: nowIso
+        });
+      }
+      orders = await ShugenDB.orders.getAll();
+      render();
+      openPartnerDetail(partnerId);
+      toast(readyOrders.length + ' pesanan berhasil ditandai sudah dibayar');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal menandai pesanan sebagai sudah dibayar');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function toggleOrderPartnerPaid() {
+    if (editingId === null) return;
+    const order = orders.find((o) => o.id === editingId);
+    if (!order || !order.partnerId) return;
+
+    const isPaid = Boolean(order.partnerPaid);
+    if (isPaid) {
+      try {
+        await ShugenDB.orders.update(editingId, {
+          partnerPaid: false,
+          partnerPaidAt: null
+        });
+        orders = await ShugenDB.orders.getAll();
+        const updated = orders.find((o) => o.id === editingId);
+        updateOrderPartnerPayoutUI(updated);
+        render();
+        toast('Status bayar partner diubah menjadi Belum Dibayar');
+      } catch (err) {
+        console.error(err);
+        toast('Gagal mengubah status bayar');
+      }
+    } else {
+      const currentStatus = ($('#field-status') && !$('#field-status-group').hidden)
+        ? $('#field-status').value
+        : order.status;
+      if (currentStatus !== 'selesai') {
+        toast('Bagian partner hanya bisa ditandai sudah dibayar jika status pesanan Selesai');
+        return;
+      }
+      try {
+        await ShugenDB.orders.update(editingId, {
+          partnerPaid: true,
+          partnerPaidAt: new Date().toISOString()
+        });
+        orders = await ShugenDB.orders.getAll();
+        const updated = orders.find((o) => o.id === editingId);
+        updateOrderPartnerPayoutUI(updated);
+        render();
+        toast('Status bayar partner diubah menjadi Sudah Dibayar');
+      } catch (err) {
+        console.error(err);
+        toast('Gagal mengubah status bayar');
+      }
+    }
+  }
+
   // App data reload
 
   async function reloadAllAppData() {
@@ -4082,6 +4997,7 @@ const App = (function () {
     expenses = await ShugenDB.expenses.getAll();
     invoices = await ShugenDB.invoices.getAll();
     customers = await ShugenDB.customers.getAll();
+    partners = await ShugenDB.partners.getAll();
     populateCustomerDatalist();
     expenseCategories = await ShugenDB.categories.getAll();
     await refreshProgressMap();
@@ -4220,6 +5136,7 @@ const App = (function () {
     const [
       curOrders,
       curCustomers,
+      curPartners,
       curIncomes,
       curExpenses,
       curInvoices,
@@ -4230,6 +5147,7 @@ const App = (function () {
     ] = await Promise.all([
       ShugenDB.orders.getAll().catch(() => []),
       ShugenDB.customers.getAll().catch(() => []),
+      ShugenDB.partners.getAll().catch(() => []),
       ShugenDB.incomes.getAll().catch(() => []),
       ShugenDB.expenses.getAll().catch(() => []),
       ShugenDB.invoices.getAll().catch(() => []),
@@ -4241,6 +5159,7 @@ const App = (function () {
 
     const curOrderCount = Array.isArray(curOrders) ? curOrders.length : 0;
     const curCustCount = Array.isArray(curCustomers) ? curCustomers.length : 0;
+    const curPartnerCount = Array.isArray(curPartners) ? curPartners.length : 0;
     const curIncCount = Array.isArray(curIncomes) ? curIncomes.length : 0;
     const curExpCount = Array.isArray(curExpenses) ? curExpenses.length : 0;
     const curInvCount = Array.isArray(curInvoices) ? curInvoices.length : 0;
@@ -4253,6 +5172,7 @@ const App = (function () {
 
     const orderCount = Array.isArray(stores.orders) ? stores.orders.length : 0;
     const custCount = Array.isArray(stores.customers) ? stores.customers.length : 0;
+    const partnerCount = Array.isArray(stores.partners) ? stores.partners.length : 0;
     const incCount = Array.isArray(stores.incomes) ? stores.incomes.length : 0;
     const expCount = Array.isArray(stores.expenses) ? stores.expenses.length : 0;
     const invCount = Array.isArray(stores.invoices) ? stores.invoices.length : 0;
@@ -4279,6 +5199,7 @@ const App = (function () {
 
     $('#import-preview-orders').textContent = formatCountComparison(curOrderCount, orderCount);
     $('#import-preview-customers').textContent = formatCountComparison(curCustCount, custCount);
+    $('#import-preview-partners').textContent = formatCountComparison(curPartnerCount, partnerCount);
     $('#import-preview-incomes').textContent = formatCountComparison(curIncCount, incCount);
     $('#import-preview-expenses').textContent = formatCountComparison(curExpCount, expCount);
     $('#import-preview-invoices').textContent = formatCountComparison(curInvCount, invCount);

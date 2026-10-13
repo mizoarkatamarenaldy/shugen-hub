@@ -218,3 +218,48 @@ Perbarui data contoh (dummy) supaya ada pesanan dengan deadline terlambat, hari 
 
 ### Di luar cakupan
 Push notification saat app tertutup, server atau background sync, pengingat lewat WhatsApp atau email, dan deadline berulang tidak dikerjakan. Kalau ada ide tambahan, tulis di laporan akhir.
+
+## Fitur 9: Daftar penjoki/partner dan bagi hasil per pesanan
+
+Tujuan: tim toko bisa mencatat siapa yang mengerjakan sebuah pesanan, berapa bagiannya, dan apakah bagian itu sudah dibayar.
+
+### Data partner
+- Menu sendiri bernama "Partner".
+- Setiap partner punya: nama (wajib, tidak boleh sama dengan partner lain), nomor HP (opsional), catatan (opsional), dan bagi hasil bawaan (opsional, berupa persen atau nominal tetap).
+- ID internal partner harus unik walau dibuat dari beberapa perangkat sekaligus, jadi pakai ID acak, bukan nomor urut lokal.
+- Partner bisa diedit, termasuk ganti nama. Pesanan yang sudah terhubung otomatis menampilkan nama terbaru.
+- Partner yang sudah punya pesanan tidak bisa dihapus, hanya dinonaktifkan. Partner nonaktif tidak muncul di pilihan form pesanan baru, tapi tetap tampil di pesanan lamanya dan bisa diaktifkan lagi.
+- Partner yang belum punya pesanan boleh dihapus, dengan dialog konfirmasi.
+
+### Bagi hasil di pesanan
+- Di form pesanan dan detail pesanan ada pilihan partner (opsional). Satu pesanan maksimal satu partner. Pesanan tanpa partner dianggap dikerjakan sendiri oleh toko dan tidak punya bagi hasil.
+- Kalau partner dipilih, ada pengaturan bagi hasil: mode persen atau nominal tetap, plus angkanya.
+- Bagi hasil bawaan partner hanya saran awal yang terisi otomatis. Selalu bisa diubah per pesanan.
+- Perhitungan memakai total harga pesanan yang sudah ada di app:
+  - Mode persen: bagian partner = persen x total pesanan, dibulatkan ke rupiah terdekat.
+  - Mode nominal: bagian partner = nominal yang diisi.
+  - Bagian toko = total pesanan dikurangi bagian partner.
+- Validasi: persen harus 0 sampai 100, nominal tidak boleh negatif, dan bagian partner tidak boleh melebihi total pesanan. Tampilkan pesan error yang jelas untuk pengguna baru.
+- Di detail pesanan tampilkan ringkasan: total pesanan, bagian partner, bagian toko.
+- Pesanan lama yang belum punya partner tetap valid dan tidak boleh rusak. Kalau skema IndexedDB perlu naik versi, ikuti pola migrasi yang sudah ada dan pastikan data lama aman.
+
+### Status bayar ke partner
+- Setiap pesanan bermitra punya status bayar ke partner: "Belum dibayar" atau "Sudah dibayar", dengan tanggal dibayar.
+- Bagian partner hanya bisa ditandai "Sudah dibayar" kalau pesanan berstatus Selesai. Untuk status lain, tombolnya nonaktif dengan penjelasan singkat.
+- Pesanan Dibatalkan tidak dihitung dalam total bagian partner mana pun.
+- Pengguna bisa membatalkan tanda "Sudah dibayar" kalau salah tekan.
+
+### Halaman partner
+- Daftar partner menampilkan per partner: jumlah pesanan, total bagian yang sudah bisa dibayar (pesanan Selesai) yang belum dibayar, dan total yang sudah dibayar.
+- Detail partner menampilkan daftar pesanan milik partner itu, dengan filter "Belum dibayar" dan "Sudah dibayar".
+- Di detail partner ada tombol "Tandai semua belum dibayar sebagai sudah dibayar" untuk pesanan Selesai milik partner itu, dengan dialog konfirmasi yang menyebut jumlah pesanan dan total nominal.
+
+### Tampilan dan data
+- Ikuti dev/DESIGN.md. Warna hanya untuk badge status pesanan, jadi jangan menambah warna baru untuk status bayar. Bedakan lewat label teks. Kalau ini bertentangan dengan kebutuhan fitur, berhenti dan tanya pemilik (aturan 6).
+- Data partner dan bagi hasil bersifat internal. Jangan tampilkan di dokumen atau pesan yang dikirim ke pelanggan.
+- Data partner dan field bagi hasil ikut masuk backup, restore, pratinjau backup, dan perbandingan jumlah data yang sudah ada (tambahkan jumlah partner).
+- Perbarui data contoh (dummy) supaya ada beberapa partner, termasuk satu nonaktif, serta pesanan dengan mode persen, mode nominal, tanpa partner, sudah dibayar, dan belum dibayar.
+
+### Di luar cakupan
+Lebih dari satu partner per pesanan, bagi hasil bertingkat, login atau peran untuk partner, pembayaran otomatis atau transfer ke partner, dan mengubah perhitungan atau data fitur lain yang sudah ada tidak dikerjakan. Di laporan akhir, tulis bagaimana data bagi hasil bisa dihubungkan ke fitur keuangan nanti. Kalau ada ide tambahan, tulis juga di laporan akhir.
+

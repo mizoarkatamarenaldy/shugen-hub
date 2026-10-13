@@ -19,6 +19,21 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #024 [2026-10-14] Implementasi Fitur 9 (Daftar penjoki/partner dan bagi hasil per pesanan)
+- Fitur: Daftar penjoki/partner dan bagi hasil per pesanan
+- Ringkasan: Menambahkan menu mandiri "Partner" untuk mengelola data penjoki/partner (nama unik, nomor HP opsional, catatan, dan pengaturan bagi hasil bawaan mode persen atau nominal tetap dengan ID acak PRT-YYMMDD-XXXX). Di form dan detail pesanan, pengguna dapat memilih satu partner opsional serta mengatur bagi hasil per pesanan dengan kalkulasi otomatis bagian partner dan toko sesuai harga total pesanan serta validasi batas nilai. Status bayar ke partner ("Belum dibayar" / "Sudah dibayar") dapat ditandai atau dibatalkan khusus untuk pesanan berstatus Selesai, termasuk fitur tandai semua siap bayar sekaligus dari detail partner dengan dialog konfirmasi nominal dan jumlah pesanan. Data partner dan status bagi hasil tetap bersifat internal tanpa bocor ke invoice/WA pelanggan, IndexedDB dinaikkan ke versi 9 dengan migrasi aman, alur backup/restore dan dialog perbandingan diperbarui menyertakan jumlah partner, data dummy dilengkapi 5 partner (termasuk 1 nonaktif), dan cache service worker dinaikkan ke shugen-v21.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - dev/PLANSPEC.md
+  - index.html
+  - js/app.js
+  - js/db.js
+  - js/dummy.js
+  - sw.js
+- Catatan: Skema IndexedDB dinaikkan ke versi 9 dengan penambahan object store "partners" dan indeks "partnerId" pada "orders"; data partner dan bagi hasil murni internal untuk tim toko; pembedaan status bayar partner menggunakan teks dan monokrom tanpa menambah warna status baru sesuai dev/DESIGN.md; versi cache service worker dinaikkan ke shugen-v21.
+
 ### #023 [2026-10-14] Implementasi Fitur 10 (Deadline pesanan dan pengingat)
 - Fitur: Deadline pesanan dan pengingat
 - Ringkasan: Menambahkan field deadline opsional (tanggal wajib jika diisi, jam opsional) pada pesanan yang dapat diisi saat pembuatan serta diubah atau dihapus melalui detail pesanan, lengkap dengan penandaan tingkat urgensi (Terlambat, Hari ini, Besok, atau tanggal lainnya) yang disajikan lewat penekanan tipografi tanpa menambah warna baru sesuai dev/DESIGN.md. Di atas daftar pesanan kini terdapat ringkasan satu baris ("N pesanan terlambat, M deadline hari ini") yang dapat diketuk untuk memfilter pesanan yang perlu perhatian, pilihan pengurutan "Deadline terdekat" dengan pesanan tanpa deadline di paling bawah, serta pengingat notifikasi browser opsional di Pengaturan untuk pesanan yang mendekati 1 jam atau terlambat. Data contoh (dummy) diperbarui dengan variasi lengkap status deadline, spek fitur 10 disalin ke dev/PLANSPEC.md dan dicentang di dev/PLAN.md, serta versi cache service worker dinaikkan ke shugen-v20.

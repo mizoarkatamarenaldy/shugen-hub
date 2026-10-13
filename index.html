@@ -38,9 +38,10 @@
   </header>
 
   <nav class="main-nav" aria-label="Menu utama">
-    <div class="main-nav-inner main-nav-inner--7">
+    <div class="main-nav-inner main-nav-inner--8">
       <button type="button" class="nav-tab active" data-view="orders" aria-current="page">Pesanan</button>
       <button type="button" class="nav-tab" data-view="customers">Pelanggan</button>
+      <button type="button" class="nav-tab" data-view="partners">Partner</button>
       <button type="button" class="nav-tab" data-view="incomes">Pemasukan</button>
       <button type="button" class="nav-tab" data-view="expenses">Pengeluaran</button>
       <button type="button" class="nav-tab" data-view="cash">Kas</button>
@@ -141,6 +142,36 @@
       </div>
 
       <section id="customer-list" class="income-list" aria-label="Daftar pelanggan"></section>
+    </div>
+
+    <div id="view-partners" hidden>
+      <div class="search-bar">
+        <div class="search-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="search" id="partner-search-input" class="search-input" placeholder="Cari partner atau nomor HP..." aria-label="Cari partner berdasarkan nama atau nomor HP">
+        </div>
+      </div>
+
+      <nav class="status-tabs partner-filter-tabs" aria-label="Filter status aktif partner">
+        <button type="button" class="tab active" data-partner-filter="semua" aria-selected="true">Semua</button>
+        <button type="button" class="tab" data-partner-filter="aktif" aria-selected="false">Aktif</button>
+        <button type="button" class="tab" data-partner-filter="nonaktif" aria-selected="false">Nonaktif</button>
+      </nav>
+
+      <div id="partner-empty-state" class="app-state" hidden>
+        <p class="state-message">Belum ada partner</p>
+        <p class="state-hint">Tap tombol + di bawah untuk menambah partner, atau muat data demo di Pengaturan.</p>
+      </div>
+
+      <div id="partner-empty-filtered" class="app-state" hidden>
+        <p class="state-message">Tidak ada partner yang sesuai</p>
+        <p class="state-hint">Coba ubah kata kunci pencarian atau pilih filter yang lain.</p>
+      </div>
+
+      <section id="partner-list" class="income-list" aria-label="Daftar partner"></section>
     </div>
 
     <div id="view-incomes" hidden>
@@ -474,6 +505,58 @@
             <select id="field-payment" class="form-select">
               <option value="">Pilih metode</option>
             </select>
+          </div>
+        </div>
+
+        <div class="form-group" id="order-partner-group">
+          <label class="form-label" for="field-partner">Partner / Penjoki (Opsional)</label>
+          <select id="field-partner" class="form-select">
+            <option value="">Tanpa partner (Dikerjakan sendiri)</option>
+          </select>
+        </div>
+
+        <div id="order-share-config" class="order-share-config" hidden>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="field-share-type">Mode Bagi Hasil</label>
+              <select id="field-share-type" class="form-select">
+                <option value="percent">Persen (%)</option>
+                <option value="nominal">Nominal Tetap (Rp)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="field-share-value" id="field-share-value-label">Nilai Persen (%)</label>
+              <div class="form-price-wrap" id="field-share-value-wrap">
+                <span class="form-price-prefix" id="field-share-value-prefix" hidden>Rp</span>
+                <input type="number" id="field-share-value" class="form-input" min="0" step="1" placeholder="0">
+              </div>
+            </div>
+          </div>
+
+          <div class="partner-share-summary" id="order-share-summary-box">
+            <div class="partner-share-row">
+              <span class="partner-share-label">Total Pesanan:</span>
+              <strong id="order-share-calc-total">Rp 0</strong>
+            </div>
+            <div class="partner-share-row">
+              <span class="partner-share-label">Bagian Partner:</span>
+              <strong id="order-share-calc-partner">Rp 0</strong>
+            </div>
+            <div class="partner-share-row">
+              <span class="partner-share-label">Bagian Toko:</span>
+              <strong id="order-share-calc-shop">Rp 0</strong>
+            </div>
+          </div>
+
+          <div id="order-partner-payout-box" class="order-paid-box" hidden>
+            <div class="order-paid-meta">
+              <span class="order-paid-label">Status Bayar ke Partner</span>
+              <span id="order-partner-paid-status" class="order-paid-count">Belum dibayar</span>
+            </div>
+            <div class="order-invoice-actions" style="margin-top:8px;">
+              <button type="button" id="btn-toggle-partner-paid" class="btn btn-secondary btn-small">Tandai Sudah Dibayar</button>
+            </div>
+            <p id="order-partner-paid-hint" class="form-hint" style="margin-top:6px;" hidden></p>
           </div>
         </div>
 
@@ -896,6 +979,153 @@
     </form>
   </dialog>
 
+  <!-- Dialog Detail Partner -->
+  <dialog id="partner-detail-dialog" class="dialog-customer-detail" aria-labelledby="partner-detail-name">
+    <div class="dialog-header">
+      <div class="dialog-header-titles">
+        <h2 class="dialog-title">Detail Partner</h2>
+        <span id="partner-detail-id" class="dialog-order-id"></span>
+      </div>
+      <button type="button" class="btn-icon" id="btn-close-partner-detail" aria-label="Tutup detail partner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="dialog-body">
+      <div class="customer-profile-card">
+        <div class="customer-profile-top">
+          <div class="customer-profile-title-wrap">
+            <h3 id="partner-detail-name" class="customer-profile-name"></h3>
+            <span id="partner-detail-inactive-badge" class="partner-inactive-badge" hidden>Nonaktif</span>
+          </div>
+          <div class="customer-profile-actions">
+            <button type="button" id="btn-partner-detail-toggle-active" class="btn btn-secondary btn-small">Nonaktifkan</button>
+            <button type="button" id="btn-partner-detail-edit" class="btn btn-secondary btn-small">Edit</button>
+          </div>
+        </div>
+
+        <div class="customer-info-grid">
+          <div class="customer-info-item">
+            <span class="customer-info-label">No. HP</span>
+            <span id="partner-detail-phone" class="customer-info-val">-</span>
+          </div>
+          <div class="customer-info-item">
+            <span class="customer-info-label">Bagi Hasil Bawaan</span>
+            <span id="partner-detail-share" class="customer-info-val">-</span>
+          </div>
+          <div class="customer-info-item" style="grid-column: 1 / -1;">
+            <span class="customer-info-label">Catatan</span>
+            <p id="partner-detail-note" class="customer-info-val">-</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="customer-stats-grid" aria-label="Ringkasan bagi hasil partner">
+        <div class="customer-stat-card">
+          <span class="customer-stat-label">Jumlah Pesanan</span>
+          <strong id="partner-detail-order-count" class="customer-stat-val">0</strong>
+        </div>
+        <div class="customer-stat-card">
+          <span class="customer-stat-label">Siap Dibayar (Selesai)</span>
+          <strong id="partner-detail-ready-unpaid" class="customer-stat-val">Rp 0</strong>
+        </div>
+        <div class="customer-stat-card">
+          <span class="customer-stat-label">Sudah Dibayar</span>
+          <strong id="partner-detail-total-paid" class="customer-stat-val">Rp 0</strong>
+        </div>
+      </div>
+
+      <div class="partner-batch-payout-section" style="margin-top:12px; margin-bottom:12px;">
+        <button type="button" id="btn-partner-mark-all-paid" class="btn btn-secondary" style="width:100%;">
+          Tandai Semua Selesai sebagai Sudah Dibayar
+        </button>
+      </div>
+
+      <div class="customer-orders-section">
+        <div class="partner-orders-header">
+          <h4 class="customer-orders-heading">Daftar Pesanan</h4>
+          <nav class="status-tabs partner-orders-tabs" aria-label="Filter status bayar pesanan partner" style="padding:0; margin:8px 0 12px;">
+            <button type="button" class="tab active" data-partner-order-filter="semua" aria-selected="true">Semua</button>
+            <button type="button" class="tab" data-partner-order-filter="belum_dibayar" aria-selected="false">Belum Dibayar</button>
+            <button type="button" class="tab" data-partner-order-filter="sudah_dibayar" aria-selected="false">Sudah Dibayar</button>
+          </nav>
+        </div>
+        <div id="partner-orders-empty" class="step-empty" hidden>Belum ada pesanan untuk partner ini.</div>
+        <div id="partner-orders-list" class="customer-orders-list" aria-label="Daftar pesanan partner"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Dialog Form Tambah / Edit Partner -->
+  <dialog id="partner-dialog" aria-labelledby="partner-form-title">
+    <div class="dialog-header">
+      <div class="dialog-header-titles">
+        <h2 id="partner-form-title" class="dialog-title">Tambah Partner</h2>
+        <div id="partner-id-row" class="dialog-order-id-row" hidden>
+          <span id="partner-id-val" class="dialog-order-id"></span>
+        </div>
+      </div>
+      <button type="button" class="btn-icon" id="btn-cancel-partner" aria-label="Tutup form partner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <form id="partner-form">
+      <div class="dialog-body">
+        <div class="form-group">
+          <label class="form-label" for="partner-field-name">Nama Partner *</label>
+          <input type="text" id="partner-field-name" class="form-input" required placeholder="Contoh: Reza">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="partner-field-phone">Nomor HP (Opsional)</label>
+          <input type="tel" id="partner-field-phone" class="form-input" placeholder="Contoh: 0812-3456-7890">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="partner-field-share-type">Bagi Hasil Bawaan</label>
+            <select id="partner-field-share-type" class="form-select">
+              <option value="">Tidak ada bawaan</option>
+              <option value="percent">Persen (%)</option>
+              <option value="nominal">Nominal Tetap (Rp)</option>
+            </select>
+          </div>
+          <div class="form-group" id="partner-field-share-val-group" hidden>
+            <label class="form-label" for="partner-field-share-val" id="partner-field-share-val-label">Nilai</label>
+            <div class="form-price-wrap" id="partner-share-val-price-wrap">
+              <span class="form-price-prefix" id="partner-share-val-prefix" hidden>Rp</span>
+              <input type="number" id="partner-field-share-val" class="form-input" min="0" step="1" placeholder="0">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="partner-field-status">Status Partner</label>
+          <select id="partner-field-status" class="form-select">
+            <option value="aktif">Aktif</option>
+            <option value="nonaktif">Nonaktif</option>
+          </select>
+          <p class="form-hint">Partner nonaktif tidak muncul di pilihan form pesanan baru.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="partner-field-note">Catatan (Opsional)</label>
+          <textarea id="partner-field-note" class="form-textarea" placeholder="Tambahkan catatan partner..."></textarea>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" id="btn-delete-partner" class="btn btn-danger" hidden>Hapus</button>
+        <button type="submit" id="btn-save-partner" class="btn btn-primary">Simpan</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Dialog Pengaturan -->
   <dialog id="settings-dialog" class="dialog-settings" aria-label="Pengaturan">
     <div class="dialog-header">
@@ -1062,6 +1292,10 @@
           <div class="backup-summary-row">
             <span class="backup-summary-label">Pelanggan</span>
             <strong id="import-preview-customers" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Partner</span>
+            <strong id="import-preview-partners" class="backup-summary-val">0</strong>
           </div>
           <div class="backup-summary-row">
             <span class="backup-summary-label">Pemasukan</span>

@@ -1,6 +1,6 @@
 const ShugenDB = (function () {
   const DB_NAME = 'shugen-hub';
-  const DB_VERSION = 8;
+  const DB_VERSION = 9;
   let _db = null;
 
   const DEFAULT_PAYMENT_METHODS = [
@@ -97,10 +97,22 @@ const ShugenDB = (function () {
           gameStore.createIndex('name', 'name');
           gameStore.createIndex('createdAt', 'createdAt');
         }
+        if (!db.objectStoreNames.contains('partners')) {
+          const partnerStore = db.createObjectStore('partners', {
+            keyPath: 'id',
+            autoIncrement: true
+          });
+          partnerStore.createIndex('partnerId', 'partnerId', { unique: true });
+          partnerStore.createIndex('name', 'name');
+          partnerStore.createIndex('createdAt', 'createdAt');
+        }
         if (e.target.transaction && e.target.transaction.objectStoreNames.contains('orders')) {
           const orderStore = e.target.transaction.objectStore('orders');
           if (!orderStore.indexNames.contains('gameId')) {
             orderStore.createIndex('gameId', 'gameId', { unique: false });
+          }
+          if (!orderStore.indexNames.contains('partnerId')) {
+            orderStore.createIndex('partnerId', 'partnerId', { unique: false });
           }
         }
       };
@@ -201,7 +213,13 @@ const ShugenDB = (function () {
               deadline: order.deadline || null,
               createdAt: order.createdAt || now,
               updatedAt: now,
-              customerId: null
+              customerId: null,
+              partnerId: order.partnerId || null,
+              partnerShareType: order.partnerShareType || null,
+              partnerShareValue: order.partnerShareValue !== undefined ? order.partnerShareValue : null,
+              partnerShareAmount: order.partnerShareAmount !== undefined ? order.partnerShareAmount : null,
+              partnerPaid: Boolean(order.partnerPaid),
+              partnerPaidAt: order.partnerPaidAt || null
             };
             const addReq = store.add(record);
             addReq.onsuccess = () => {
@@ -1175,6 +1193,160 @@ const ShugenDB = (function () {
     return req2p(tx('games', 'readwrite').clear());
   }
 
+  // Partners
+
+  let _addPartnerQueue = Promise.resolve();
+
+  function buildCandidatePartnerId(date) {
+    const now = date || new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return 'PRT-' + yy + mm + dd + '-' + randomIdCode(4);
+  }
+
+  async function getAllPartners() {
+    await open();
+    return req2p(tx('partners', 'readonly').getAll());
+  }
+
+  async function getPartner(id) {
+    await open();
+    return req2p(tx('partners', 'readonly').get(id));
+  }
+
+  async function getPartnerByPartnerId(partnerId) {
+    await open();
+    if (!partnerId) return null;
+    return req2p(tx('partners', 'readonly').index('partnerId').get(partnerId));
+  }
+
+  function addPartner(partner) {
+    const run = _addPartnerQueue.then(async () => {
+      await open();
+      return new Promise((resolve, reject) => {
+        const transaction = _db.transaction('partners', 'readwrite');
+        const store = transaction.objectStore('partners');
+        const partIdx = store.index('partnerId');
+        const now = new Date();
+        let savedRecord = null;
+
+        transaction.oncomplete = () => resolve(savedRecord);
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error || new Error('Transaksi dibatalkan'));
+
+        const cleanName = String((partner && partner.name) || '').trim();
+        if (!cleanName) {
+          transaction.abort();
+          reject(new Error('Nama partner wajib diisi'));
+          return;
+        }
+
+        const checkNameReq = store.getAll();
+        checkNameReq.onsuccess = () => {
+          const all = checkNameReq.result || [];
+          const isDup = all.some(
+            (p) => p.name && p.name.trim().toLowerCase() === cleanName.toLowerCase()
+          );
+          if (isDup) {
+            transaction.abort();
+            reject(new Error('DUPLICATE_PARTNER_NAME'));
+            return;
+          }
+
+          function tryInsert(preferredId) {
+            const candidate = preferredId || buildCandidatePartnerId(now);
+            const checkReq = partIdx.getKey(candidate);
+            checkReq.onsuccess = () => {
+              if (checkReq.result !== undefined) {
+                tryInsert(null);
+                return;
+              }
+              const record = {
+                partnerId: candidate,
+                name: cleanName,
+                phone: String((partner && partner.phone) || '').trim(),
+                note: String((partner && partner.note) || '').trim(),
+                defaultShareType: partner && partner.defaultShareType ? String(partner.defaultShareType) : '',
+                defaultShareValue: partner && partner.defaultShareValue !== undefined && partner.defaultShareValue !== null && partner.defaultShareValue !== ''
+                  ? Number(partner.defaultShareValue)
+                  : null,
+                isActive: partner && partner.isActive !== undefined ? Boolean(partner.isActive) : true,
+                createdAt: (partner && partner.createdAt) || now,
+                updatedAt: now
+              };
+              const addReq = store.add(record);
+              addReq.onsuccess = () => {
+                record.id = addReq.result;
+                savedRecord = record;
+              };
+              addReq.onerror = (e) => {
+                if (addReq.error && addReq.error.name === 'ConstraintError') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  tryInsert(null);
+                }
+              };
+            };
+          }
+
+          tryInsert((partner && partner.partnerId) || null);
+        };
+      });
+    });
+    _addPartnerQueue = run.catch(() => {});
+    return run;
+  }
+
+  async function updatePartner(id, partnerData) {
+    await open();
+    const existing = await getPartner(id);
+    if (!existing) throw new Error('Partner tidak ditemukan');
+
+    const cleanName = partnerData.name !== undefined ? String(partnerData.name).trim() : existing.name;
+    if (!cleanName) throw new Error('Nama partner wajib diisi');
+
+    const all = await getAllPartners();
+    const isDup = all.some(
+      (p) => p.id !== id && p.name && p.name.trim().toLowerCase() === cleanName.toLowerCase()
+    );
+    if (isDup) {
+      throw new Error('DUPLICATE_PARTNER_NAME');
+    }
+
+    const updated = Object.assign({}, existing, {
+      name: cleanName,
+      phone: partnerData.phone !== undefined ? String(partnerData.phone).trim() : existing.phone,
+      note: partnerData.note !== undefined ? String(partnerData.note).trim() : existing.note,
+      defaultShareType: partnerData.defaultShareType !== undefined ? String(partnerData.defaultShareType) : existing.defaultShareType,
+      defaultShareValue: partnerData.defaultShareValue !== undefined && partnerData.defaultShareValue !== null && partnerData.defaultShareValue !== ''
+        ? Number(partnerData.defaultShareValue)
+        : (partnerData.defaultShareValue === null ? null : existing.defaultShareValue),
+      isActive: partnerData.isActive !== undefined ? Boolean(partnerData.isActive) : existing.isActive,
+      updatedAt: new Date()
+    });
+
+    await req2p(tx('partners', 'readwrite').put(updated));
+    return updated;
+  }
+
+  async function deletePartner(id) {
+    await open();
+    const existing = await getPartner(id);
+    if (!existing) return;
+    const allOrders = await getAllOrders();
+    const isUsed = allOrders.some((o) => o.partnerId === existing.partnerId);
+    if (isUsed) {
+      throw new Error('PARTNER_IN_USE');
+    }
+    return req2p(tx('partners', 'readwrite').delete(id));
+  }
+
+  async function clearPartners() {
+    await open();
+    return req2p(tx('partners', 'readwrite').clear());
+  }
+
   // Backup & Restore
 
   function reviveDates(obj) {
@@ -1205,10 +1377,10 @@ const ShugenDB = (function () {
       return { valid: false, error: 'Penanda aplikasi tidak cocok. File ini bukan backup Shugen Hub.' };
     }
     const fileVersion = data.version !== undefined ? data.version : data.schemaVersion;
-    if (fileVersion !== DB_VERSION) {
+    if (fileVersion !== DB_VERSION && fileVersion !== 8) {
       return {
         valid: false,
-        error: 'Versi skema backup (' + fileVersion + ') tidak sama dengan versi aplikasi saat ini (' + DB_VERSION + ').'
+        error: 'Versi skema backup (' + fileVersion + ') tidak cocok dengan versi aplikasi saat ini (' + DB_VERSION + ').'
       };
     }
     if (!data.stores || typeof data.stores !== 'object') {
@@ -1372,6 +1544,15 @@ const ShugenDB = (function () {
       update: updateGame,
       delete: deleteGame,
       clear: clearGames
+    },
+    partners: {
+      getAll: getAllPartners,
+      get: getPartner,
+      getByPartnerId: getPartnerByPartnerId,
+      add: addPartner,
+      update: updatePartner,
+      delete: deletePartner,
+      clear: clearPartners
     },
     categories: {
       getAll: getAllExpenseCategories,

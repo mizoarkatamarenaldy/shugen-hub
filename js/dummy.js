@@ -36,6 +36,59 @@ const DummyData = (function () {
     }
   ];
 
+  const PARTNERS = [
+    {
+      partnerId: 'PRT-261011-R7K3',
+      name: 'Reza Fauzi',
+      phone: '0812-9988-7711',
+      defaultShareType: 'percent',
+      defaultShareValue: 70,
+      isActive: true,
+      note: 'Spesialis joki MLBB rank Epic sampai Mythic Glory',
+      createdAt: new Date('2026-10-11T07:30:00')
+    },
+    {
+      partnerId: 'PRT-261011-D4M8',
+      name: 'Dimas Setiawan',
+      phone: '0857-4433-2211',
+      defaultShareType: 'nominal',
+      defaultShareValue: 15000,
+      isActive: true,
+      note: 'Partner supplier topup game cepat',
+      createdAt: new Date('2026-10-11T07:45:00')
+    },
+    {
+      partnerId: 'PRT-261012-B9P2',
+      name: 'Bima Santika',
+      phone: '0821-6677-8899',
+      defaultShareType: 'percent',
+      defaultShareValue: 60,
+      isActive: true,
+      note: 'Spesialis joki Genshin Abyss dan eksplorasi map',
+      createdAt: new Date('2026-10-12T08:00:00')
+    },
+    {
+      partnerId: 'PRT-261012-A3T6',
+      name: 'Arif Wibowo',
+      phone: '0813-1122-3344',
+      defaultShareType: 'percent',
+      defaultShareValue: 70,
+      isActive: false,
+      note: 'Sedang cuti kuliah semester akhir',
+      createdAt: new Date('2026-10-12T08:15:00')
+    },
+    {
+      partnerId: 'PRT-261013-G1K5',
+      name: 'Gilang Ramadhan',
+      phone: '0856-2233-4455',
+      defaultShareType: '',
+      defaultShareValue: null,
+      isActive: true,
+      note: 'Partner baru untuk joki Valorant',
+      createdAt: new Date('2026-10-13T09:00:00')
+    }
+  ];
+
   const INITIAL_CASH_BALANCE = 500000;
 
   const ORDERS = [
@@ -48,8 +101,15 @@ const DummyData = (function () {
       price: 150000,
       status: 'selesai',
       paymentMethod: 'Transfer BCA',
+      deadline: null,
       createdAt: new Date('2026-10-11T09:30:00'),
-      updatedAt: new Date('2026-10-12T14:00:00')
+      updatedAt: new Date('2026-10-12T14:00:00'),
+      partnerId: 'PRT-261011-R7K3',
+      partnerShareType: 'percent',
+      partnerShareValue: 70,
+      partnerShareAmount: 105000,
+      partnerPaid: true,
+      partnerPaidAt: '2026-10-12'
     },
     {
       orderId: 'SGN-261011-R9W2',
@@ -60,8 +120,15 @@ const DummyData = (function () {
       price: 95000,
       status: 'selesai',
       paymentMethod: 'DANA',
+      deadline: null,
       createdAt: new Date('2026-10-11T11:15:00'),
-      updatedAt: new Date('2026-10-11T11:30:00')
+      updatedAt: new Date('2026-10-11T11:30:00'),
+      partnerId: 'PRT-261011-D4M8',
+      partnerShareType: 'nominal',
+      partnerShareValue: 15000,
+      partnerShareAmount: 15000,
+      partnerPaid: true,
+      partnerPaidAt: '2026-10-11'
     },
     {
       orderId: 'SGN-261012-4H8P',
@@ -74,7 +141,32 @@ const DummyData = (function () {
       paymentMethod: 'Transfer BRI',
       deadline: '2026-10-13T14:00',
       createdAt: new Date('2026-10-12T08:00:00'),
-      updatedAt: new Date('2026-10-12T08:30:00')
+      updatedAt: new Date('2026-10-12T08:30:00'),
+      partnerId: 'PRT-261011-R7K3',
+      partnerShareType: 'percent',
+      partnerShareValue: 70,
+      partnerShareAmount: 140000,
+      partnerPaid: false,
+      partnerPaidAt: null
+    },
+    {
+      orderId: 'SGN-261012-C8Y2',
+      customerName: 'Budi Santoso',
+      type: 'joki',
+      gameId: 'GAM-261011-M7K2',
+      detail: 'Push rank Legend IV ke Mythic',
+      price: 180000,
+      status: 'selesai',
+      paymentMethod: 'Transfer BCA',
+      deadline: null,
+      createdAt: new Date('2026-10-12T16:00:00'),
+      updatedAt: new Date('2026-10-13T12:00:00'),
+      partnerId: 'PRT-261011-R7K3',
+      partnerShareType: 'percent',
+      partnerShareValue: 70,
+      partnerShareAmount: 126000,
+      partnerPaid: false,
+      partnerPaidAt: null
     },
     {
       orderId: 'SGN-261012-X3N6',
@@ -87,7 +179,13 @@ const DummyData = (function () {
       paymentMethod: 'GoPay',
       deadline: null,
       createdAt: new Date('2026-10-12T10:45:00'),
-      updatedAt: new Date('2026-10-12T10:45:00')
+      updatedAt: new Date('2026-10-12T10:45:00'),
+      partnerId: null,
+      partnerShareType: null,
+      partnerShareValue: 0,
+      partnerShareAmount: 0,
+      partnerPaid: false,
+      partnerPaidAt: null
     },
     {
       orderId: 'SGN-261012-T5V9',
@@ -100,7 +198,13 @@ const DummyData = (function () {
       paymentMethod: 'Cash',
       deadline: null,
       createdAt: new Date('2026-10-12T13:00:00'),
-      updatedAt: new Date('2026-10-12T15:00:00')
+      updatedAt: new Date('2026-10-12T15:00:00'),
+      partnerId: 'PRT-261012-A3T6',
+      partnerShareType: 'percent',
+      partnerShareValue: 70,
+      partnerShareAmount: 70000,
+      partnerPaid: false,
+      partnerPaidAt: null
     },
     {
       orderId: 'SGN-261013-B6Q8',
@@ -113,7 +217,13 @@ const DummyData = (function () {
       paymentMethod: 'Transfer BCA',
       deadline: '2026-10-15',
       createdAt: new Date('2026-10-13T07:20:00'),
-      updatedAt: new Date('2026-10-13T07:20:00')
+      updatedAt: new Date('2026-10-13T07:20:00'),
+      partnerId: null,
+      partnerShareType: null,
+      partnerShareValue: 0,
+      partnerShareAmount: 0,
+      partnerPaid: false,
+      partnerPaidAt: null
     },
     {
       orderId: 'SGN-261013-L2C7',
@@ -126,7 +236,13 @@ const DummyData = (function () {
       paymentMethod: 'DANA',
       deadline: '2026-10-14T15:00',
       createdAt: new Date('2026-10-13T08:10:00'),
-      updatedAt: new Date('2026-10-13T08:30:00')
+      updatedAt: new Date('2026-10-13T08:30:00'),
+      partnerId: 'PRT-261012-B9P2',
+      partnerShareType: 'percent',
+      partnerShareValue: 60,
+      partnerShareAmount: 150000,
+      partnerPaid: false,
+      partnerPaidAt: null
     },
     {
       orderId: 'SGN-261013-J4Z3',
@@ -139,7 +255,13 @@ const DummyData = (function () {
       paymentMethod: 'Transfer BRI',
       deadline: '2026-10-19',
       createdAt: new Date('2026-10-13T09:00:00'),
-      updatedAt: new Date('2026-10-13T09:00:00')
+      updatedAt: new Date('2026-10-13T09:00:00'),
+      partnerId: null,
+      partnerShareType: null,
+      partnerShareValue: 0,
+      partnerShareAmount: 0,
+      partnerPaid: false,
+      partnerPaidAt: null
     }
   ];
 
@@ -165,10 +287,23 @@ const DummyData = (function () {
       { id: 'demo-4-1', name: 'Floor 12 Chamber 1 (3 bintang)', done: true },
       { id: 'demo-4-2', name: 'Floor 12 Chamber 2 (3 bintang)', done: true },
       { id: 'demo-4-3', name: 'Floor 12 Chamber 3 (3 bintang)', done: false }
+    ],
+    'SGN-261012-C8Y2': [
+      { id: 'demo-5-1', name: 'Push Legend IV ke II', done: true },
+      { id: 'demo-5-2', name: 'Push Legend II ke Mythic', done: true }
     ]
   };
 
   const INCOMES = [
+    {
+      incomeId: 'MSK-261012-K8M1',
+      date: '2026-10-12',
+      amount: 180000,
+      paymentMethod: 'Transfer BCA',
+      orderId: 'SGN-261012-C8Y2',
+      note: 'Pelunasan joki Legend ke Mythic',
+      createdAt: new Date('2026-10-12T16:05:00')
+    },
     {
       incomeId: 'MSK-261011-A8D3',
       date: '2026-10-11',
@@ -408,6 +543,7 @@ const DummyData = (function () {
     await ShugenDB.expenses.clear();
     await ShugenDB.invoices.clear();
     await ShugenDB.customers.clear();
+    await ShugenDB.partners.clear();
     await ShugenDB.games.clear();
     await ShugenDB.categories.clear();
     await ShugenDB.payment.clear();
@@ -417,6 +553,10 @@ const DummyData = (function () {
 
     for (const name of PAYMENT_METHODS) {
       await ShugenDB.payment.add(name);
+    }
+
+    for (const p of PARTNERS) {
+      await ShugenDB.partners.add(p);
     }
 
     const categoryIdByName = {};

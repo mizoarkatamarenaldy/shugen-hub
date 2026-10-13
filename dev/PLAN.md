@@ -25,7 +25,7 @@ Spek lengkap fitur yang sudah selesai ada di dev/PLANSPEC.md.
 - [x] 8. Rekap harian dan bulanan (omzet, pengeluaran, untung bersih)
 - [x] 7. Template pesan WA (konfirmasi, update progress, selesai)
 - [x] 10. Deadline pesanan dan pengingat
-- [ ] 9. Daftar penjoki/partner dan bagi hasil per pesanan
+- [x] 9. Daftar penjoki/partner dan bagi hasil per pesanan
 - [ ] 11. Katalog harga (hanya template, harga bisa diubah per pesanan)
 - [ ] 15. Pengingat backup berkala (tunda, putuskan setelah rencana sinkron Google Drive jelas)
 
