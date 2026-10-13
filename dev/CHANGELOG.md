@@ -19,6 +19,18 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #018 [2026-10-13] Implementasi Fitur 12c (Backup otomatis sebelum import)
+- Fitur: Backup otomatis sebelum import
+- Ringkasan: Menambahkan opsi kotak centang "Unduh backup data saat ini dulu" yang tercentang secara default pada dialog pratinjau dan konfirmasi import. Memanfaatkan ulang logika fungsi export untuk secara otomatis mengunduh file backup berformat shugen-backup-sebelum-import-YYYYMMDD-HHMM.json sebelum proses import dijalankan, membatalkan import dan menjaga data tetap utuh jika proses pengunduhan gagal, memperbarui checklist dan fokus pengerjaan di PLAN.md, serta menaikkan versi cache service worker ke shugen-v16.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - index.html
+  - js/app.js
+  - sw.js
+- Catatan: Skema IndexedDB tetap pada versi 8 tanpa perubahan; file backup tidak disimpan di IndexedDB melainkan langsung diunduh ke perangkat; versi cache service worker dinaikkan ke shugen-v16.
+
 ### #017 [2026-10-13] Implementasi Fitur 12b (Pratinjau isi backup sebelum import)
 - Fitur: Pratinjau isi backup sebelum import
 - Ringkasan: Menambahkan dialog pratinjau isi backup sebelum import yang menampilkan waktu export dan rincian jumlah data untuk seluruh object store IndexedDB (pesanan, pelanggan, pemasukan, pengeluaran, invoice, game, progress joki, kategori pengeluaran, metode pembayaran) serta nilai saldo awal kas dan nama toko di atas peringatan penimpaan data. Menambahkan tampilan ukuran file backup dalam KB atau MB pada notifikasi sukses export, memastikan dialog responsif dan ramah perangkat bergerak, memperbarui checklist dan spesifikasi PLAN.md, serta menaikkan versi cache service worker ke shugen-v15.

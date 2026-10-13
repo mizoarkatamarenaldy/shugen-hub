@@ -3090,17 +3090,26 @@ const App = (function () {
     }).format(d);
   }
 
-  async function exportBackup() {
+  async function exportBackup(customOptions) {
+    const isOptsObj = customOptions && typeof customOptions === 'object' && !(customOptions instanceof Event);
+    const opts = isOptsObj ? customOptions : {};
+    const isAutoBackup = !!opts.isAutoBackup;
+    const filenamePrefix = (typeof opts.prefix === 'string' && opts.prefix) ? opts.prefix : 'shugen-backup-';
+    const showToast = opts.showToast !== false;
+    const throwOnError = opts.throwOnError === true;
+
     const exportBtn = $('#btn-export-backup');
     const importBtn = $('#btn-import-backup');
-    if (exportBtn.disabled) return;
 
-    exportBtn.disabled = true;
-    importBtn.disabled = true;
+    if (!isAutoBackup) {
+      if (exportBtn && exportBtn.disabled) return;
+      if (exportBtn) exportBtn.disabled = true;
+      if (importBtn) importBtn.disabled = true;
+    }
 
     try {
       const data = await ShugenDB.backup.exportData();
-      const filename = 'shugen-backup-' + formatBackupTimestamp(new Date()) + '.json';
+      const filename = filenamePrefix + formatBackupTimestamp(new Date()) + '.json';
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -3113,13 +3122,22 @@ const App = (function () {
         URL.revokeObjectURL(url);
       }, 100);
       const sizeStr = formatBackupFileSize(blob.size);
-      toast('Backup data berhasil diunduh (' + sizeStr + ')');
+      if (showToast) {
+        toast('Backup data berhasil diunduh (' + sizeStr + ')');
+      }
+      return { success: true, sizeStr };
     } catch (err) {
       console.error(err);
+      if (throwOnError) {
+        throw err;
+      }
       toast('Gagal mengekspor backup: ' + (err.message || 'terjadi kesalahan'));
+      return { success: false, error: err };
     } finally {
-      exportBtn.disabled = false;
-      importBtn.disabled = false;
+      if (!isAutoBackup) {
+        if (exportBtn) exportBtn.disabled = false;
+        if (importBtn) importBtn.disabled = false;
+      }
     }
   }
 
@@ -3175,6 +3193,9 @@ const App = (function () {
     $('#import-preview-cash-balance').textContent = 'Rp ' + formatPrice(cashBal);
     $('#import-preview-shop-name').textContent = shopNameVal;
 
+    const autoBackupCheckbox = $('#import-auto-backup-checkbox');
+    if (autoBackupCheckbox) autoBackupCheckbox.checked = true;
+
     const confirmBtn = $('#btn-confirm-import-preview');
     if (confirmBtn) confirmBtn.disabled = false;
     const cancelBtn = $('#btn-cancel-import-preview');
@@ -3195,6 +3216,8 @@ const App = (function () {
     if (confirmBtn) confirmBtn.disabled = false;
     const cancelBtn = $('#btn-cancel-import-preview');
     if (cancelBtn) cancelBtn.disabled = false;
+    const autoBackupCheckbox = $('#import-auto-backup-checkbox');
+    if (autoBackupCheckbox) autoBackupCheckbox.checked = true;
     const dialog = $('#import-confirm-dialog');
     if (dialog && dialog.open) {
       dialog.close();
@@ -3209,6 +3232,26 @@ const App = (function () {
 
     confirmBtn.disabled = true;
     cancelBtn.disabled = true;
+
+    const autoBackupCheckbox = $('#import-auto-backup-checkbox');
+    const shouldAutoBackup = autoBackupCheckbox ? autoBackupCheckbox.checked : false;
+
+    if (shouldAutoBackup) {
+      try {
+        await exportBackup({
+          prefix: 'shugen-backup-sebelum-import-',
+          isAutoBackup: true,
+          throwOnError: true,
+          showToast: false
+        });
+      } catch (backupErr) {
+        console.error(backupErr);
+        toast('Gagal mengunduh backup otomatis: ' + (backupErr.message || 'pengunduhan gagal') + '. Import dibatalkan.');
+        confirmBtn.disabled = false;
+        cancelBtn.disabled = false;
+        return;
+      }
+    }
 
     try {
       await ShugenDB.backup.importData(pendingImportData);

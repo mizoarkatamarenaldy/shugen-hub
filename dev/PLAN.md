@@ -18,9 +18,9 @@ Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 - [x] 12. Backup dan restore manual (export/import file)
 
 ### Berikutnya
-- [x] 12b. Pratinjau isi backup sebelum import  <- FOKUS SEKARANG
-- [ ] 12c. Backup otomatis sebelum import (unduh backup data saat ini dulu)
-- [ ] 12d. Perbandingan jumlah data saat ini dengan isi file backup (di dialog konfirmasi import)
+- [x] 12b. Pratinjau isi backup sebelum import
+- [x] 12c. Backup otomatis sebelum import (unduh backup data saat ini dulu)
+- [ ] 12d. Perbandingan jumlah data saat ini dengan isi file backup (di dialog konfirmasi import)  <- FOKUS SEKARANG
 - [ ] 8. Rekap harian dan bulanan (omzet, pengeluaran, untung bersih)
 - [ ] 7. Template pesan WA (konfirmasi, update progress, selesai)
 - [ ] 10. Deadline pesanan dan pengingat
