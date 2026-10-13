@@ -18,7 +18,9 @@ Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 - [x] 12. Backup dan restore manual (export/import file)
 
 ### Berikutnya
-- [ ] 12b. Pratinjau isi backup sebelum import  <- FOKUS SEKARANG
+- [x] 12b. Pratinjau isi backup sebelum import  <- FOKUS SEKARANG
+- [ ] 12c. Backup otomatis sebelum import (unduh backup data saat ini dulu)
+- [ ] 12d. Perbandingan jumlah data saat ini dengan isi file backup (di dialog konfirmasi import)
 - [ ] 8. Rekap harian dan bulanan (omzet, pengeluaran, untung bersih)
 - [ ] 7. Template pesan WA (konfirmasi, update progress, selesai)
 - [ ] 10. Deadline pesanan dan pengingat
@@ -142,6 +144,26 @@ Kebutuhan layar:
 - Menu Kas hanya menampilkan dan tidak menambah atau mengubah data baru selain saldo awal. Pencatatan tetap lewat Fitur 3 dan 4.
 - Pesanan Dibatalkan tetap menghitung pemasukan dan pengeluaran yang sudah tercatat.
 - Tidak ada perhitungan untung bersih dan tidak ada rekap harian/bulanan (itu Fitur 8). Tidak ada hitungan gaji otomatis (itu Fitur 9).
+
+## Fitur 12c: Backup otomatis sebelum import
+- Di dialog konfirmasi import (Fitur 12), tambahkan kotak centang "Unduh backup data saat ini dulu". Kotak ini aktif (tercentang) secara default.
+- Kalau tercentang, saat pengguna menekan tombol konfirmasi import, aplikasi mengunduh file backup dari data saat ini lebih dulu, baru menjalankan import.
+- Pakai ulang fungsi export dari Fitur 12. Jangan menulis ulang logika export.
+- Nama file: shugen-backup-sebelum-import-YYYYMMDD-HHMM.json.
+- Kalau pengunduhan gagal, import dibatalkan dan data tidak diubah. Tampilkan pesan yang jelas.
+- Kalau kotak tidak tercentang, import berjalan seperti biasa tanpa unduhan.
+- Backup tidak disimpan di IndexedDB. Hasilnya hanya file unduhan di perangkat.
+- Tanpa store baru, tanpa perubahan skema IndexedDB, tanpa library baru.
+- Tidak ada fitur "pulihkan otomatis". Pemulihan dilakukan lewat Import biasa memakai file yang diunduh.
+
+## Fitur 12d: Perbandingan jumlah data saat import
+- Di ringkasan dialog konfirmasi import (Fitur 12b), tiap baris jumlah data menampilkan dua angka: jumlah di perangkat sekarang dan jumlah di file backup. Contoh: "Pesanan: 8 -> 12".
+- Jumlah data sekarang dibaca dari IndexedDB saat dialog dibuka (hanya baca, tidak mengubah apa pun).
+- Daftar baris sama dengan ringkasan 12b (semua store yang dihitung jumlahnya). Store pengaturan tunggal tetap tidak dihitung.
+- Kalau angkanya berbeda, tambahkan selisih dalam teks, misalnya "(+4)" atau "(-2)". Jangan hanya mengandalkan warna. Ikuti dev/DESIGN.md: warna hanya untuk status.
+- Kalau sebuah store kosong atau tidak ada, tampilkan 0.
+- Ringkasan hanya menampilkan. Alur validasi, Fitur 12c, dan proses import tidak berubah.
+- Tanpa perubahan skema IndexedDB, tanpa library baru.
 
 ## Aturan umum
 - Metode pembayaran bisa diatur sendiri (tambah, hapus, ganti nama), bukan daftar tetap
