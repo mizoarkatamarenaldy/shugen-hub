@@ -1868,6 +1868,37 @@ dialog.dialog-import-confirm .dialog-footer .btn {
   }
 }
 
+.main-nav-inner--7 {
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+  gap: 6px;
+}
+
+.main-nav-inner--7::-webkit-scrollbar {
+  display: none;
+}
+
+.main-nav-inner--7 .nav-tab {
+  flex: 1 0 auto;
+  min-width: 74px;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .main-nav-inner--7 {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  .main-nav-inner--7 .nav-tab {
+    min-width: 0;
+    padding-left: 4px;
+    padding-right: 4px;
+    font-size: 13px;
+  }
+}
+
 .customer-card {
   display: flex;
   flex-direction: column;
@@ -2446,6 +2477,121 @@ dialog.dialog-invoice {
 .invoice-note-edit-section {
   padding-top: 8px;
   border-top: 1px solid var(--border);
+}
+
+/* Fitur 8: Rekap harian dan bulanan */
+
+.recap-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+@media (min-width: 480px) {
+  .recap-summary-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.recap-stat-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+@media (min-width: 480px) {
+  .recap-stat-card {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 4px;
+  }
+}
+
+.recap-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.recap-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.recap-day-card {
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recap-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.recap-day-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.recap-day-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 380px) {
+  .recap-day-stats {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+.recap-day-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+@media (max-width: 380px) {
+  .recap-day-stat {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.recap-day-stat-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.recap-day-stat-val {
+  font-size: 13px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* CSS Print: Bersih, latar putih, teks gelap, tanpa library */

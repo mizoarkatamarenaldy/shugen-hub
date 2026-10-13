@@ -38,13 +38,14 @@
   </header>
 
   <nav class="main-nav" aria-label="Menu utama">
-    <div class="main-nav-inner main-nav-inner--6">
+    <div class="main-nav-inner main-nav-inner--7">
       <button type="button" class="nav-tab active" data-view="orders" aria-current="page">Pesanan</button>
       <button type="button" class="nav-tab" data-view="customers">Pelanggan</button>
       <button type="button" class="nav-tab" data-view="incomes">Pemasukan</button>
       <button type="button" class="nav-tab" data-view="expenses">Pengeluaran</button>
       <button type="button" class="nav-tab" data-view="cash">Kas</button>
       <button type="button" class="nav-tab" data-view="invoices">Invoice</button>
+      <button type="button" class="nav-tab" data-view="recap">Rekap</button>
     </div>
   </nav>
 
@@ -281,6 +282,55 @@
       </div>
 
       <section id="invoice-list" class="income-list" aria-label="Daftar invoice"></section>
+    </div>
+
+    <div id="view-recap" hidden>
+      <nav class="status-tabs recap-tabs" aria-label="Pilihan periode rekap">
+        <button type="button" class="tab active" data-recap-mode="daily" aria-selected="true">Harian</button>
+        <button type="button" class="tab" data-recap-mode="monthly" aria-selected="false">Bulanan</button>
+      </nav>
+
+      <section class="income-controls" aria-label="Filter dan ringkasan rekap">
+        <div id="recap-daily-controls" class="income-filter-bar">
+          <div class="income-filter-fields">
+            <div class="income-filter-field">
+              <label class="form-label" for="recap-date-input">Tanggal</label>
+              <input type="date" id="recap-date-input" class="form-input income-date-input">
+            </div>
+          </div>
+        </div>
+
+        <div id="recap-monthly-controls" class="income-filter-bar" hidden>
+          <div class="income-filter-fields">
+            <div class="income-filter-field">
+              <label class="form-label" for="recap-month-input">Bulan</label>
+              <input type="month" id="recap-month-input" class="form-input income-date-input">
+            </div>
+          </div>
+        </div>
+
+        <div class="recap-summary-grid" aria-label="Tiga angka utama rekap">
+          <div class="recap-stat-card">
+            <span class="recap-stat-label">Omzet</span>
+            <strong id="recap-omzet" class="recap-stat-value">Rp 0</strong>
+          </div>
+          <div class="recap-stat-card">
+            <span class="recap-stat-label">Pengeluaran</span>
+            <strong id="recap-expenses" class="recap-stat-value">Rp 0</strong>
+          </div>
+          <div class="recap-stat-card">
+            <span class="recap-stat-label">Untung Bersih</span>
+            <strong id="recap-profit" class="recap-stat-value">Rp 0</strong>
+          </div>
+        </div>
+      </section>
+
+      <div id="recap-empty-state" class="app-state" hidden>
+        <p id="recap-empty-message" class="state-message">Tidak ada transaksi pada tanggal ini</p>
+        <p id="recap-empty-hint" class="state-hint">Belum ada pemasukan atau pengeluaran yang tercatat pada periode ini.</p>
+      </div>
+
+      <section id="recap-monthly-list" class="income-list" aria-label="Daftar rekap per hari" hidden></section>
     </div>
 
     <button type="button" class="fab" id="fab-add" aria-label="Tambah pesanan baru">

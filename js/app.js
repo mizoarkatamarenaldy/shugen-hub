@@ -33,6 +33,9 @@ const App = (function () {
   let activeCustomerId = null;
   let editingCustomerId = null;
   let pendingImportData = null;
+  let activeRecapTab = 'daily';
+  let recapDailyDate = '';
+  let recapMonthlyMonth = '';
 
   const STATUS_LABELS = {
     menunggu_bayar: 'Menunggu Bayar',
@@ -63,6 +66,33 @@ const App = (function () {
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
     return yyyy + '-' + mm + '-' + dd;
+  }
+
+  function currentYm() {
+    const now = new Date();
+    const yyyy = String(now.getFullYear());
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    return yyyy + '-' + mm;
+  }
+
+  function formatMonthYear(ym) {
+    if (!ym) return '';
+    const parts = String(ym).split('-');
+    if (parts.length === 2) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+      if (!isNaN(d.getTime())) {
+        return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(d);
+      }
+    }
+    return ym;
+  }
+
+  function formatRecapCurrency(amount) {
+    const val = Number(amount) || 0;
+    if (val < 0) {
+      return '-Rp ' + formatPrice(Math.abs(val));
+    }
+    return 'Rp ' + formatPrice(val);
   }
 
   // DOM helpers
@@ -117,6 +147,8 @@ const App = (function () {
       await refreshProgressMap();
       await loadTheme();
       populateCustomerDatalist();
+      recapDailyDate = todayYmd();
+      recapMonthlyMonth = currentYm();
       render();
       bindEvents();
       registerSW();
@@ -152,7 +184,8 @@ const App = (function () {
     $('#view-expenses').hidden = state !== 'ready' || activeView !== 'expenses';
     $('#view-cash').hidden = state !== 'ready' || activeView !== 'cash';
     $('#view-invoices').hidden = state !== 'ready' || activeView !== 'invoices';
-    $('#fab-add').hidden = state !== 'ready' || activeView === 'cash' || activeView === 'invoices';
+    $('#view-recap').hidden = state !== 'ready' || activeView !== 'recap';
+    $('#fab-add').hidden = state !== 'ready' || activeView === 'cash' || activeView === 'invoices' || activeView === 'recap';
 
     $('#empty-state').hidden = true;
     $('#empty-filtered').hidden = true;
@@ -177,6 +210,11 @@ const App = (function () {
     $('#invoice-empty-state').hidden = true;
     $('#invoice-empty-filtered').hidden = true;
     $('#invoice-list').hidden = state !== 'ready';
+
+    if (state !== 'ready') {
+      $('#recap-empty-state').hidden = true;
+      $('#recap-monthly-list').hidden = true;
+    }
 
     if (state === 'ready') {
       const fabLabel = activeView === 'incomes'
@@ -512,6 +550,7 @@ const App = (function () {
     renderExpenses();
     renderCash();
     renderInvoices();
+    renderRecap();
   }
 
   function renderNav() {
@@ -805,6 +844,159 @@ const App = (function () {
     showView('ready');
   }
 
+  function renderRecap() {
+    renderRecapTabs();
+
+    const isDaily = activeRecapTab === 'daily';
+    const dailyControls = $('#recap-daily-controls');
+    const monthlyControls = $('#recap-monthly-controls');
+    const dailyDateInput = $('#recap-date-input');
+    const monthlyMonthInput = $('#recap-month-input');
+    const emptyState = $('#recap-empty-state');
+    const emptyMsg = $('#recap-empty-message');
+    const emptyHint = $('#recap-empty-hint');
+    const monthlyList = $('#recap-monthly-list');
+    const omzetEl = $('#recap-omzet');
+    const expensesEl = $('#recap-expenses');
+    const profitEl = $('#recap-profit');
+
+    if (!dailyControls || !monthlyControls) return;
+
+    dailyControls.hidden = !isDaily;
+    monthlyControls.hidden = isDaily;
+
+    if (isDaily) {
+      if (dailyDateInput && dailyDateInput.value !== recapDailyDate) {
+        dailyDateInput.value = recapDailyDate;
+      }
+      monthlyList.hidden = true;
+      monthlyList.innerHTML = '';
+
+      if (!recapDailyDate) {
+        omzetEl.textContent = 'Rp 0';
+        expensesEl.textContent = 'Rp 0';
+        profitEl.textContent = 'Rp 0';
+        emptyState.hidden = false;
+        emptyMsg.textContent = 'Pilih tanggal untuk melihat rekap';
+        emptyHint.textContent = 'Silakan pilih tanggal transaksi pada kolom di atas.';
+        return;
+      }
+
+      const dayIncomes = incomes.filter((inc) => inc.date === recapDailyDate);
+      const dayExpenses = expenses.filter((exp) => exp.date === recapDailyDate);
+      const totalOmzet = dayIncomes.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
+      const totalExpenses = dayExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+      const netProfit = totalOmzet - totalExpenses;
+
+      omzetEl.textContent = formatRecapCurrency(totalOmzet);
+      expensesEl.textContent = formatRecapCurrency(totalExpenses);
+      profitEl.textContent = formatRecapCurrency(netProfit);
+
+      if (dayIncomes.length === 0 && dayExpenses.length === 0) {
+        emptyState.hidden = false;
+        emptyMsg.textContent = 'Tidak ada transaksi pada tanggal ini';
+        emptyHint.textContent = 'Belum ada pemasukan atau pengeluaran yang tercatat pada ' + formatYmd(recapDailyDate) + '.';
+      } else {
+        emptyState.hidden = true;
+      }
+    } else {
+      if (monthlyMonthInput && monthlyMonthInput.value !== recapMonthlyMonth) {
+        monthlyMonthInput.value = recapMonthlyMonth;
+      }
+
+      if (!recapMonthlyMonth) {
+        omzetEl.textContent = 'Rp 0';
+        expensesEl.textContent = 'Rp 0';
+        profitEl.textContent = 'Rp 0';
+        emptyState.hidden = false;
+        emptyMsg.textContent = 'Pilih bulan untuk melihat rekap';
+        emptyHint.textContent = 'Silakan pilih bulan transaksi pada kolom di atas.';
+        monthlyList.hidden = true;
+        monthlyList.innerHTML = '';
+        return;
+      }
+
+      const monthIncomes = incomes.filter(
+        (inc) => inc.date && inc.date.slice(0, 7) === recapMonthlyMonth
+      );
+      const monthExpenses = expenses.filter(
+        (exp) => exp.date && exp.date.slice(0, 7) === recapMonthlyMonth
+      );
+      const totalOmzet = monthIncomes.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
+      const totalExpenses = monthExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+      const netProfit = totalOmzet - totalExpenses;
+
+      omzetEl.textContent = formatRecapCurrency(totalOmzet);
+      expensesEl.textContent = formatRecapCurrency(totalExpenses);
+      profitEl.textContent = formatRecapCurrency(netProfit);
+
+      if (monthIncomes.length === 0 && monthExpenses.length === 0) {
+        emptyState.hidden = false;
+        emptyMsg.textContent = 'Tidak ada transaksi pada bulan ini';
+        emptyHint.textContent = 'Belum ada pemasukan atau pengeluaran yang tercatat pada bulan ' + formatMonthYear(recapMonthlyMonth) + '.';
+        monthlyList.hidden = true;
+        monthlyList.innerHTML = '';
+      } else {
+        emptyState.hidden = true;
+        monthlyList.hidden = false;
+        monthlyList.innerHTML = '';
+
+        const dailyMap = {};
+        monthIncomes.forEach((inc) => {
+          const d = inc.date;
+          if (!dailyMap[d]) dailyMap[d] = { date: d, omzet: 0, expenses: 0 };
+          dailyMap[d].omzet += Number(inc.amount) || 0;
+        });
+        monthExpenses.forEach((exp) => {
+          const d = exp.date;
+          if (!dailyMap[d]) dailyMap[d] = { date: d, omzet: 0, expenses: 0 };
+          dailyMap[d].expenses += Number(exp.amount) || 0;
+        });
+
+        const sortedDays = Object.values(dailyMap).sort((a, b) => b.date.localeCompare(a.date));
+
+        sortedDays.forEach((day) => {
+          const dayProfit = day.omzet - day.expenses;
+          const card = document.createElement('article');
+          card.className = 'recap-day-card';
+          card.setAttribute(
+            'aria-label',
+            'Rekap ' + formatYmd(day.date) + ': Omzet ' + formatRecapCurrency(day.omzet) + ', Pengeluaran ' + formatRecapCurrency(day.expenses) + ', Untung Bersih ' + formatRecapCurrency(dayProfit)
+          );
+
+          card.innerHTML =
+            '<div class="recap-day-header">' +
+              '<span class="recap-day-date">' + esc(formatYmd(day.date)) + '</span>' +
+            '</div>' +
+            '<div class="recap-day-stats">' +
+              '<div class="recap-day-stat">' +
+                '<span class="recap-day-stat-label">Omzet</span>' +
+                '<span class="recap-day-stat-val">' + esc(formatRecapCurrency(day.omzet)) + '</span>' +
+              '</div>' +
+              '<div class="recap-day-stat">' +
+                '<span class="recap-day-stat-label">Pengeluaran</span>' +
+                '<span class="recap-day-stat-val">' + esc(formatRecapCurrency(day.expenses)) + '</span>' +
+              '</div>' +
+              '<div class="recap-day-stat">' +
+                '<span class="recap-day-stat-label">Untung Bersih</span>' +
+                '<strong class="recap-day-stat-val">' + esc(formatRecapCurrency(dayProfit)) + '</strong>' +
+              '</div>' +
+            '</div>';
+
+          monthlyList.appendChild(card);
+        });
+      }
+    }
+  }
+
+  function renderRecapTabs() {
+    $$('.recap-tabs .tab').forEach((tab) => {
+      const isSelected = tab.dataset.recapMode === activeRecapTab;
+      tab.classList.toggle('active', isSelected);
+      tab.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+    });
+  }
+
   function esc(str) {
     const el = document.createElement('span');
     el.textContent = str;
@@ -826,7 +1018,7 @@ const App = (function () {
       renderOrders();
     });
 
-    $$('.status-tabs:not(.customer-filter-tabs) .tab').forEach((tab) => {
+    $$('.status-tabs:not(.customer-filter-tabs):not(.recap-tabs) .tab').forEach((tab) => {
       tab.addEventListener('click', () => {
         activeFilter = tab.dataset.status;
         render();
@@ -844,6 +1036,33 @@ const App = (function () {
         render();
       });
     });
+
+    $$('.recap-tabs .tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        activeRecapTab = tab.dataset.recapMode;
+        renderRecap();
+      });
+    });
+
+    const recapDateInput = $('#recap-date-input');
+    if (recapDateInput) {
+      const handleDateChange = (e) => {
+        recapDailyDate = e.target.value;
+        renderRecap();
+      };
+      recapDateInput.addEventListener('input', handleDateChange);
+      recapDateInput.addEventListener('change', handleDateChange);
+    }
+
+    const recapMonthInput = $('#recap-month-input');
+    if (recapMonthInput) {
+      const handleMonthChange = (e) => {
+        recapMonthlyMonth = e.target.value;
+        renderRecap();
+      };
+      recapMonthInput.addEventListener('input', handleMonthChange);
+      recapMonthInput.addEventListener('change', handleMonthChange);
+    }
 
     $('#customer-list').addEventListener('click', (e) => {
       const subBtn = e.target.closest('.btn-sub-toggle');

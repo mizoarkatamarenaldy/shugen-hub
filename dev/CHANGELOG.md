@@ -19,6 +19,18 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #020 [2026-10-13] Implementasi Fitur 8 (Rekap harian dan bulanan)
+- Fitur: Rekap harian dan bulanan (omzet, pengeluaran, untung bersih)
+- Ringkasan: Menambahkan menu navigasi baru "Rekap" dengan dua mode periode Harian dan Bulanan yang menyajikan tiga metrik keuangan utama: omzet, pengeluaran, dan untung bersih tanpa memodifikasi data toko atau skema IndexedDB. Mode Harian menyajikan angka pada tanggal yang dipilih (default hari ini), sedangkan mode Bulanan menyajikan akumulasi bulanan (default bulan ini) beserta daftar rincian per hari yang memiliki transaksi urut tanggal terbaru, format angka rupiah minus yang jelas tanpa mengandalkan warna semata sesuai dev/DESIGN.md, pembaruan checklist dan fokus pengerjaan di PLAN.md ke Fitur 7, serta peningkatan cache service worker ke shugen-v18.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - index.html
+  - js/app.js
+  - sw.js
+- Catatan: Skema IndexedDB tetap pada versi 8 tanpa perubahan; nilai untung bersih negatif ditampilkan menggunakan tanda minus -Rp sesuai dev/DESIGN.md; versi cache service worker dinaikkan ke shugen-v18.
+
 ### #019 [2026-10-13] Implementasi Fitur 12d (Perbandingan jumlah data saat import)
 - Fitur: Perbandingan jumlah data saat import
 - Ringkasan: Menampilkan perbandingan jumlah data di perangkat saat ini dengan data di dalam file backup pada setiap baris ringkasan dialog konfirmasi import (contoh: "8 -> 12 (+4)"), di mana data saat ini dibaca langsung dari IndexedDB saat dialog dibuka. Menyertakan selisih angka secara tekstual saat jumlahnya berbeda tanpa mengandalkan warna semata sesuai dev/DESIGN.md, memperbarui checklist dan penanda fokus pengerjaan di PLAN.md ke Fitur 8, serta menaikkan versi cache service worker ke shugen-v17.
