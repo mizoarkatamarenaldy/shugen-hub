@@ -19,6 +19,16 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #005 [2026-10-13] Perbaikan keunikan ID pesanan dan pembaruan ID data contoh
+- Fitur: Pesanan + Status
+- Ringkasan: Mengamankan pembuatan ID pesanan dan penyimpanan ke IndexedDB dalam satu transaksi readwrite berurutan agar bebas kondisi balapan serta mengacak ulang otomatis jika ID sudah terpakai. Mengubah seluruh ID pesanan di data contoh dari format urutan ke format acak 4 karakter beserta referensi progress jokinya.
+- File diubah:
+  - dev/CHANGELOG.md
+  - js/db.js
+  - js/dummy.js
+  - sw.js
+- Catatan: Data pesanan yang sudah tersimpan di IndexedDB tidak diubah. Untuk melihat ID baru pada data contoh, muat ulang data demo lewat dialog Pengaturan.
+
 ### #004 [2026-10-13] Implementasi Fitur 2 (Progress joki)
 - Fitur: Progress joki
 - Ringkasan: Menambahkan fitur checklist langkah pengerjaan khusus pesanan Joki (tambah, hapus, ganti nama, atur ulang urutan, centang satu tap) dengan perhitungan persentase otomatis yang tampil di daftar dan detail pesanan. Menyediakan saran penyelesaian manual saat progress mencapai 100%, menjaga progress pada pesanan yang dibatalkan, serta melakukan migrasi skema IndexedDB ke versi 2 secara aman.

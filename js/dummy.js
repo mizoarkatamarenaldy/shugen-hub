@@ -6,7 +6,7 @@ const DummyData = (function () {
 
   const ORDERS = [
     {
-      orderId: 'SGN-261011-001',
+      orderId: 'SGN-261011-K7M4',
       customerName: 'Budi Santoso',
       type: 'joki',
       game: 'Mobile Legends',
@@ -18,7 +18,7 @@ const DummyData = (function () {
       updatedAt: new Date('2026-10-12T14:00:00')
     },
     {
-      orderId: 'SGN-261011-002',
+      orderId: 'SGN-261011-R9W2',
       customerName: 'Siti Rahayu',
       type: 'topup',
       game: 'Genshin Impact',
@@ -30,7 +30,7 @@ const DummyData = (function () {
       updatedAt: new Date('2026-10-11T11:30:00')
     },
     {
-      orderId: 'SGN-261012-001',
+      orderId: 'SGN-261012-4H8P',
       customerName: 'Andi Pratama',
       type: 'joki',
       game: 'Valorant',
@@ -42,7 +42,7 @@ const DummyData = (function () {
       updatedAt: new Date('2026-10-12T08:30:00')
     },
     {
-      orderId: 'SGN-261012-002',
+      orderId: 'SGN-261012-X3N6',
       customerName: 'Dewi Lestari',
       type: 'topup',
       game: 'Free Fire',
@@ -54,7 +54,7 @@ const DummyData = (function () {
       updatedAt: new Date('2026-10-12T10:45:00')
     },
     {
-      orderId: 'SGN-261012-003',
+      orderId: 'SGN-261012-T5V9',
       customerName: 'Rizky Hidayat',
       type: 'joki',
       game: 'Mobile Legends',
@@ -66,7 +66,7 @@ const DummyData = (function () {
       updatedAt: new Date('2026-10-12T15:00:00')
     },
     {
-      orderId: 'SGN-261013-001',
+      orderId: 'SGN-261013-B6Q8',
       customerName: 'Fajar Nugroho',
       type: 'topup',
       game: 'Mobile Legends',
@@ -78,7 +78,7 @@ const DummyData = (function () {
       updatedAt: new Date('2026-10-13T07:20:00')
     },
     {
-      orderId: 'SGN-261013-002',
+      orderId: 'SGN-261013-L2C7',
       customerName: 'Maya Putri',
       type: 'joki',
       game: 'Genshin Impact',
@@ -90,7 +90,7 @@ const DummyData = (function () {
       updatedAt: new Date('2026-10-13T08:30:00')
     },
     {
-      orderId: 'SGN-261013-003',
+      orderId: 'SGN-261013-J4Z3',
       customerName: 'Hendra Wijaya',
       type: 'topup',
       game: 'Honkai: Star Rail',
@@ -104,24 +104,24 @@ const DummyData = (function () {
   ];
 
   const PROGRESS = {
-    'SGN-261011-001': [
+    'SGN-261011-K7M4': [
       { id: 'demo-1-1', name: 'Login dan verifikasi akun', done: true },
       { id: 'demo-1-2', name: 'Push Epic V ke Epic III', done: true },
       { id: 'demo-1-3', name: 'Push Epic III ke Epic I', done: true },
       { id: 'demo-1-4', name: 'Promosi ke Legend V', done: true }
     ],
-    'SGN-261012-001': [
+    'SGN-261012-4H8P': [
       { id: 'demo-2-1', name: 'Cek setting akun dan crosshair', done: true },
       { id: 'demo-2-2', name: 'Naik ke Silver 2', done: true },
       { id: 'demo-2-3', name: 'Naik ke Silver 3', done: false },
       { id: 'demo-2-4', name: 'Promosi ke Gold 1', done: false }
     ],
-    'SGN-261012-003': [
+    'SGN-261012-T5V9': [
       { id: 'demo-3-1', name: 'Push Grandmaster V ke III', done: true },
       { id: 'demo-3-2', name: 'Push Grandmaster III ke I', done: false },
       { id: 'demo-3-3', name: 'Promosi ke Epic V', done: false }
     ],
-    'SGN-261013-002': [
+    'SGN-261013-L2C7': [
       { id: 'demo-4-1', name: 'Floor 12 Chamber 1 (3 bintang)', done: true },
       { id: 'demo-4-2', name: 'Floor 12 Chamber 2 (3 bintang)', done: true },
       { id: 'demo-4-3', name: 'Floor 12 Chamber 3 (3 bintang)', done: false }

@@ -72,26 +72,69 @@ const ShugenDB = (function () {
     return req2p(tx('orders', 'readonly').get(id));
   }
 
-  async function addOrder(order) {
-    await open();
-    const id = order.orderId || await generateOrderId();
-    const now = new Date();
-    const record = {
-      orderId: id,
-      customerName: order.customerName,
-      type: order.type,
-      game: order.game,
-      detail: order.detail || '',
-      price: Number(order.price) || 0,
-      status: order.status || 'menunggu_bayar',
-      paymentMethod: order.paymentMethod || '',
-      createdAt: order.createdAt || now,
-      updatedAt: now,
-      customerId: null
-    };
-    const key = await req2p(tx('orders', 'readwrite').add(record));
-    record.id = key;
-    return record;
+  const ID_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let _addOrderQueue = Promise.resolve();
+
+  function buildCandidateOrderId(date) {
+    const now = date || new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    let code = '';
+    for (let i = 0; i < 4; i++) {
+      code += ID_CHARS.charAt(Math.floor(Math.random() * ID_CHARS.length));
+    }
+    return 'SGN-' + yy + mm + dd + '-' + code;
+  }
+
+  function addOrder(order) {
+    const run = _addOrderQueue.then(async () => {
+      await open();
+      return new Promise((resolve, reject) => {
+        const transaction = _db.transaction('orders', 'readwrite');
+        const store = transaction.objectStore('orders');
+        const idx = store.index('orderId');
+        const now = new Date();
+        let savedRecord = null;
+
+        transaction.oncomplete = () => resolve(savedRecord);
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error || new Error('Transaksi dibatalkan'));
+
+        function tryInsert(preferredId) {
+          const candidate = preferredId || buildCandidateOrderId(now);
+          const checkReq = idx.getKey(candidate);
+          checkReq.onsuccess = () => {
+            if (checkReq.result !== undefined) {
+              tryInsert(null);
+              return;
+            }
+            const record = {
+              orderId: candidate,
+              customerName: order.customerName,
+              type: order.type,
+              game: order.game,
+              detail: order.detail || '',
+              price: Number(order.price) || 0,
+              status: order.status || 'menunggu_bayar',
+              paymentMethod: order.paymentMethod || '',
+              createdAt: order.createdAt || now,
+              updatedAt: now,
+              customerId: null
+            };
+            const addReq = store.add(record);
+            addReq.onsuccess = () => {
+              record.id = addReq.result;
+              savedRecord = record;
+            };
+          };
+        }
+
+        tryInsert(order.orderId || null);
+      });
+    });
+    _addOrderQueue = run.catch(() => {});
+    return run;
   }
 
   async function updateOrder(id, changes) {
@@ -114,26 +157,27 @@ const ShugenDB = (function () {
   }
 
   async function generateOrderId() {
-    const now = new Date();
-    const yy = String(now.getFullYear()).slice(-2);
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const prefix = 'SGN-' + yy + mm + dd;
+    await open();
+    return new Promise((resolve, reject) => {
+      const transaction = _db.transaction('orders', 'readonly');
+      const idx = transaction.objectStore('orders').index('orderId');
+      const now = new Date();
 
-    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-    const all = await getAllOrders();
-    const existing = new Set(all.map((o) => o.orderId));
-
-    let candidate = '';
-    do {
-      let code = '';
-      for (let i = 0; i < 4; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      function tryGenerate() {
+        const candidate = buildCandidateOrderId(now);
+        const checkReq = idx.getKey(candidate);
+        checkReq.onsuccess = () => {
+          if (checkReq.result !== undefined) {
+            tryGenerate();
+            return;
+          }
+          resolve(candidate);
+        };
+        checkReq.onerror = () => reject(checkReq.error);
       }
-      candidate = prefix + '-' + code;
-    } while (existing.has(candidate));
 
-    return candidate;
+      tryGenerate();
+    });
   }
 
   async function clearOrders() {
