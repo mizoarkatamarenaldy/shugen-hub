@@ -32,6 +32,7 @@ const App = (function () {
   let customerFilter = 'semua';
   let activeCustomerId = null;
   let editingCustomerId = null;
+  let pendingImportData = null;
 
   const STATUS_LABELS = {
     menunggu_bayar: 'Menunggu Bayar',
@@ -1132,6 +1133,11 @@ const App = (function () {
     $('#btn-export-backup').addEventListener('click', exportBackup);
     $('#btn-import-backup').addEventListener('click', triggerImportBackup);
     $('#backup-file-input').addEventListener('change', handleBackupFileSelected);
+
+    $('#btn-close-import-preview').addEventListener('click', closeImportPreview);
+    $('#btn-cancel-import-preview').addEventListener('click', closeImportPreview);
+    $('#btn-confirm-import-preview').addEventListener('click', confirmImportBackup);
+    $('#import-confirm-dialog').addEventListener('close', closeImportPreview);
 
     $('#btn-add-payment').addEventListener('click', addPaymentMethod);
     $('#payment-add-input').addEventListener('keydown', (e) => {
@@ -3060,6 +3066,30 @@ const App = (function () {
     return yyyy + mm + dd + '-' + hh + min;
   }
 
+  function formatBackupFileSize(bytes) {
+    const kb = bytes / 1024;
+    if (kb > 1024) {
+      const mb = kb / 1024;
+      const formatted = (Math.round(mb * 10) / 10).toLocaleString('id-ID');
+      return formatted + ' MB';
+    }
+    const formatted = (Math.round(kb * 10) / 10).toLocaleString('id-ID');
+    return formatted + ' KB';
+  }
+
+  function formatBackupDateTime(isoStr) {
+    if (!isoStr) return '-';
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return String(isoStr);
+    return new Intl.DateTimeFormat('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(d);
+  }
+
   async function exportBackup() {
     const exportBtn = $('#btn-export-backup');
     const importBtn = $('#btn-import-backup');
@@ -3082,7 +3112,8 @@ const App = (function () {
         if (a.parentNode) a.parentNode.removeChild(a);
         URL.revokeObjectURL(url);
       }, 100);
-      toast('Backup data berhasil diunduh');
+      const sizeStr = formatBackupFileSize(blob.size);
+      toast('Backup data berhasil diunduh (' + sizeStr + ')');
     } catch (err) {
       console.error(err);
       toast('Gagal mengekspor backup: ' + (err.message || 'terjadi kesalahan'));
@@ -3098,6 +3129,98 @@ const App = (function () {
     const fileInput = $('#backup-file-input');
     fileInput.value = '';
     fileInput.click();
+  }
+
+  function openImportPreview(backupData) {
+    pendingImportData = backupData;
+    const stores = (backupData && backupData.stores) || {};
+
+    $('#import-preview-date').textContent = formatBackupDateTime(backupData.exportedAt);
+
+    const orderCount = Array.isArray(stores.orders) ? stores.orders.length : 0;
+    const custCount = Array.isArray(stores.customers) ? stores.customers.length : 0;
+    const incCount = Array.isArray(stores.incomes) ? stores.incomes.length : 0;
+    const expCount = Array.isArray(stores.expenses) ? stores.expenses.length : 0;
+    const invCount = Array.isArray(stores.invoices) ? stores.invoices.length : 0;
+    const gameCount = Array.isArray(stores.games) ? stores.games.length : 0;
+    const progCount = Array.isArray(stores.progress) ? stores.progress.length : 0;
+    const catCount = Array.isArray(stores.expenseCategories) ? stores.expenseCategories.length : 0;
+    const payCount = Array.isArray(stores.paymentMethods) ? stores.paymentMethods.length : 0;
+
+    let cashBal = 0;
+    if (Array.isArray(stores.cashSettings)) {
+      const initialItem = stores.cashSettings.find((s) => s && s.key === 'initialBalance');
+      if (initialItem && initialItem.value !== undefined && initialItem.value !== null) {
+        cashBal = Number(initialItem.value) || 0;
+      }
+    }
+
+    let shopNameVal = 'Shugen Store';
+    if (Array.isArray(stores.settings)) {
+      const shopItem = stores.settings.find((s) => s && s.key === 'shopName');
+      if (shopItem && shopItem.value) {
+        shopNameVal = String(shopItem.value);
+      }
+    }
+
+    $('#import-preview-orders').textContent = formatPrice(orderCount);
+    $('#import-preview-customers').textContent = formatPrice(custCount);
+    $('#import-preview-incomes').textContent = formatPrice(incCount);
+    $('#import-preview-expenses').textContent = formatPrice(expCount);
+    $('#import-preview-invoices').textContent = formatPrice(invCount);
+    $('#import-preview-games').textContent = formatPrice(gameCount);
+    $('#import-preview-progress').textContent = formatPrice(progCount);
+    $('#import-preview-categories').textContent = formatPrice(catCount);
+    $('#import-preview-payments').textContent = formatPrice(payCount);
+    $('#import-preview-cash-balance').textContent = 'Rp ' + formatPrice(cashBal);
+    $('#import-preview-shop-name').textContent = shopNameVal;
+
+    const confirmBtn = $('#btn-confirm-import-preview');
+    if (confirmBtn) confirmBtn.disabled = false;
+    const cancelBtn = $('#btn-cancel-import-preview');
+    if (cancelBtn) cancelBtn.disabled = false;
+
+    $('#import-confirm-dialog').showModal();
+  }
+
+  function closeImportPreview() {
+    pendingImportData = null;
+    const fileInput = $('#backup-file-input');
+    if (fileInput) fileInput.value = '';
+    const exportBtn = $('#btn-export-backup');
+    const importBtn = $('#btn-import-backup');
+    if (exportBtn) exportBtn.disabled = false;
+    if (importBtn) importBtn.disabled = false;
+    const confirmBtn = $('#btn-confirm-import-preview');
+    if (confirmBtn) confirmBtn.disabled = false;
+    const cancelBtn = $('#btn-cancel-import-preview');
+    if (cancelBtn) cancelBtn.disabled = false;
+    const dialog = $('#import-confirm-dialog');
+    if (dialog && dialog.open) {
+      dialog.close();
+    }
+  }
+
+  async function confirmImportBackup() {
+    if (!pendingImportData) return;
+    const confirmBtn = $('#btn-confirm-import-preview');
+    const cancelBtn = $('#btn-cancel-import-preview');
+    if (confirmBtn.disabled) return;
+
+    confirmBtn.disabled = true;
+    cancelBtn.disabled = true;
+
+    try {
+      await ShugenDB.backup.importData(pendingImportData);
+      await reloadAllAppData();
+      closeImportPreview();
+      toast('Data backup berhasil dipulihkan');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal mengimpor backup: ' + (err.message || 'terjadi kesalahan'));
+      confirmBtn.disabled = false;
+      cancelBtn.disabled = false;
+    }
   }
 
   async function handleBackupFileSelected(e) {
@@ -3118,29 +3241,25 @@ const App = (function () {
         parsed = JSON.parse(fileText);
       } catch (jsonErr) {
         toast('File backup tidak valid: format JSON rusak.');
+        exportBtn.disabled = false;
+        importBtn.disabled = false;
+        e.target.value = '';
         return;
       }
 
       const validation = ShugenDB.backup.validate(parsed);
       if (!validation.valid) {
         toast(validation.error);
+        exportBtn.disabled = false;
+        importBtn.disabled = false;
+        e.target.value = '';
         return;
       }
 
-      const confirmed = window.confirm(
-        'Semua data saat ini akan DIGANTI dengan isi file backup. Lanjutkan proses import?'
-      );
-      if (!confirmed) {
-        return;
-      }
-
-      await ShugenDB.backup.importData(parsed);
-      await reloadAllAppData();
-      toast('Data backup berhasil dipulihkan');
+      openImportPreview(parsed);
     } catch (err) {
       console.error(err);
-      toast('Gagal mengimpor backup: ' + (err.message || 'terjadi kesalahan'));
-    } finally {
+      toast('Gagal membaca file backup: ' + (err.message || 'terjadi kesalahan'));
       exportBtn.disabled = false;
       importBtn.disabled = false;
       e.target.value = '';

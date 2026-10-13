@@ -15,14 +15,16 @@ Jalan di HP dan PC, bisa dipasang seperti app, tanpa server.
 - [x] 6. Data pelanggan (riwayat order, tandai langganan)
 - [x] 13. Kas toko (saldo gabungan, menu sendiri)
 - [x] 14. Kategori game (daftar game di Pengaturan, wajib dipilih di form pesanan)
+- [x] 12. Backup dan restore manual (export/import file)
 
 ### Berikutnya
-- [x] 12. Backup dan restore manual (export/import file)  <- FOKUS SEKARANG
+- [ ] 12b. Pratinjau isi backup sebelum import  <- FOKUS SEKARANG
 - [ ] 8. Rekap harian dan bulanan (omzet, pengeluaran, untung bersih)
 - [ ] 7. Template pesan WA (konfirmasi, update progress, selesai)
 - [ ] 10. Deadline pesanan dan pengingat
 - [ ] 9. Daftar penjoki/partner dan bagi hasil per pesanan
 - [ ] 11. Katalog harga (hanya template, harga bisa diubah per pesanan)
+- [ ] 15. Pengingat backup berkala (tunda, putuskan setelah rencana sinkron Google Drive jelas)
 
 ## Fitur 1: Pesanan + Status
 Data pesanan:
@@ -121,6 +123,16 @@ Kebutuhan layar:
 - Tombol Export dan Import dinonaktifkan selama prosesnya berjalan (ikuti pola pengaman tombol yang sudah ada). Setelah import berhasil, tampilkan pesan sukses dan muat ulang tampilan agar semua menu menampilkan data baru.
 - Tanpa library baru. Tanpa kompresi, tanpa enkripsi, tanpa sinkron Google Drive (itu fitur terpisah).
 - Jangan menyimpan atau meng-commit file backup apa pun ke repo.
+
+## Fitur 12b: Pratinjau isi backup sebelum import
+- Pada dialog konfirmasi import (Fitur 12), tampilkan ringkasan isi file backup di atas peringatan "semua data akan DIGANTI".
+- Ringkasan memuat tanggal dan waktu export (diambil dari file), lalu jumlah data untuk SEMUA jenis data yang disimpan. Baca js/db.js untuk daftar store lengkap, jangan ada yang terlewat. Minimal: pesanan, pelanggan, pemasukan, pengeluaran, invoice, game, progress joki, kategori pengeluaran, dan metode pembayaran.
+- Store yang hanya berisi satu pengaturan (misalnya nama toko atau saldo awal kas) tidak dihitung jumlahnya. Kalau mau ditampilkan, tampilkan sebagai nilainya saja (contoh: saldo awal).
+- Tiap baris pakai label bahasa Indonesia yang mudah dipahami pengguna baru, bukan nama store teknis.
+- Angka dihitung dari data di dalam file yang sudah lolos validasi. Kalau sebuah store tidak ada atau kosong di file, tampilkan 0.
+- Ringkasan hanya menampilkan. Tidak mengubah data apa pun, dan alur validasi serta proses import yang sudah ada tidak berubah.
+- Pada notifikasi (toast) sukses export, tampilkan ukuran file backup (pakai KB, atau MB kalau lebih dari 1024 KB).
+- Tanpa library baru. Tanpa perubahan skema IndexedDB.
 
 ## Fitur 13: Kas toko
 - Satu saldo gabungan untuk seluruh toko. Kas berfungsi sebagai penampung: uang pelanggan masuk ke kas, uang keluar ke worker dan biaya lain dari kas.

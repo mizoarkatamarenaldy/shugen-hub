@@ -890,6 +890,159 @@ dialog.dialog-settings {
   }
 }
 
+/* Fitur 12b: Dialog Konfirmasi & Pratinjau Import Backup */
+
+dialog.dialog-import-confirm {
+  height: auto;
+  max-height: 90vh;
+  margin: auto 0 0 0;
+  border-radius: 12px 12px 0 0;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  background: var(--surface);
+  color: var(--text);
+  overflow: hidden;
+}
+
+dialog.dialog-import-confirm[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+dialog.dialog-import-confirm:not([open]) {
+  display: none;
+}
+
+dialog.dialog-import-confirm .dialog-header {
+  flex-shrink: 0;
+}
+
+dialog.dialog-import-confirm .dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 16px;
+}
+
+dialog.dialog-import-confirm .dialog-footer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+}
+
+dialog.dialog-import-confirm .dialog-footer .btn {
+  flex: 1;
+}
+
+.backup-preview-meta {
+  padding: 10px 12px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.backup-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.backup-meta-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.backup-meta-val {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.backup-preview-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.backup-preview-heading {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.backup-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.backup-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="light"] .backup-summary-row {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.backup-summary-row:last-child {
+  border-bottom: none;
+}
+
+.backup-summary-label {
+  color: var(--text-secondary);
+}
+
+.backup-summary-val {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  word-break: break-word;
+}
+
+.import-warning-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  background: var(--status-cancelled-bg);
+  border: 1px solid var(--status-cancelled);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.import-warning-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--status-cancelled);
+  margin-top: 1px;
+}
+
+.import-warning-text strong {
+  color: var(--status-cancelled);
+}
+
 .progress-section {
   margin-bottom: 16px;
   padding: 12px;
@@ -1478,7 +1631,7 @@ dialog.dialog-settings {
     margin: 0 auto;
   }
 
-  dialog:not(.dialog-status):not(.dialog-settings) {
+  dialog:not(.dialog-status):not(.dialog-settings):not(.dialog-import-confirm) {
     width: 90%;
     max-width: 640px;
     height: auto;
@@ -1498,6 +1651,16 @@ dialog.dialog-settings {
     max-width: 480px;
     margin: auto;
     border-radius: 12px;
+  }
+
+  dialog.dialog-import-confirm {
+    width: 90%;
+    max-width: 480px;
+    height: auto;
+    max-height: 85vh;
+    margin: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
   }
 }
 
@@ -2284,7 +2447,8 @@ dialog.dialog-invoice {
   #income-dialog,
   #expense-dialog,
   #customer-dialog,
-  #customer-detail-dialog {
+  #customer-detail-dialog,
+  #import-confirm-dialog {
     display: none !important;
   }
 

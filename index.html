@@ -859,6 +859,95 @@
     </div>
   </dialog>
 
+  <!-- Dialog Konfirmasi & Pratinjau Import Backup -->
+  <dialog id="import-confirm-dialog" class="dialog-import-confirm" aria-labelledby="import-confirm-title">
+    <div class="dialog-header">
+      <div class="dialog-header-titles">
+        <h2 id="import-confirm-title" class="dialog-title">Pratinjau Isi Backup</h2>
+        <span class="dialog-order-id">Periksa isi data sebelum import</span>
+      </div>
+      <button type="button" class="btn-icon" id="btn-close-import-preview" aria-label="Tutup pratinjau import">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="dialog-body">
+      <div class="backup-preview-meta">
+        <div class="backup-meta-row">
+          <span class="backup-meta-label">Waktu Export</span>
+          <strong id="import-preview-date" class="backup-meta-val">-</strong>
+        </div>
+      </div>
+
+      <div class="backup-preview-card" aria-label="Ringkasan jumlah data backup">
+        <div class="backup-preview-heading">Ringkasan Data</div>
+        <div class="backup-summary-list">
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Pesanan</span>
+            <strong id="import-preview-orders" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Pelanggan</span>
+            <strong id="import-preview-customers" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Pemasukan</span>
+            <strong id="import-preview-incomes" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Pengeluaran</span>
+            <strong id="import-preview-expenses" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Invoice</span>
+            <strong id="import-preview-invoices" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Game</span>
+            <strong id="import-preview-games" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Progress Joki</span>
+            <strong id="import-preview-progress" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Kategori Pengeluaran</span>
+            <strong id="import-preview-categories" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Metode Pembayaran</span>
+            <strong id="import-preview-payments" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Saldo Awal Kas</span>
+            <strong id="import-preview-cash-balance" class="backup-summary-val">Rp 0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Nama Toko</span>
+            <strong id="import-preview-shop-name" class="backup-summary-val">Shugen Store</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="import-warning-box" role="alert">
+        <svg class="import-warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <div class="import-warning-text">
+          Semua data saat ini akan <strong>DIGANTI</strong> dengan data file backup di atas. Tindakan ini tidak dapat dibatalkan.
+        </div>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" id="btn-cancel-import-preview" class="btn btn-secondary">Batal</button>
+      <button type="button" id="btn-confirm-import-preview" class="btn btn-danger">Ganti Semua Data</button>
+    </div>
+  </dialog>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="js/db.js"></script>
