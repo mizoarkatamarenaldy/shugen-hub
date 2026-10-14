@@ -1273,6 +1273,11 @@
         <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Muat data contoh pesanan dan pemasukan untuk demonstrasi dan uji coba tampilan.</p>
         <button type="button" id="btn-load-demo" class="btn btn-secondary btn-demo">Muat Data Demo</button>
       </div>
+      <div class="settings-section">
+        <div class="settings-label">Hapus Semua Data</div>
+        <p class="settings-desc">Semua data toko di perangkat ini akan hilang dan tidak bisa dikembalikan kecuali dari file backup.</p>
+        <button type="button" id="btn-open-clear-data" class="btn btn-danger btn-demo">Hapus Semua Data</button>
+      </div>
     </div>
   </dialog>
 
@@ -1377,6 +1382,103 @@
     <div class="dialog-footer">
       <button type="button" id="btn-cancel-import-preview" class="btn btn-secondary">Batal</button>
       <button type="button" id="btn-confirm-import-preview" class="btn btn-danger">Ganti Semua Data</button>
+    </div>
+  </dialog>
+
+  <!-- Dialog Konfirmasi Hapus Semua Data -->
+  <dialog id="clear-confirm-dialog" class="dialog-import-confirm" aria-labelledby="clear-confirm-title">
+    <div class="dialog-header">
+      <div class="dialog-header-titles">
+        <h2 id="clear-confirm-title" class="dialog-title">Hapus Semua Data</h2>
+        <span class="dialog-order-id">Konfirmasi pengosongan data</span>
+      </div>
+      <button type="button" class="btn-icon" id="btn-close-clear-confirm" aria-label="Tutup dialog konfirmasi">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="dialog-body">
+      <div class="backup-preview-card" aria-label="Ringkasan jumlah data saat ini yang akan dihapus">
+        <div class="backup-preview-heading">Data Yang Akan Dihapus</div>
+        <div class="backup-summary-list">
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Pesanan</span>
+            <strong id="clear-preview-orders" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Pelanggan</span>
+            <strong id="clear-preview-customers" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Partner</span>
+            <strong id="clear-preview-partners" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Pemasukan</span>
+            <strong id="clear-preview-incomes" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Pengeluaran</span>
+            <strong id="clear-preview-expenses" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Invoice</span>
+            <strong id="clear-preview-invoices" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Game</span>
+            <strong id="clear-preview-games" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Katalog Harga</span>
+            <strong id="clear-preview-catalog" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Progress Joki</span>
+            <strong id="clear-preview-progress" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Kategori Pengeluaran</span>
+            <strong id="clear-preview-categories" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Metode Pembayaran</span>
+            <strong id="clear-preview-payments" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Template Pesan</span>
+            <strong id="clear-preview-templates" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Saldo Awal Kas</span>
+            <strong id="clear-preview-cash-balance" class="backup-summary-val">Rp 0</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="import-warning-box" role="alert">
+        <svg class="import-warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <div class="import-warning-text">
+          Backup data saat ini akan diunduh otomatis terlebih dahulu. Semua data toko di perangkat ini akan <strong>DIHAPUS</strong> dan aplikasi kembali ke keadaan awal. Pilihan tema tetap tersimpan.
+        </div>
+      </div>
+
+      <div class="clear-confirm-input-wrap">
+        <label for="clear-data-confirm-input" class="form-label">
+          Ketik <strong>HAPUS</strong> untuk mengaktifkan tombol konfirmasi:
+        </label>
+        <input type="text" id="clear-data-confirm-input" class="form-input" placeholder="Ketik HAPUS" autocomplete="off" spellcheck="false" aria-label="Ketik HAPUS untuk konfirmasi">
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" id="btn-cancel-clear-confirm" class="btn btn-secondary">Batal</button>
+      <button type="button" id="btn-confirm-clear-data" class="btn btn-danger" disabled>Hapus Semua Data</button>
     </div>
   </dialog>
 

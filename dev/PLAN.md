@@ -28,6 +28,7 @@ Spek lengkap fitur yang sudah selesai ada di dev/PLANSPEC.md.
 - [x] 9. Daftar penjoki/partner dan bagi hasil per pesanan
 - [x] 11. Katalog harga (hanya template, harga bisa diubah per pesanan)
 - [ ] 15. Pengingat backup berkala (tunda, putuskan setelah rencana sinkron Google Drive jelas)
+- [x] 16. Hapus semua data
 
 ## Aturan umum
 - Metode pembayaran bisa diatur sendiri (tambah, hapus, ganti nama), bukan daftar tetap

@@ -2010,6 +2010,8 @@ const App = (function () {
     });
     $('#settings-dialog').addEventListener('close', () => {
       $('#btn-load-demo').disabled = false;
+      const clearBtn = $('#btn-open-clear-data');
+      if (clearBtn) clearBtn.disabled = false;
       $('#btn-add-payment').disabled = false;
       $('#btn-add-game').disabled = false;
       $('#btn-add-category').disabled = false;
@@ -2025,6 +2027,27 @@ const App = (function () {
     $('#btn-cancel-import-preview').addEventListener('click', closeImportPreview);
     $('#btn-confirm-import-preview').addEventListener('click', confirmImportBackup);
     $('#import-confirm-dialog').addEventListener('close', closeImportPreview);
+
+    // Hapus Semua Data (Fitur 16)
+    $('#btn-open-clear-data').addEventListener('click', openClearConfirmDialog);
+    $('#btn-close-clear-confirm').addEventListener('click', closeClearConfirmDialog);
+    $('#btn-cancel-clear-confirm').addEventListener('click', closeClearConfirmDialog);
+    $('#btn-confirm-clear-data').addEventListener('click', confirmClearAllData);
+    $('#clear-confirm-dialog').addEventListener('close', closeClearConfirmDialog);
+    $('#clear-data-confirm-input').addEventListener('input', (e) => {
+      const isHapus = e.target.value.trim() === 'HAPUS';
+      const confirmBtn = $('#btn-confirm-clear-data');
+      if (confirmBtn) confirmBtn.disabled = !isHapus;
+    });
+    $('#clear-data-confirm-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const confirmBtn = $('#btn-confirm-clear-data');
+        if (confirmBtn && !confirmBtn.disabled) {
+          confirmClearAllData();
+        }
+      }
+    });
 
     $('#btn-add-payment').addEventListener('click', addPaymentMethod);
     $('#payment-add-input').addEventListener('keydown', (e) => {
@@ -3573,6 +3596,8 @@ const App = (function () {
 
   function openSettings() {
     $('#btn-load-demo').disabled = false;
+    const clearBtn = $('#btn-open-clear-data');
+    if (clearBtn) clearBtn.disabled = false;
     $('#btn-add-payment').disabled = false;
     $('#btn-add-game').disabled = false;
     $('#btn-add-category').disabled = false;
@@ -5543,6 +5568,18 @@ const App = (function () {
     return base + ' ' + diffStr;
   }
 
+  function formatCashComparison(currentBalance, targetBalance) {
+    const cur = Number(currentBalance) || 0;
+    const target = Number(targetBalance) || 0;
+    const base = 'Rp ' + formatPrice(cur) + ' -> Rp ' + formatPrice(target);
+    if (cur === target) {
+      return base;
+    }
+    const diff = target - cur;
+    const diffStr = diff > 0 ? '(+' + formatPrice(diff) + ')' : '(-' + formatPrice(Math.abs(diff)) + ')';
+    return base + ' ' + diffStr;
+  }
+
   async function openImportPreview(backupData) {
     pendingImportData = backupData;
     const stores = (backupData && backupData.stores) || {};
@@ -5766,6 +5803,182 @@ const App = (function () {
       toast('Gagal memuat data demo');
     } finally {
       demoBtn.disabled = false;
+    }
+  }
+
+  // Clear all data actions (Fitur 16)
+
+  async function openClearConfirmDialog() {
+    const openBtn = $('#btn-open-clear-data');
+    if (openBtn && openBtn.disabled) return;
+
+    const [
+      curOrders,
+      curCustomers,
+      curPartners,
+      curIncomes,
+      curExpenses,
+      curInvoices,
+      curGames,
+      curProgress,
+      curCategories,
+      curPayments,
+      curCatalog,
+      curCash,
+      allSettings
+    ] = await Promise.all([
+      ShugenDB.orders.getAll().catch(() => []),
+      ShugenDB.customers.getAll().catch(() => []),
+      ShugenDB.partners.getAll().catch(() => []),
+      ShugenDB.incomes.getAll().catch(() => []),
+      ShugenDB.expenses.getAll().catch(() => []),
+      ShugenDB.invoices.getAll().catch(() => []),
+      ShugenDB.games.getAll().catch(() => []),
+      ShugenDB.progress.getAll().catch(() => []),
+      ShugenDB.categories.getAll().catch(() => []),
+      ShugenDB.payment.getAll().catch(() => []),
+      ShugenDB.catalog.getAll().catch(() => []),
+      ShugenDB.cash.get('initialBalance').catch(() => 0),
+      ShugenDB.settings.getAll().catch(() => [])
+    ]);
+
+    const curOrderCount = Array.isArray(curOrders) ? curOrders.length : 0;
+    const curCustCount = Array.isArray(curCustomers) ? curCustomers.length : 0;
+    const curPartnerCount = Array.isArray(curPartners) ? curPartners.length : 0;
+    const curIncCount = Array.isArray(curIncomes) ? curIncomes.length : 0;
+    const curExpCount = Array.isArray(curExpenses) ? curExpenses.length : 0;
+    const curInvCount = Array.isArray(curInvoices) ? curInvoices.length : 0;
+    const curGameCount = Array.isArray(curGames) ? curGames.length : 0;
+    const curCatalogCount = Array.isArray(curCatalog) ? curCatalog.length : 0;
+    const curProgCount = Array.isArray(curProgress) ? curProgress.length : 0;
+    const curCatCount = Array.isArray(curCategories) ? curCategories.length : 0;
+    const curPayCount = Array.isArray(curPayments) ? curPayments.length : 0;
+    const curTplCount = Array.isArray(allSettings)
+      ? allSettings.filter((s) => s && s.key && String(s.key).startsWith('wa_template_')).length
+      : 0;
+    const curCashBal = Number(curCash) || 0;
+
+    $('#clear-preview-orders').textContent = formatCountComparison(curOrderCount, 0);
+    $('#clear-preview-customers').textContent = formatCountComparison(curCustCount, 0);
+    $('#clear-preview-partners').textContent = formatCountComparison(curPartnerCount, 0);
+    $('#clear-preview-incomes').textContent = formatCountComparison(curIncCount, 0);
+    $('#clear-preview-expenses').textContent = formatCountComparison(curExpCount, 0);
+    $('#clear-preview-invoices').textContent = formatCountComparison(curInvCount, 0);
+    $('#clear-preview-games').textContent = formatCountComparison(curGameCount, 0);
+    $('#clear-preview-catalog').textContent = formatCountComparison(curCatalogCount, 0);
+    $('#clear-preview-progress').textContent = formatCountComparison(curProgCount, 0);
+    $('#clear-preview-categories').textContent = formatCountComparison(curCatCount, 0);
+    $('#clear-preview-payments').textContent = formatCountComparison(curPayCount, 0);
+    $('#clear-preview-templates').textContent = formatCountComparison(curTplCount, 0);
+    $('#clear-preview-cash-balance').textContent = formatCashComparison(curCashBal, 0);
+
+    const confirmInput = $('#clear-data-confirm-input');
+    const confirmBtn = $('#btn-confirm-clear-data');
+    const cancelBtn = $('#btn-cancel-clear-confirm');
+    const closeBtn = $('#btn-close-clear-confirm');
+
+    if (confirmInput) {
+      confirmInput.value = '';
+      confirmInput.disabled = false;
+    }
+    if (confirmBtn) confirmBtn.disabled = true;
+    if (cancelBtn) cancelBtn.disabled = false;
+    if (closeBtn) closeBtn.disabled = false;
+
+    $('#clear-confirm-dialog').showModal();
+    setTimeout(() => {
+      if (confirmInput) confirmInput.focus();
+    }, 50);
+  }
+
+  function closeClearConfirmDialog() {
+    const dialog = $('#clear-confirm-dialog');
+    const confirmInput = $('#clear-data-confirm-input');
+    const confirmBtn = $('#btn-confirm-clear-data');
+    const cancelBtn = $('#btn-cancel-clear-confirm');
+    const closeBtn = $('#btn-close-clear-confirm');
+
+    if (confirmInput) {
+      confirmInput.value = '';
+      confirmInput.disabled = false;
+    }
+    if (confirmBtn) confirmBtn.disabled = true;
+    if (cancelBtn) cancelBtn.disabled = false;
+    if (closeBtn) closeBtn.disabled = false;
+
+    if (dialog && dialog.open) {
+      dialog.close();
+    }
+  }
+
+  async function confirmClearAllData() {
+    const confirmInput = $('#clear-data-confirm-input');
+    if (!confirmInput || confirmInput.value.trim() !== 'HAPUS') return;
+
+    const confirmBtn = $('#btn-confirm-clear-data');
+    const cancelBtn = $('#btn-cancel-clear-confirm');
+    const closeBtn = $('#btn-close-clear-confirm');
+
+    if (confirmBtn) confirmBtn.disabled = true;
+    if (cancelBtn) cancelBtn.disabled = true;
+    if (closeBtn) closeBtn.disabled = true;
+    if (confirmInput) confirmInput.disabled = true;
+
+    // 1. Unduh backup otomatis terlebih dahulu (Fitur 12c)
+    try {
+      await exportBackup({
+        prefix: 'shugen-backup-sebelum-hapus-',
+        isAutoBackup: true,
+        throwOnError: true,
+        showToast: false
+      });
+    } catch (backupErr) {
+      console.error(backupErr);
+      toast('Gagal mengunduh backup otomatis: ' + (backupErr.message || 'pengunduhan gagal') + '. Penghapusan dibatalkan.');
+      if (confirmBtn) confirmBtn.disabled = false;
+      if (cancelBtn) cancelBtn.disabled = false;
+      if (closeBtn) closeBtn.disabled = false;
+      if (confirmInput) confirmInput.disabled = false;
+      return;
+    }
+
+    // 2. Kosongkan semua data toko di IndexedDB
+    try {
+      await ShugenDB.clearAllData();
+      try {
+        localStorage.removeItem(NOTIF_STORAGE_REMINDED);
+      } catch (e) {}
+
+      // Reset filter dan state navigasi
+      activeView = 'orders';
+      activeFilter = 'semua';
+      customerFilter = 'semua';
+      partnerFilter = 'semua';
+      searchQuery = '';
+      customerSearchQuery = '';
+      partnerSearchQuery = '';
+      invoiceSearchQuery = '';
+      selectedCustomerId = null;
+      selectedPartnerId = null;
+      editingOrderId = null;
+      deadlineFilterActive = false;
+
+      await reloadAllAppData();
+      closeClearConfirmDialog();
+
+      const settingsDialog = $('#settings-dialog');
+      if (settingsDialog && settingsDialog.open) {
+        settingsDialog.close();
+      }
+
+      toast('Semua data sudah dihapus');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal menghapus data: ' + (err.message || 'terjadi kesalahan'));
+      if (confirmBtn) confirmBtn.disabled = false;
+      if (cancelBtn) cancelBtn.disabled = false;
+      if (closeBtn) closeBtn.disabled = false;
+      if (confirmInput) confirmInput.disabled = false;
     }
   }
 

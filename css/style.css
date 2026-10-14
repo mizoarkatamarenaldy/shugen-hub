@@ -1076,6 +1076,23 @@ dialog.dialog-import-confirm .dialog-footer .btn {
   color: var(--status-cancelled);
 }
 
+.clear-confirm-input-wrap {
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+.clear-confirm-input-wrap .form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.clear-confirm-input-wrap .form-label strong {
+  color: var(--status-cancelled);
+}
+
 .progress-section {
   margin-bottom: 16px;
   padding: 12px;

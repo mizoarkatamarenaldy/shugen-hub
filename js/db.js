@@ -735,6 +735,11 @@ const ShugenDB = (function () {
     return req2p(tx('settings', 'readwrite').put({ key: key, value: value }));
   }
 
+  async function getAllSettings() {
+    await open();
+    return req2p(tx('settings', 'readonly').getAll());
+  }
+
   // Cash settings
 
   async function getCashSetting(key) {
@@ -746,6 +751,11 @@ const ShugenDB = (function () {
   async function setCashSetting(key, value) {
     await open();
     return req2p(tx('cashSettings', 'readwrite').put({ key: key, value: value }));
+  }
+
+  async function clearCashSettings() {
+    await open();
+    return req2p(tx('cashSettings', 'readwrite').clear());
   }
 
   // Invoices
@@ -1635,6 +1645,59 @@ const ShugenDB = (function () {
     });
   }
 
+  async function clearAllData() {
+    await open();
+    let currentTheme = await getSetting('theme');
+    if (!currentTheme && typeof document !== 'undefined' && document.documentElement && document.documentElement.getAttribute('data-theme') === 'light') {
+      currentTheme = 'light';
+    }
+    const storeNames = Array.from(_db.objectStoreNames);
+
+    return new Promise((resolve, reject) => {
+      let finished = false;
+      const transaction = _db.transaction(storeNames, 'readwrite');
+
+      transaction.oncomplete = () => {
+        finished = true;
+        resolve(true);
+      };
+
+      transaction.onerror = () => {
+        if (!finished) {
+          finished = true;
+          reject(transaction.error || new Error('Gagal mengosongkan database. Data lama tetap utuh.'));
+        }
+      };
+
+      transaction.onabort = () => {
+        if (!finished) {
+          finished = true;
+          reject(transaction.error || new Error('Transaksi pengosongan data dibatalkan. Data lama tetap utuh.'));
+        }
+      };
+
+      try {
+        for (const name of storeNames) {
+          const store = transaction.objectStore(name);
+          store.clear();
+        }
+
+        if (currentTheme !== null && currentTheme !== undefined) {
+          const settingsStore = transaction.objectStore('settings');
+          settingsStore.put({ key: 'theme', value: currentTheme });
+        }
+      } catch (err) {
+        try {
+          transaction.abort();
+        } catch (abortErr) {}
+        if (!finished) {
+          finished = true;
+          reject(err);
+        }
+      }
+    });
+  }
+
   return {
     open: open,
     orders: {
@@ -1738,7 +1801,8 @@ const ShugenDB = (function () {
     },
     settings: {
       get: getSetting,
-      set: setSetting
+      set: setSetting,
+      getAll: getAllSettings
     },
     templates: {
       get: (key) => getSetting('wa_template_' + key),
@@ -1746,13 +1810,15 @@ const ShugenDB = (function () {
     },
     cash: {
       get: getCashSetting,
-      set: setCashSetting
+      set: setCashSetting,
+      clear: clearCashSettings
     },
     backup: {
       exportData: exportAllData,
       importData: importAllData,
       validate: validateBackupData
     },
+    clearAllData: clearAllData,
     version: DB_VERSION
   };
 })();

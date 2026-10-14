@@ -19,6 +19,20 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #026 [2026-10-14] Implementasi Fitur 16 (Hapus semua data)
+- Fitur: Hapus semua data
+- Ringkasan: Menambahkan bagian 'Hapus Semua Data' di Pengaturan untuk mengosongkan seluruh data operasional toko di IndexedDB perangkat dalam sekali aksi secara aman. Dialog konfirmasi menyajikan perbandingan jumlah data saat ini per jenis ke 0 (pesanan, pelanggan, partner, pemasukan, pengeluaran, invoice, game, katalog, progress, kategori, metode pembayaran, template pesan, dan kas toko), mewajibkan pemakai mengetik kata 'HAPUS' untuk mengaktifkan tombol konfirmasi, serta secara otomatis mengunduh file backup (fitur 12c) sebelum penghapusan dieksekusi. Jika pengunduhan backup otomatis gagal, tindakan penghapusan langsung dibatalkan; setelah penghapusan berhasil, preferensi tema tampilan (gelap/terang) tetap dipertahankan, aplikasi kembali ke keadaan kosong awal, dan ditampilkan pesan notifikasi bahwa semua data sudah dihapus.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - dev/PLANSPEC.md
+  - index.html
+  - js/app.js
+  - js/db.js
+  - sw.js
+- Catatan: Pilihan tema tampilan tetap dipertahankan di object store settings; backup otomatis diunduh dengan awalan 'shugen-backup-sebelum-hapus-'; versi cache service worker dinaikkan ke shugen-v23.
+
 ### #025 [2026-10-14] Implementasi Fitur 11 (Katalog harga)
 - Fitur: Katalog harga
 - Ringkasan: Menambahkan fitur pengelolaan katalog harga layanan di Pengaturan yang dikelompokkan per game (nama layanan, jenis joki atau topup, game dari kategori game, dan harga saran dalam Rupiah) dengan dukungan tambah, ubah, dan hapus item. Pada form pesanan, ditambahkan opsi dropdown "Ambil dari katalog" sesuai game yang dipilih untuk mengisi otomatis nama layanan, harga, dan jenis pesanan tanpa mengunci nilai tersebut serta pesanan tetap dapat dibuat manual tanpa katalog. Data katalog disimpan di IndexedDB versi 10 dengan ID unik CTL-YYMMDD-XXXX, diikutsertakan dalam backup dan restore (lengkap dengan pratinjau dan perbandingan jumlah data pada dialog import), dilengkapi data dummy 11 item katalog untuk demo portofolio, dan cache service worker dinaikkan ke shugen-v22.

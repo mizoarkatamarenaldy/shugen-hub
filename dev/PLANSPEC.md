@@ -286,3 +286,26 @@ Data:
 - Katalog disimpan di IndexedDB, tiap item punya ID unik.
 - Katalog ikut di export dan import backup (fitur 12), termasuk pratinjau dan perbandingan jumlah data di dialog import.
 - Tambahkan beberapa item katalog contoh ke data dummy untuk demo portofolio.
+
+## Fitur 16: Hapus semua data
+
+Tujuan: mengosongkan seluruh data toko di perangkat ini dalam sekali aksi, misalnya untuk mulai dari awal atau setelah selesai demo.
+
+Tempat dan tampilan:
+- Di Pengaturan, di bagian sendiri bernama "Hapus Semua Data", paling bawah.
+- Berisi penjelasan singkat bahwa semua data toko di perangkat ini akan hilang dan tidak bisa dikembalikan kecuali dari file backup, serta tombol "Hapus Semua Data".
+
+Yang dihapus:
+- Semua data toko di IndexedDB: pesanan, progress joki, pemasukan, pengeluaran, invoice, pelanggan, kas toko, penjoki/partner, katalog harga, kategori game, metode pembayaran, dan template pesan.
+- Pilihan tampilan (tema gelap/terang) tidak ikut dihapus.
+- File backup yang sudah pernah diunduh dan file aplikasi (kode, service worker) tidak disentuh.
+
+Alur aman:
+- Tombol membuka dialog konfirmasi yang menampilkan jumlah data saat ini per jenis, dengan gaya yang sama seperti perbandingan jumlah data di dialog import.
+- Sebelum menghapus, aplikasi otomatis mengunduh backup data saat ini, memakai mekanisme backup otomatis yang sudah ada dari fitur 12c (kalau perlu, buka hanya bagian 12c di dev/PLANSPEC.md, sesuai pengecualian aturan 11).
+- Kalau backup otomatis gagal, penghapusan dibatalkan dan pemakai diberi tahu.
+- Tombol konfirmasi di dialog baru aktif setelah pemakai mengetik kata "HAPUS" di kolom konfirmasi.
+- Setelah selesai, aplikasi kembali ke keadaan kosong seperti pertama kali dipakai, dan menampilkan pesan bahwa semua data sudah dihapus.
+
+Data:
+- Penghapusan hanya terjadi di perangkat ini. Sinkron Google Drive belum ada, jadi tidak perlu ditangani di fitur ini.
