@@ -579,15 +579,16 @@
             </div>
           </div>
 
-          <div id="order-partner-payout-box" class="order-paid-box" hidden>
+          <div id="order-partner-payout-box" class="order-paid-box order-partner-payout-box" hidden>
             <div class="order-paid-meta">
               <span class="order-paid-label">Status Bayar ke Partner</span>
               <span id="order-partner-paid-status" class="order-paid-count">Belum dibayar</span>
             </div>
             <div class="order-invoice-actions" style="margin-top:8px;">
               <button type="button" id="btn-toggle-partner-paid" class="btn btn-secondary btn-small">Tandai Sudah Dibayar</button>
+              <button type="button" id="btn-send-payout-wa" class="btn btn-secondary btn-small">Kirim Konfirmasi Payout</button>
             </div>
-            <p id="order-partner-paid-hint" class="form-hint" style="margin-top:6px;" hidden></p>
+            <p id="order-partner-paid-hint" class="form-hint" style="margin-top:6px; width:100%;" hidden></p>
           </div>
         </div>
 
@@ -1245,10 +1246,12 @@
           <div class="wa-placeholder-title">Daftar Placeholder Tersedia:</div>
           <ul class="wa-placeholder-list">
             <li><code>{nama_pelanggan}</code> : Nama pelanggan pesanan</li>
-            <li><code>{id_pesanan}</code> : ID pesanan (contoh: SGN-261011-K7M4)</li>
+            <li><code>{id_pesanan}</code> atau <code>[ID Pesanan]</code> : ID pesanan (contoh: SGN-261011-K7M4)</li>
             <li><code>{game}</code> : Nama game yang dipesan</li>
             <li><code>{total}</code> : Total bayar pesanan (contoh: Rp 150.000)</li>
             <li><code>{progress}</code> : Persentase progress joki (contoh: 50%)</li>
+            <li><code>[Nama Partner]</code> : Nama partner / penjoki</li>
+            <li><code>[Nominal]</code> : Jumlah bagi hasil partner (contoh: 50.000)</li>
           </ul>
           <p class="wa-placeholder-hint">Jika sebuah data kosong, placeholder akan diganti dengan teks kosong.</p>
         </div>
@@ -1286,6 +1289,18 @@
           <div class="wa-template-card-actions">
             <button type="button" id="btn-reset-template-selesai" class="btn btn-secondary btn-small">Kembalikan ke bawaan</button>
             <button type="button" id="btn-save-template-selesai" class="btn btn-secondary btn-small">Simpan</button>
+          </div>
+        </div>
+
+        <div class="wa-template-card">
+          <div class="wa-template-card-header">
+            <span class="wa-template-card-title">4. Template Konfirmasi Payout</span>
+            <span class="wa-template-card-hint">Untuk konfirmasi transfer bagi hasil ke partner</span>
+          </div>
+          <textarea id="setting-template-payout" class="form-textarea wa-template-textarea" rows="4" placeholder="Teks template konfirmasi payout..."></textarea>
+          <div class="wa-template-card-actions">
+            <button type="button" id="btn-reset-template-payout" class="btn btn-secondary btn-small">Kembalikan ke bawaan</button>
+            <button type="button" id="btn-save-template-payout" class="btn btn-secondary btn-small">Simpan</button>
           </div>
         </div>
       </div>
@@ -1572,11 +1587,15 @@
           <span class="wa-tab-name">Selesai</span>
           <span class="wa-tab-suggested" id="wa-suggested-selesai" hidden>(Disarankan)</span>
         </button>
+        <button type="button" class="wa-tab" data-template="payout" id="wa-tab-payout" role="tab" aria-selected="false" hidden>
+          <span class="wa-tab-name">Konfirmasi Payout</span>
+          <span class="wa-tab-suggested" id="wa-suggested-payout" hidden>(Disarankan)</span>
+        </button>
       </div>
 
       <div class="wa-recipient-box">
         <div class="wa-recipient-info">
-          <span class="wa-recipient-label">Pelanggan</span>
+          <span class="wa-recipient-label" id="wa-recipient-role-label">Pelanggan</span>
           <strong id="wa-recipient-name" class="wa-recipient-name">-</strong>
         </div>
         <div class="wa-recipient-phone-wrap">

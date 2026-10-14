@@ -30,6 +30,7 @@ Spek lengkap fitur yang sudah selesai ada di dev/PLANSPEC.md.
 - [ ] 15. Pengingat backup berkala (tunda, putuskan setelah rencana sinkron Google Drive jelas)
 - [x] 16. Hapus semua data
 - [x] 17. Rekening / e-wallet partner + tombol salin
+- [x] 18. Template WA konfirmasi payout ke partner
 
 ## Aturan umum
 - Metode pembayaran bisa diatur sendiri (tambah, hapus, ganti nama), bukan daftar tetap

@@ -19,6 +19,19 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #028 [2026-10-14] Implementasi Fitur 18 (Template WA Konfirmasi Payout)
+- Fitur: Template WA konfirmasi payout ke partner
+- Ringkasan: Menambahkan template WhatsApp baru "Konfirmasi payout" ke dalam pengaturan template WA yang sudah ada dengan teks bawaan untuk mengonfirmasi transfer bagi hasil partner. Nilai [Nama Partner], [ID Pesanan], dan [Nominal] (diformat Rupiah) otomatis terisi dari data pesanan dan bagian partner serta template dapat diedit atau dikembalikan ke teks bawaan. Tombol "Kirim Konfirmasi Payout" disediakan pada area status bayar ke partner di detail pesanan, membuka dialog pesan WhatsApp dengan tab payout aktif, menampilkan nomor partner atau tombol salin pesan jika nomor tidak tersedia, dan cache service worker dinaikkan ke shugen-v25.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - dev/PLANSPEC.md
+  - index.html
+  - js/app.js
+  - sw.js
+- Catatan: Mendukung placeholder format kurung siku maupun kurung kurawal; tab payout di dialog WA otomatis disembunyikan untuk pesanan tanpa partner; tidak ada perubahan skema data partner atau struktur bagi hasil; cache service worker dinaikkan ke shugen-v25.
+
 ### #027 [2026-10-14] Implementasi Fitur 17 (Rekening / E-Wallet Partner)
 - Fitur: Rekening / e-wallet partner + tombol salin
 - Ringkasan: Menambahkan tiga field opsional di data partner (nama bank / e-wallet, nomor rekening / e-wallet, dan atas nama) yang disimpan sebagai string di IndexedDB agar angka 0 di depan tetap utuh dan partner lama tetap berfungsi normal. Field ini tersedia di form tambah dan edit partner, ditampilkan di detail partner serta di bagian bagi hasil pesanan (order share summary) lengkap dengan tombol 'Salin Nomor Rekening' untuk menyalin nomor saja ke clipboard dalam satu ketukan dengan notifikasi singkat dan nomor tetap dapat diseleksi manual jika clipboard tidak tersedia. Seluruh data rekening ikut dalam alur backup/restore dan terhapus pada aksi hapus semua data, data dummy portofolio diperbarui menggunakan nomor rekening dan identitas fiktif tanpa mengekspos data riil ke repo, dan cache service worker dinaikkan ke shugen-v24.

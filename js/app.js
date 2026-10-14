@@ -50,13 +50,15 @@ const App = (function () {
   const DEFAULT_WA_TEMPLATES = {
     konfirmasi: 'Halo {nama_pelanggan}, pesanan game {game} ({id_pesanan}) sudah kami catat. Total tagihan: {total}. Silakan lakukan pembayaran agar pesanan dapat segera kami proses. Terima kasih!',
     progress: 'Halo {nama_pelanggan}, pesanan {game} ({id_pesanan}) sedang kami kerjakan. Progress saat ini: {progress}. Kami akan kabari lagi saat ada perkembangan selanjutnya.',
-    selesai: 'Halo {nama_pelanggan}, pesanan {game} ({id_pesanan}) sudah selesai dikerjakan. Terima kasih banyak telah memesan di Shugen Store!'
+    selesai: 'Halo {nama_pelanggan}, pesanan {game} ({id_pesanan}) sudah selesai dikerjakan. Terima kasih banyak telah memesan di Shugen Store!',
+    payout: 'Halo [Nama Partner], bagi hasil pesanan [ID Pesanan] sebesar Rp [Nominal] sudah ditransfer. Terima kasih!'
   };
 
   let waTemplates = {
     konfirmasi: DEFAULT_WA_TEMPLATES.konfirmasi,
     progress: DEFAULT_WA_TEMPLATES.progress,
-    selesai: DEFAULT_WA_TEMPLATES.selesai
+    selesai: DEFAULT_WA_TEMPLATES.selesai,
+    payout: DEFAULT_WA_TEMPLATES.payout
   };
   let currentWaOrderId = null;
   let currentWaOrderSnapshot = null;
@@ -2146,12 +2148,24 @@ const App = (function () {
     $('#btn-reset-template-progress').addEventListener('click', () => resetWaTemplate('progress'));
     $('#btn-save-template-selesai').addEventListener('click', () => saveWaTemplate('selesai'));
     $('#btn-reset-template-selesai').addEventListener('click', () => resetWaTemplate('selesai'));
+    $('#btn-save-template-payout').addEventListener('click', () => saveWaTemplate('payout'));
+    $('#btn-reset-template-payout').addEventListener('click', () => resetWaTemplate('payout'));
 
     // WhatsApp dialog events
     $('#btn-close-wa-dialog').addEventListener('click', () => {
       $('#wa-dialog').close();
     });
     $('#btn-copy-wa-message').addEventListener('click', copyWaMessage);
+
+    const btnSendPayoutWa = $('#btn-send-payout-wa');
+    if (btnSendPayoutWa) {
+      btnSendPayoutWa.addEventListener('click', () => {
+        if (editingId !== null) {
+          const order = orders.find((o) => o.id === editingId);
+          if (order) openWaDialog(order.orderId, 'payout');
+        }
+      });
+    }
 
     $$('.wa-template-tabs .wa-tab').forEach((tab) => {
       tab.addEventListener('click', () => {
@@ -2586,6 +2600,13 @@ const App = (function () {
         btn.disabled = false;
         hint.hidden = true;
       }
+    }
+
+    const sendPayoutWaBtn = $('#btn-send-payout-wa');
+    if (sendPayoutWaBtn) {
+      sendPayoutWaBtn.onclick = () => {
+        openWaDialog(order.orderId, 'payout');
+      };
     }
   }
 
@@ -4587,6 +4608,7 @@ const App = (function () {
       const tplKonfirmasi = await ShugenDB.templates.get('konfirmasi');
       const tplProgress = await ShugenDB.templates.get('progress');
       const tplSelesai = await ShugenDB.templates.get('selesai');
+      const tplPayout = await ShugenDB.templates.get('payout');
 
       waTemplates.konfirmasi = (tplKonfirmasi !== null && tplKonfirmasi !== undefined)
         ? tplKonfirmasi
@@ -4597,6 +4619,9 @@ const App = (function () {
       waTemplates.selesai = (tplSelesai !== null && tplSelesai !== undefined)
         ? tplSelesai
         : DEFAULT_WA_TEMPLATES.selesai;
+      waTemplates.payout = (tplPayout !== null && tplPayout !== undefined)
+        ? tplPayout
+        : DEFAULT_WA_TEMPLATES.payout;
     } catch (err) {
       console.error(err);
     }
@@ -4607,15 +4632,18 @@ const App = (function () {
     const inputKonfirmasi = $('#setting-template-konfirmasi');
     const inputProgress = $('#setting-template-progress');
     const inputSelesai = $('#setting-template-selesai');
+    const inputPayout = $('#setting-template-payout');
     if (inputKonfirmasi) inputKonfirmasi.value = waTemplates.konfirmasi;
     if (inputProgress) inputProgress.value = waTemplates.progress;
     if (inputSelesai) inputSelesai.value = waTemplates.selesai;
+    if (inputPayout) inputPayout.value = waTemplates.payout;
   }
 
   function getTemplateLabel(type) {
     if (type === 'konfirmasi') return 'konfirmasi';
     if (type === 'progress') return 'update progress';
     if (type === 'selesai') return 'selesai';
+    if (type === 'payout') return 'konfirmasi payout';
     return type;
   }
 
@@ -4700,16 +4728,34 @@ const App = (function () {
       }
     }
 
+    let partnerName = '';
+    if (order.partnerId) {
+      const part = getPartner(order.partnerId);
+      if (part && part.name) {
+        partnerName = String(part.name).trim();
+      } else if (order.partnerName) {
+        partnerName = String(order.partnerName).trim();
+      }
+    }
+
+    let nominalStr = '';
+    if (order.partnerId && order.partnerShareAmount !== undefined && order.partnerShareAmount !== null) {
+      const shareVal = Number(order.partnerShareAmount) || 0;
+      nominalStr = formatPrice(shareVal);
+    }
+
     return templateText
-      .replace(/\{nama_pelanggan\}/gi, customerName)
-      .replace(/\{id_pesanan\}/gi, orderId)
-      .replace(/\{game\}/gi, gameName)
-      .replace(/\{total\}/gi, totalStr)
-      .replace(/\{progress\}/gi, progressStr)
-      .replace(/\{layanan\}/gi, '');
+      .replace(/\{nama_pelanggan\}|\[nama pelanggan\]/gi, customerName)
+      .replace(/\{id_pesanan\}|\[id pesanan\]/gi, orderId)
+      .replace(/\{game\}|\[game\]/gi, gameName)
+      .replace(/\{total\}|\[total\]/gi, totalStr)
+      .replace(/\{progress\}|\[progress\]/gi, progressStr)
+      .replace(/\{nama_partner\}|\[nama partner\]/gi, partnerName)
+      .replace(/\{nominal\}|\[nominal\]/gi, nominalStr)
+      .replace(/\{layanan\}|\[layanan\]/gi, '');
   }
 
-  function openWaDialog(orderId) {
+  function openWaDialog(orderId, initialType) {
     const order = orders.find((o) => o.orderId === orderId);
     if (!order) {
       toast('Data pesanan tidak ditemukan');
@@ -4729,11 +4775,26 @@ const App = (function () {
       ? $('#field-game').value
       : order.gameId;
 
+    const currentPartnerId = ($('#field-partner') && $('#field-partner').value)
+      ? $('#field-partner').value
+      : (order.partnerId || '');
+    const currentShareType = $('#field-share-type') ? $('#field-share-type').value : (order.partnerShareType || 'percent');
+    const currentShareVal = $('#field-share-value') ? Number($('#field-share-value').value) : (order.partnerShareValue || 0);
+    let currentPartnerShareAmount = order.partnerShareAmount;
+    if (currentPartnerId) {
+      const calc = calculatePartnerShare(currentPrice, currentShareType, currentShareVal);
+      currentPartnerShareAmount = calc.partnerAmount;
+    }
+
     const orderData = Object.assign({}, order, {
       status: currentStatus,
       price: currentPrice,
       customerName: currentCustomer,
-      gameId: currentGameId
+      gameId: currentGameId,
+      partnerId: currentPartnerId,
+      partnerShareType: currentShareType,
+      partnerShareValue: currentShareVal,
+      partnerShareAmount: currentPartnerShareAmount
     });
 
     currentWaOrderId = order.orderId;
@@ -4747,29 +4808,26 @@ const App = (function () {
     } else {
       suggested = 'konfirmasi';
     }
-    currentWaTemplateType = suggested;
+
+    const hasPartner = Boolean(orderData.partnerId);
+    const payoutTab = $('#wa-tab-payout');
+    if (payoutTab) {
+      payoutTab.hidden = !hasPartner;
+    }
+
+    if (initialType) {
+      currentWaTemplateType = initialType;
+    } else {
+      currentWaTemplateType = suggested;
+    }
 
     $('#wa-dialog-order-id').textContent = orderData.orderId;
-
-    const customer = findCustomerForOrder(orderData);
-    const recipientName = orderData.customerName || (customer ? customer.name : '-');
-    const rawContact = customer && customer.contact ? customer.contact.trim() : '';
-    const phone = extractPhoneNumber(rawContact);
-
-    $('#wa-recipient-name').textContent = recipientName;
-    if (phone) {
-      $('#wa-recipient-phone').textContent = rawContact || ('+' + phone);
-      $('#wa-no-phone-warning').hidden = true;
-      $('#btn-open-wa-link').hidden = false;
-    } else {
-      $('#wa-recipient-phone').textContent = rawContact ? (rawContact + ' (bukan nomor HP)') : 'Tidak ada nomor HP';
-      $('#wa-no-phone-warning').hidden = false;
-      $('#btn-open-wa-link').hidden = true;
-    }
 
     $('#wa-suggested-konfirmasi').hidden = (suggested !== 'konfirmasi');
     $('#wa-suggested-progress').hidden = (suggested !== 'progress');
     $('#wa-suggested-selesai').hidden = (suggested !== 'selesai');
+    const payoutSuggested = $('#wa-suggested-payout');
+    if (payoutSuggested) payoutSuggested.hidden = true;
 
     selectWaTemplateTab(currentWaTemplateType);
     resetWaCopyButton();
@@ -4783,7 +4841,62 @@ const App = (function () {
       tab.classList.toggle('active', isSelected);
       tab.setAttribute('aria-selected', isSelected ? 'true' : 'false');
     });
+    updateWaRecipientUI();
     updateWaPreview();
+  }
+
+  function updateWaRecipientUI() {
+    if (!currentWaOrderId) return;
+    const order = currentWaOrderSnapshot || orders.find((o) => o.orderId === currentWaOrderId);
+    if (!order) return;
+
+    const roleLabel = $('#wa-recipient-role-label');
+    const nameEl = $('#wa-recipient-name');
+    const phoneEl = $('#wa-recipient-phone');
+    const warningEl = $('#wa-no-phone-warning');
+    const linkBtn = $('#btn-open-wa-link');
+
+    if (currentWaTemplateType === 'payout') {
+      if (roleLabel) roleLabel.textContent = 'Partner';
+      const part = getPartner(order.partnerId);
+      const recipientName = part ? part.name : (order.partnerName || '-');
+      const rawContact = part && part.phone ? String(part.phone).trim() : '';
+      const phone = extractPhoneNumber(rawContact);
+
+      if (nameEl) nameEl.textContent = recipientName;
+      if (phone) {
+        if (phoneEl) phoneEl.textContent = rawContact || ('+' + phone);
+        if (warningEl) warningEl.hidden = true;
+        if (linkBtn) linkBtn.hidden = false;
+      } else {
+        if (phoneEl) phoneEl.textContent = rawContact ? (rawContact + ' (bukan nomor HP)') : 'Tidak ada nomor HP';
+        if (warningEl) {
+          warningEl.hidden = false;
+          warningEl.textContent = 'Data partner tidak memiliki nomor HP. Tombol "Buka WhatsApp" tidak tersedia. Silakan gunakan tombol "Salin pesan".';
+        }
+        if (linkBtn) linkBtn.hidden = true;
+      }
+    } else {
+      if (roleLabel) roleLabel.textContent = 'Pelanggan';
+      const customer = findCustomerForOrder(order);
+      const recipientName = order.customerName || (customer ? customer.name : '-');
+      const rawContact = customer && customer.contact ? String(customer.contact).trim() : '';
+      const phone = extractPhoneNumber(rawContact);
+
+      if (nameEl) nameEl.textContent = recipientName;
+      if (phone) {
+        if (phoneEl) phoneEl.textContent = rawContact || ('+' + phone);
+        if (warningEl) warningEl.hidden = true;
+        if (linkBtn) linkBtn.hidden = false;
+      } else {
+        if (phoneEl) phoneEl.textContent = rawContact ? (rawContact + ' (bukan nomor HP)') : 'Tidak ada nomor HP';
+        if (warningEl) {
+          warningEl.hidden = false;
+          warningEl.textContent = 'Data pelanggan tidak memiliki nomor HP. Tombol "Buka WhatsApp" tidak tersedia. Silakan gunakan tombol "Salin pesan".';
+        }
+        if (linkBtn) linkBtn.hidden = true;
+      }
+    }
   }
 
   function updateWaPreview() {
@@ -4796,10 +4909,16 @@ const App = (function () {
 
     $('#wa-preview-text').value = message;
 
-    const customer = findCustomerForOrder(order);
-    const phone = extractPhoneNumber(customer ? customer.contact : '');
-    const linkBtn = $('#btn-open-wa-link');
+    let phone = null;
+    if (currentWaTemplateType === 'payout') {
+      const part = getPartner(order.partnerId);
+      phone = extractPhoneNumber(part ? part.phone : '');
+    } else {
+      const customer = findCustomerForOrder(order);
+      phone = extractPhoneNumber(customer ? customer.contact : '');
+    }
 
+    const linkBtn = $('#btn-open-wa-link');
     if (phone) {
       linkBtn.hidden = false;
       linkBtn.href = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(message);

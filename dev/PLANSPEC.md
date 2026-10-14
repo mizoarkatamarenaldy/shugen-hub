@@ -342,3 +342,27 @@ Data contoh (dummy):
 Di luar cakupan:
 - Template pesan WA konfirmasi payout dan riwayat batch pembayaran tidak dikerjakan di fitur ini.
 - Tidak ada perubahan hitungan bagi hasil.
+
+## Fitur 18: Template WA Konfirmasi Payout
+
+Tujuan: setelah bagi hasil ditransfer ke partner/penjoki, pemilik bisa mengirim pesan konfirmasi singkat lewat WhatsApp tanpa mengetik ulang.
+
+Template (menambah Fitur 7):
+- Satu template baru bernama "Konfirmasi payout", ditaruh bersama template pesan WA yang sudah ada dari Fitur 7.
+- Isi bawaan: "Halo [Nama Partner], bagi hasil pesanan [ID Pesanan] sebesar Rp [Nominal] sudah ditransfer. Terima kasih!"
+- Isian [Nama Partner], [ID Pesanan], dan [Nominal] terisi otomatis dari data pesanan dan bagi hasil partner (Fitur 9). Nominal tampil dalam format rupiah yang sama dengan bagian lain di aplikasi.
+- Teks template bisa diubah dengan cara yang sama seperti template Fitur 7 yang lain.
+
+Tempat dan tampilan:
+- Tombol "Kirim Konfirmasi Payout" muncul di tempat bagi hasil partner per pesanan ditampilkan, untuk pesanan yang punya bagi hasil partner.
+- Cara teks dikirim memakai mekanisme yang sama dengan template di Fitur 7.
+- Kalau mekanisme Fitur 7 butuh nomor WA tujuan yang belum ada di data partner, cukup sediakan tombol untuk menyalin teks. Jangan menambah field baru di data partner.
+
+Data:
+- Tidak ada data baru di luar teks template. Template baru ikut tersimpan, ikut export dan import backup, dan ikut terhapus oleh "Hapus semua data" (Fitur 16), mengikuti cara template Fitur 7 diperlakukan.
+- Backup lama yang belum punya template ini tetap bisa diimpor tanpa error, dan template bawaan tetap tersedia.
+
+Di luar cakupan:
+- Riwayat batch pembayaran tidak dikerjakan.
+- Tidak ada perubahan hitungan bagi hasil dan tidak ada perubahan status pembayaran.
+- Rekening/e-wallet partner (Fitur 17) tidak diubah.

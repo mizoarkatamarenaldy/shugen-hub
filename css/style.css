@@ -3029,9 +3029,20 @@ dialog.dialog-wa {
   color: var(--text);
 }
 
+.order-partner-payout-box {
+  flex-wrap: wrap;
+}
+
+.order-invoice-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .wa-template-tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 6px;
   margin-bottom: 12px;
 }
