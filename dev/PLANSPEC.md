@@ -366,3 +366,42 @@ Di luar cakupan:
 - Riwayat batch pembayaran tidak dikerjakan.
 - Tidak ada perubahan hitungan bagi hasil dan tidak ada perubahan status pembayaran.
 - Rekening/e-wallet partner (Fitur 17) tidak diubah.
+
+## Fitur 19: Dashboard
+
+Tujuan: satu halaman awal yang merangkum kondisi toko hari ini, supaya pemakai langsung tahu apa yang harus ditangani tanpa membuka banyak menu.
+
+Tempat dan tampilan:
+- Menjadi halaman awal saat app dibuka, dan bisa dibuka lewat menu bernama "Dashboard". Menu dan halaman lain tidak diubah.
+- Satu kolom, mengikuti dev/DESIGN.md. Warna hanya untuk badge status, angka dan kartu tetap monokrom.
+- Tanpa library grafik. Bar progress cukup dibuat dengan CSS biasa.
+
+Isi, urut dari atas:
+1. Perlu perhatian
+   - Jumlah pesanan berstatus Menunggu Bayar.
+   - Jumlah pesanan aktif (bukan Selesai dan bukan Dibatalkan) yang deadline-nya sudah lewat, jatuh hari ini, atau jatuh besok. Pakai data deadline dari fitur 10.
+   - Mengetuk angka membuka daftar pesanan dengan filter yang sesuai. Kalau filter itu belum ada, tampilkan daftar pendek di dashboard dan tiap barisnya membuka detail pesanan.
+2. Hari ini
+   - Omzet, pengeluaran, dan untung bersih hari ini, plus satu baris ringkas untuk bulan ini.
+   - Wajib memakai hitungan yang sama dengan Rekap (fitur 8). Jangan membuat rumus baru.
+3. Saldo kas
+   - Satu angka saldo saat ini dari Kas toko (fitur 13). Mengetuknya membuka menu Kas.
+4. Joki berjalan
+   - Maksimal 5 pesanan berstatus Diproses, urut deadline terdekat. Tiap baris: ID pesanan, nama pelanggan, badge status, bar persentase progress.
+   - Mengetuk baris membuka detail pesanan. Ada tautan "Lihat semua" ke daftar pesanan.
+5. Bagi hasil belum dibayar
+   - Total bagi hasil ke penjoki/partner yang belum dibayar (fitur 9 dan 18), dan rincian per partner.
+   - Kalau di data belum ada penanda bahwa bagi hasil sudah dibayar, jangan membuat penanda baru. Berhenti dan tanya pemilik (aturan 6).
+6. Tombol cepat
+   - Tiga tombol: "Pesanan baru", "Catat pemasukan", "Catat pengeluaran". Masing-masing membuka form yang sudah ada.
+
+Aturan data:
+- Dashboard hanya membaca data. Tidak ada tabel baru, tidak ada perubahan skema IndexedDB, tidak ada data yang ditulis dari dashboard.
+- Angka dihitung ulang setiap dashboard dibuka. Tanpa polling dan tanpa timer.
+- Pesanan Dibatalkan mengikuti aturan yang sama seperti di Rekap dan Kas.
+- Kalau sebuah blok kosong, tampilkan teks singkat yang jelas (contoh: "Tidak ada pesanan yang menunggu bayar"), bukan blok kosong.
+- Tanggal "hari ini" memakai zona waktu perangkat.
+
+Di luar cakupan:
+- Tidak ada grafik tren, tidak ada ekspor, tidak ada pengaturan susunan dashboard.
+- Tidak mengubah halaman Rekap, Kas, atau Pesanan.

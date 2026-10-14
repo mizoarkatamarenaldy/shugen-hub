@@ -7,7 +7,7 @@ const App = (function () {
   let expenseCategories = [];
   let currentSteps = [];
   let paymentMethods = [];
-  let activeView = 'orders';
+  let activeView = 'dashboard';
   let activeFilter = 'semua';
   let searchQuery = '';
   let incomeStartDate = '';
@@ -590,6 +590,7 @@ const App = (function () {
   function showView(state) {
     $('#loading-state').hidden = state !== 'loading';
     $('#error-state').hidden = state !== 'error';
+    $('#view-dashboard').hidden = state !== 'ready' || activeView !== 'dashboard';
     $('#view-orders').hidden = state !== 'ready' || activeView !== 'orders';
     $('#view-customers').hidden = state !== 'ready' || activeView !== 'customers';
     $('#view-partners').hidden = state !== 'ready' || activeView !== 'partners';
@@ -598,7 +599,7 @@ const App = (function () {
     $('#view-cash').hidden = state !== 'ready' || activeView !== 'cash';
     $('#view-invoices').hidden = state !== 'ready' || activeView !== 'invoices';
     $('#view-recap').hidden = state !== 'ready' || activeView !== 'recap';
-    $('#fab-add').hidden = state !== 'ready' || activeView === 'cash' || activeView === 'invoices' || activeView === 'recap';
+    $('#fab-add').hidden = state !== 'ready' || activeView === 'cash' || activeView === 'invoices' || activeView === 'recap' || activeView === 'dashboard';
 
     $('#empty-state').hidden = true;
     $('#empty-filtered').hidden = true;
@@ -1026,6 +1027,7 @@ const App = (function () {
     renderCustomerTabs();
     renderPartnerTabs();
     updateDeadlineSummary();
+    renderDashboard();
     renderOrders();
     renderCustomers();
     renderPartners();
@@ -1062,6 +1064,319 @@ const App = (function () {
       tab.classList.toggle('active', isSelected);
       tab.setAttribute('aria-selected', isSelected ? 'true' : 'false');
     });
+  }
+
+  function renderDashboard() {
+    // 1. Perlu perhatian
+    const pendingPayOrders = orders.filter((o) => o.status === 'menunggu_bayar');
+    const pendingPayCount = pendingPayOrders.length;
+    $('#dashboard-pending-pay-count').textContent = String(pendingPayCount);
+    const pendingPaySub = $('#dashboard-pending-pay-sub');
+    if (pendingPayCount === 0) {
+      pendingPaySub.textContent = 'Tidak ada pesanan yang menunggu bayar';
+    } else {
+      pendingPaySub.textContent = pendingPayCount + ' pesanan menunggu bayar';
+    }
+
+    const now = new Date();
+    let overdueCount = 0;
+    let todayCount = 0;
+    let tomorrowCount = 0;
+
+    const urgentDeadlineOrders = orders.filter((o) => {
+      if (o.status !== 'menunggu_bayar' && o.status !== 'diproses') return false;
+      const urg = getDeadlineUrgency(o, now);
+      if (!urg) return false;
+      if (urg.level === 'terlambat') {
+        overdueCount++;
+        return true;
+      }
+      if (urg.level === 'hari_ini') {
+        todayCount++;
+        return true;
+      }
+      if (urg.level === 'besok') {
+        tomorrowCount++;
+        return true;
+      }
+      return false;
+    });
+
+    const deadlineCount = urgentDeadlineOrders.length;
+    $('#dashboard-deadline-count').textContent = String(deadlineCount);
+    const deadlineSub = $('#dashboard-deadline-sub');
+    if (deadlineCount === 0) {
+      deadlineSub.textContent = 'Semua deadline aman';
+    } else {
+      const parts = [];
+      if (overdueCount > 0) parts.push(overdueCount + ' terlambat');
+      if (todayCount > 0) parts.push(todayCount + ' hari ini');
+      if (tomorrowCount > 0) parts.push(tomorrowCount + ' besok');
+      deadlineSub.textContent = parts.join(', ');
+    }
+
+    // Short list pesanan deadline mendesak (filter lewat/hari ini/besok tidak ada di Pesanan)
+    const deadlineListWrap = $('#dashboard-deadline-list-wrap');
+    const deadlineListContainer = $('#dashboard-deadline-list');
+    if (deadlineCount === 0) {
+      deadlineListWrap.hidden = true;
+      deadlineListContainer.innerHTML = '';
+    } else {
+      deadlineListWrap.hidden = false;
+      deadlineListContainer.innerHTML = '';
+
+      urgentDeadlineOrders.sort((a, b) => {
+        const aParsed = parseDeadline(a.deadline);
+        const bParsed = parseDeadline(b.deadline);
+        const aMoment = getDeadlineMoment(aParsed);
+        const bMoment = getDeadlineMoment(bParsed);
+        const aTime = aMoment ? aMoment.getTime() : Infinity;
+        const bTime = bMoment ? bMoment.getTime() : Infinity;
+        return aTime - bTime;
+      });
+
+      urgentDeadlineOrders.forEach((order) => {
+        const row = document.createElement('div');
+        row.className = 'dashboard-short-row';
+        row.tabIndex = 0;
+        row.setAttribute('role', 'button');
+        const deadlineLabel = formatDeadlineDisplay(order, now);
+        row.setAttribute(
+          'aria-label',
+          order.orderId + ', ' + order.customerName + ', ' + STATUS_LABELS[order.status] + ', ' + deadlineLabel + '. Ketuk untuk buka detail.'
+        );
+
+        row.innerHTML =
+          '<div class="dashboard-short-info">' +
+            '<span class="dashboard-short-id">' + esc(order.orderId) + '</span>' +
+            '<span class="dashboard-short-customer">' + esc(order.customerName) + '</span>' +
+          '</div>' +
+          '<div class="dashboard-short-meta">' +
+            '<span class="dashboard-deadline-tag">' + esc(deadlineLabel) + '</span>' +
+            '<span class="status-badge status-' + order.status + '">' + STATUS_LABELS[order.status] + '</span>' +
+          '</div>';
+
+        row.addEventListener('click', () => openOrderForm(order.id));
+        row.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openOrderForm(order.id);
+          }
+        });
+        deadlineListContainer.appendChild(row);
+      });
+    }
+
+    // 2. Hari ini (Wajib memakai hitungan yang sama dengan Rekap (fitur 8))
+    const today = todayYmd();
+    const currentMonth = currentYm();
+
+    const dayIncomes = incomes.filter((inc) => inc.date === today);
+    const dayExpenses = expenses.filter((exp) => exp.date === today);
+    const todayOmzet = dayIncomes.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
+    const todayExpenses = dayExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+    const todayProfit = todayOmzet - todayExpenses;
+
+    $('#dashboard-today-omzet').textContent = formatRecapCurrency(todayOmzet);
+    $('#dashboard-today-expenses').textContent = formatRecapCurrency(todayExpenses);
+    $('#dashboard-today-profit').textContent = formatRecapCurrency(todayProfit);
+
+    const todayEmpty = $('#dashboard-today-empty');
+    if (dayIncomes.length === 0 && dayExpenses.length === 0) {
+      todayEmpty.hidden = false;
+    } else {
+      todayEmpty.hidden = true;
+    }
+
+    // Ringkasan bulan ini
+    const monthIncomes = incomes.filter((inc) => inc.date && inc.date.slice(0, 7) === currentMonth);
+    const monthExpenses = expenses.filter((exp) => exp.date && exp.date.slice(0, 7) === currentMonth);
+    const monthOmzet = monthIncomes.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
+    const monthExpensesTotal = monthExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+    const monthProfit = monthOmzet - monthExpensesTotal;
+
+    $('#dashboard-month-title').textContent = 'Bulan Ini (' + formatMonthYear(currentMonth) + ')';
+    $('#dashboard-month-omzet').textContent = formatRecapCurrency(monthOmzet);
+    $('#dashboard-month-expenses').textContent = formatRecapCurrency(monthExpensesTotal);
+    $('#dashboard-month-profit').textContent = formatRecapCurrency(monthProfit);
+
+    // 3. Saldo kas (Fitur 13)
+    const totalCashIncome = incomes.reduce((sum, inc) => sum + (Number(inc.amount) || 0), 0);
+    const totalCashExpense = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+    const cashBalance = cashInitialBalance + totalCashIncome - totalCashExpense;
+    $('#dashboard-cash-balance').textContent = cashBalance < 0
+      ? ('-Rp ' + formatPrice(Math.abs(cashBalance)))
+      : ('Rp ' + formatPrice(cashBalance));
+
+    // 4. Joki berjalan (Maksimal 5 pesanan berstatus Diproses, urut deadline terdekat)
+    const diprosesOrders = orders.filter((o) => o.status === 'diproses');
+    diprosesOrders.sort((a, b) => {
+      const aParsed = parseDeadline(a.deadline);
+      const bParsed = parseDeadline(b.deadline);
+      const aHas = Boolean(aParsed);
+      const bHas = Boolean(bParsed);
+
+      if (aHas && !bHas) return -1;
+      if (!aHas && bHas) return 1;
+      if (!aHas && !bHas) {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      }
+
+      const aMoment = getDeadlineMoment(aParsed);
+      const bMoment = getDeadlineMoment(bParsed);
+      const aTime = aMoment ? aMoment.getTime() : Infinity;
+      const bTime = bMoment ? bMoment.getTime() : Infinity;
+
+      if (aTime !== bTime) {
+        return aTime - bTime;
+      }
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
+    const topJoki = diprosesOrders.slice(0, 5);
+    const jokiContainer = $('#dashboard-joki-list');
+    const jokiEmpty = $('#dashboard-joki-empty');
+    jokiContainer.innerHTML = '';
+
+    if (topJoki.length === 0) {
+      jokiEmpty.hidden = false;
+    } else {
+      jokiEmpty.hidden = true;
+      topJoki.forEach((order) => {
+        const row = document.createElement('article');
+        row.className = 'dashboard-joki-row';
+        row.tabIndex = 0;
+        row.setAttribute('role', 'button');
+
+        const prog = progressMap[order.orderId];
+        const steps = prog && Array.isArray(prog.steps) ? prog.steps : [];
+        const pct = prog && typeof prog.percentage === 'number'
+          ? prog.percentage
+          : ShugenDB.progress.calcPercentage(steps);
+
+        let deadlineLabel = '';
+        let urgClass = '';
+        if (order.deadline) {
+          const urg = getDeadlineUrgency(order, now);
+          deadlineLabel = formatDeadlineDisplay(order, now);
+          urgClass = urg ? ('order-deadline--' + urg.level) : '';
+        }
+
+        row.setAttribute(
+          'aria-label',
+          order.orderId + ', ' + order.customerName + ', ' + STATUS_LABELS[order.status] + ', Progress ' + pct + '%' + (deadlineLabel ? (', Deadline: ' + deadlineLabel) : '') + '. Ketuk untuk buka detail pesanan.'
+        );
+
+        row.innerHTML =
+          '<div class="dashboard-joki-header">' +
+            '<div class="dashboard-joki-title-group">' +
+              '<strong class="dashboard-joki-id">' + esc(order.orderId) + '</strong>' +
+              '<span class="dashboard-joki-customer">' + esc(order.customerName) + '</span>' +
+            '</div>' +
+            '<span class="status-badge status-' + order.status + '">' + STATUS_LABELS[order.status] + '</span>' +
+          '</div>' +
+          '<div class="dashboard-joki-progress-wrap">' +
+            '<div class="dashboard-joki-progress-info">' +
+              '<span class="dashboard-joki-progress-label">Progress: <strong>' + pct + '%</strong></span>' +
+              (deadlineLabel ? ('<span class="dashboard-joki-deadline ' + urgClass + '">' + esc(deadlineLabel) + '</span>') : '') +
+            '</div>' +
+            '<div class="order-progress-track" aria-hidden="true">' +
+              '<div class="order-progress-fill" style="width:' + pct + '%"></div>' +
+            '</div>' +
+          '</div>';
+
+        row.addEventListener('click', () => openOrderForm(order.id));
+        row.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openOrderForm(order.id);
+          }
+        });
+
+        jokiContainer.appendChild(row);
+      });
+    }
+
+    // 5. Bagi hasil belum dibayar (fitur 9 dan 18)
+    const partnerUnpaidOrders = orders.filter((o) => o.partnerId && o.status !== 'dibatalkan' && !o.partnerPaid);
+    const readyPartnerOrders = partnerUnpaidOrders.filter((o) => o.status === 'selesai');
+    const readyPartnerTotal = readyPartnerOrders.reduce((sum, o) => sum + (Number(o.partnerShareAmount) || 0), 0);
+    const inProgPartnerOrders = partnerUnpaidOrders.filter((o) => o.status === 'diproses');
+    const inProgPartnerTotal = inProgPartnerOrders.reduce((sum, o) => sum + (Number(o.partnerShareAmount) || 0), 0);
+    const totalPartnerUnpaid = readyPartnerTotal + inProgPartnerTotal;
+
+    const partnerTotalEl = $('#dashboard-partner-total');
+    const partnerTotalSub = $('#dashboard-partner-total-sub');
+    const partnerListContainer = $('#dashboard-partner-list');
+    const partnerEmpty = $('#dashboard-partner-empty');
+    partnerListContainer.innerHTML = '';
+
+    if (totalPartnerUnpaid === 0) {
+      partnerTotalEl.textContent = 'Rp 0';
+      partnerTotalSub.textContent = '';
+      partnerListContainer.hidden = true;
+      partnerEmpty.hidden = false;
+    } else {
+      partnerEmpty.hidden = true;
+      partnerListContainer.hidden = false;
+      partnerTotalEl.textContent = 'Rp ' + formatPrice(readyPartnerTotal > 0 ? readyPartnerTotal : totalPartnerUnpaid);
+
+      if (readyPartnerTotal > 0 && inProgPartnerTotal > 0) {
+        partnerTotalSub.textContent = readyPartnerOrders.length + ' pesanan siap dibayar (Rp ' + formatPrice(readyPartnerTotal) + ') · ' + inProgPartnerOrders.length + ' pesanan diproses (Rp ' + formatPrice(inProgPartnerTotal) + ')';
+      } else if (readyPartnerTotal > 0) {
+        partnerTotalSub.textContent = readyPartnerOrders.length + ' pesanan selesai siap dibayar';
+      } else {
+        partnerTotalSub.textContent = inProgPartnerOrders.length + ' pesanan sedang diproses';
+      }
+
+      // Rincian per partner
+      partners.forEach((part) => {
+        const pOrders = partnerUnpaidOrders.filter((o) => o.partnerId === part.partnerId);
+        if (pOrders.length === 0) return;
+
+        const pReady = pOrders.filter((o) => o.status === 'selesai');
+        const pReadyAmt = pReady.reduce((sum, o) => sum + (Number(o.partnerShareAmount) || 0), 0);
+        const pInProg = pOrders.filter((o) => o.status === 'diproses');
+        const pInProgAmt = pInProg.reduce((sum, o) => sum + (Number(o.partnerShareAmount) || 0), 0);
+        const pTotal = pReadyAmt + pInProgAmt;
+
+        const row = document.createElement('div');
+        row.className = 'dashboard-partner-row';
+        row.tabIndex = 0;
+        row.setAttribute('role', 'button');
+
+        let noteText = '';
+        if (pReadyAmt > 0 && pInProgAmt > 0) {
+          noteText = 'Rp ' + formatPrice(pReadyAmt) + ' siap dibayar · Rp ' + formatPrice(pInProgAmt) + ' diproses';
+        } else if (pReadyAmt > 0) {
+          noteText = pReady.length + ' pesanan siap dibayar';
+        } else {
+          noteText = pInProg.length + ' pesanan diproses';
+        }
+
+        row.setAttribute(
+          'aria-label',
+          'Partner ' + part.name + ', Belum dibayar Rp ' + formatPrice(pTotal) + ' (' + noteText + '). Ketuk untuk buka detail partner.'
+        );
+
+        row.innerHTML =
+          '<div>' +
+            '<div class="dashboard-partner-name">' + esc(part.name) + '</div>' +
+            '<span class="dashboard-partner-sub">' + esc(noteText) + '</span>' +
+          '</div>' +
+          '<div class="dashboard-partner-amount">Rp ' + formatPrice(pReadyAmt > 0 ? pReadyAmt : pTotal) + '</div>';
+
+        row.addEventListener('click', () => openPartnerDetail(part.partnerId));
+        row.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openPartnerDetail(part.partnerId);
+          }
+        });
+
+        partnerListContainer.appendChild(row);
+      });
+    }
   }
 
   function renderOrders() {
@@ -1876,6 +2191,84 @@ const App = (function () {
         openOrderForm(null);
       }
     });
+
+    // Dashboard interactive elements
+    const cardPendingPay = $('#dashboard-card-pending-pay');
+    if (cardPendingPay) {
+      const openPendingPay = () => {
+        activeView = 'orders';
+        activeFilter = 'menunggu_bayar';
+        activeDeadlineAttentionFilter = false;
+        render();
+        window.scrollTo(0, 0);
+      };
+      cardPendingPay.addEventListener('click', openPendingPay);
+      cardPendingPay.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openPendingPay();
+        }
+      });
+    }
+
+    const cardDeadline = $('#dashboard-card-deadline');
+    if (cardDeadline) {
+      const toggleDeadlineList = () => {
+        const wrap = $('#dashboard-deadline-list-wrap');
+        if (wrap && !wrap.hidden) {
+          wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      };
+      cardDeadline.addEventListener('click', toggleDeadlineList);
+      cardDeadline.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleDeadlineList();
+        }
+      });
+    }
+
+    const cardCash = $('#dashboard-card-cash');
+    if (cardCash) {
+      const openCash = () => {
+        activeView = 'cash';
+        render();
+        window.scrollTo(0, 0);
+      };
+      cardCash.addEventListener('click', openCash);
+      cardCash.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openCash();
+        }
+      });
+    }
+
+    const btnAllJoki = $('#dashboard-btn-all-joki');
+    if (btnAllJoki) {
+      btnAllJoki.addEventListener('click', () => {
+        activeView = 'orders';
+        activeFilter = 'diproses';
+        activeDeadlineAttentionFilter = false;
+        render();
+        window.scrollTo(0, 0);
+      });
+    }
+
+    const btnQuickOrder = $('#btn-quick-new-order');
+    if (btnQuickOrder) {
+      btnQuickOrder.addEventListener('click', () => openOrderForm(null));
+    }
+
+    const btnQuickIncome = $('#btn-quick-new-income');
+    if (btnQuickIncome) {
+      btnQuickIncome.addEventListener('click', () => openIncomeForm(null));
+    }
+
+    const btnQuickExpense = $('#btn-quick-new-expense');
+    if (btnQuickExpense) {
+      btnQuickExpense.addEventListener('click', () => openExpenseForm(null));
+    }
 
     $('#field-type').addEventListener('change', toggleProgressSection);
     $('#field-game').addEventListener('change', () => {
@@ -6255,7 +6648,7 @@ const App = (function () {
       } catch (e) {}
 
       // Reset filter dan state navigasi
-      activeView = 'orders';
+      activeView = 'dashboard';
       activeFilter = 'semua';
       customerFilter = 'semua';
       partnerFilter = 'semua';

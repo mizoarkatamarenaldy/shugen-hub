@@ -19,6 +19,20 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #029 [2026-10-14] Implementasi Fitur 19 (Dashboard)
+- Fitur: Dashboard
+- Ringkasan: Menambahkan halaman Dashboard sebagai halaman awal aplikasi saat dibuka dan menu navigasi baru untuk merangkum kondisi operasional toko hari ini dalam tampilan satu kolom monokrom sesuai dev/DESIGN.md. Dashboard menampilkan 6 blok berurutan: pesanan yang perlu perhatian (menunggu bayar dan deadline mendesak beserta daftar pendek), performa keuangan hari ini dan ringkasan bulan ini dengan rumus rekap Fitur 8, saldo kas toko saat ini yang dapat diketuk membuka menu Kas, daftar maksimal 5 joki berjalan berstatus diproses dengan progress bar CSS dan tautan lihat semua, total dan rincian bagi hasil partner yang belum dibayar, serta tombol aksi cepat untuk pesanan baru, pemasukan, dan pengeluaran.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - dev/PLANSPEC.md
+  - index.html
+  - js/app.js
+  - sw.js
+- Catatan: Dashboard hanya membaca data lokal tanpa timer atau polling; penanda bagi hasil sudah dibayar menggunakan field partnerPaid yang sudah ada di IndexedDB; cache service worker dinaikkan ke shugen-v26.
+
+
 ### #028 [2026-10-14] Implementasi Fitur 18 (Template WA Konfirmasi Payout)
 - Fitur: Template WA konfirmasi payout ke partner
 - Ringkasan: Menambahkan template WhatsApp baru "Konfirmasi payout" ke dalam pengaturan template WA yang sudah ada dengan teks bawaan untuk mengonfirmasi transfer bagi hasil partner. Nilai [Nama Partner], [ID Pesanan], dan [Nominal] (diformat Rupiah) otomatis terisi dari data pesanan dan bagian partner serta template dapat diedit atau dikembalikan ke teks bawaan. Tombol "Kirim Konfirmasi Payout" disediakan pada area status bayar ke partner di detail pesanan, membuka dialog pesan WhatsApp dengan tab payout aktif, menampilkan nomor partner atau tombol salin pesan jika nomor tidak tersedia, dan cache service worker dinaikkan ke shugen-v25.

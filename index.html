@@ -38,8 +38,9 @@
   </header>
 
   <nav class="main-nav" aria-label="Menu utama">
-    <div class="main-nav-inner main-nav-inner--8">
-      <button type="button" class="nav-tab active" data-view="orders" aria-current="page">Pesanan</button>
+    <div class="main-nav-inner main-nav-inner--9">
+      <button type="button" class="nav-tab active" data-view="dashboard" aria-current="page">Dashboard</button>
+      <button type="button" class="nav-tab" data-view="orders">Pesanan</button>
       <button type="button" class="nav-tab" data-view="customers">Pelanggan</button>
       <button type="button" class="nav-tab" data-view="partners">Partner</button>
       <button type="button" class="nav-tab" data-view="incomes">Pemasukan</button>
@@ -60,7 +61,112 @@
       <p class="state-hint">Muat ulang halaman atau periksa penyimpanan lokal perangkat.</p>
     </div>
 
-    <div id="view-orders">
+    <div id="view-dashboard" class="dashboard-view">
+      <!-- 1. Perlu perhatian -->
+      <section class="dashboard-section" aria-labelledby="dashboard-heading-attention">
+        <h2 id="dashboard-heading-attention" class="dashboard-section-title">Perlu Perhatian</h2>
+        <div class="dashboard-attention-grid">
+          <div id="dashboard-card-pending-pay" class="dashboard-stat-card dashboard-stat-card--interactive" role="button" tabindex="0" aria-label="Pesanan Menunggu Bayar. Ketuk untuk membuka daftar pesanan.">
+            <span class="dashboard-stat-label">Menunggu Bayar</span>
+            <div id="dashboard-pending-pay-count" class="dashboard-stat-number">0</div>
+            <div id="dashboard-pending-pay-sub" class="dashboard-stat-sub">Tidak ada pesanan yang menunggu bayar</div>
+          </div>
+          <div id="dashboard-card-deadline" class="dashboard-stat-card dashboard-stat-card--interactive" role="button" tabindex="0" aria-label="Pesanan mendekati atau lewat deadline. Ketuk untuk melihat daftar.">
+            <span class="dashboard-stat-label">Deadline Mendesak</span>
+            <div id="dashboard-deadline-count" class="dashboard-stat-number">0</div>
+            <div id="dashboard-deadline-sub" class="dashboard-stat-sub">Semua deadline aman</div>
+          </div>
+        </div>
+        <div id="dashboard-deadline-list-wrap" class="dashboard-short-list-wrap" hidden>
+          <div class="dashboard-short-list-header">
+            <span class="dashboard-short-list-title">Pesanan Lewat / Jatuh Hari Ini / Besok:</span>
+          </div>
+          <div id="dashboard-deadline-list" class="dashboard-short-list" role="list"></div>
+        </div>
+      </section>
+
+      <!-- 2. Hari ini -->
+      <section class="dashboard-section" aria-labelledby="dashboard-heading-today">
+        <h2 id="dashboard-heading-today" class="dashboard-section-title">Hari Ini</h2>
+        <div class="dashboard-card">
+          <div class="dashboard-recap-grid">
+            <div class="dashboard-recap-item">
+              <span class="dashboard-recap-label">Omzet</span>
+              <span id="dashboard-today-omzet" class="dashboard-recap-val">Rp 0</span>
+            </div>
+            <div class="dashboard-recap-item">
+              <span class="dashboard-recap-label">Pengeluaran</span>
+              <span id="dashboard-today-expenses" class="dashboard-recap-val">Rp 0</span>
+            </div>
+            <div class="dashboard-recap-item">
+              <span class="dashboard-recap-label">Untung Bersih</span>
+              <span id="dashboard-today-profit" class="dashboard-recap-val">Rp 0</span>
+            </div>
+          </div>
+          <div id="dashboard-today-empty" class="dashboard-empty-note" hidden>Tidak ada transaksi hari ini</div>
+          <div class="dashboard-month-bar">
+            <span class="dashboard-month-label" id="dashboard-month-title">Bulan Ini</span>
+            <div class="dashboard-month-stats">
+              <span>Omzet: <strong id="dashboard-month-omzet">Rp 0</strong></span>
+              <span class="dashboard-month-sep">&middot;</span>
+              <span>Pengeluaran: <strong id="dashboard-month-expenses">Rp 0</strong></span>
+              <span class="dashboard-month-sep">&middot;</span>
+              <span>Untung Bersih: <strong id="dashboard-month-profit">Rp 0</strong></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Saldo kas -->
+      <section class="dashboard-section" aria-labelledby="dashboard-heading-cash">
+        <h2 id="dashboard-heading-cash" class="dashboard-section-title">Saldo Kas</h2>
+        <div id="dashboard-card-cash" class="dashboard-card dashboard-card--interactive" role="button" tabindex="0" aria-label="Saldo Kas saat ini. Ketuk untuk membuka menu Kas.">
+          <div class="dashboard-cash-row">
+            <div>
+              <span class="dashboard-stat-label">Saldo Kas Saat Ini</span>
+              <div id="dashboard-cash-balance" class="dashboard-cash-value">Rp 0</div>
+            </div>
+            <span class="dashboard-nav-arrow" aria-hidden="true">&rarr;</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Joki berjalan -->
+      <section class="dashboard-section" aria-labelledby="dashboard-heading-joki">
+        <div class="dashboard-section-header">
+          <h2 id="dashboard-heading-joki" class="dashboard-section-title">Joki Berjalan</h2>
+          <button type="button" id="dashboard-btn-all-joki" class="dashboard-link-btn" aria-label="Lihat semua pesanan joki berjalan">Lihat semua</button>
+        </div>
+        <div id="dashboard-joki-list" class="dashboard-joki-list" role="list"></div>
+        <div id="dashboard-joki-empty" class="dashboard-empty-card" hidden>Tidak ada joki yang sedang berjalan</div>
+      </section>
+
+      <!-- 5. Bagi hasil belum dibayar -->
+      <section class="dashboard-section" aria-labelledby="dashboard-heading-partner">
+        <h2 id="dashboard-heading-partner" class="dashboard-section-title">Bagi Hasil Belum Dibayar</h2>
+        <div class="dashboard-card">
+          <div class="dashboard-partner-total-box">
+            <span class="dashboard-stat-label">Total Belum Dibayar</span>
+            <div id="dashboard-partner-total" class="dashboard-cash-value">Rp 0</div>
+            <div id="dashboard-partner-total-sub" class="dashboard-stat-sub"></div>
+          </div>
+          <div id="dashboard-partner-list" class="dashboard-partner-list" role="list"></div>
+          <div id="dashboard-partner-empty" class="dashboard-empty-note" hidden>Semua bagi hasil sudah dibayar</div>
+        </div>
+      </section>
+
+      <!-- 6. Tombol cepat -->
+      <section class="dashboard-section" aria-labelledby="dashboard-heading-quick">
+        <h2 id="dashboard-heading-quick" class="dashboard-section-title">Tombol Cepat</h2>
+        <div class="dashboard-quick-grid">
+          <button type="button" id="btn-quick-new-order" class="btn btn-secondary dashboard-quick-btn">Pesanan baru</button>
+          <button type="button" id="btn-quick-new-income" class="btn btn-secondary dashboard-quick-btn">Catat pemasukan</button>
+          <button type="button" id="btn-quick-new-expense" class="btn btn-secondary dashboard-quick-btn">Catat pengeluaran</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="view-orders" hidden>
       <div class="search-bar">
         <div class="search-wrap">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -387,7 +493,7 @@
       <section id="recap-monthly-list" class="income-list" aria-label="Daftar rekap per hari" hidden></section>
     </div>
 
-    <button type="button" class="fab" id="fab-add" aria-label="Tambah pesanan baru">
+    <button type="button" class="fab" id="fab-add" aria-label="Tambah pesanan baru" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
         <line x1="12" y1="5" x2="12" y2="19"/>
         <line x1="5" y1="12" x2="19" y2="12"/>
