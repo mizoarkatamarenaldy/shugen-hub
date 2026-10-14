@@ -263,3 +263,26 @@ Tujuan: tim toko bisa mencatat siapa yang mengerjakan sebuah pesanan, berapa bag
 ### Di luar cakupan
 Lebih dari satu partner per pesanan, bagi hasil bertingkat, login atau peran untuk partner, pembayaran otomatis atau transfer ke partner, dan mengubah perhitungan atau data fitur lain yang sudah ada tidak dikerjakan. Di laporan akhir, tulis bagaimana data bagi hasil bisa dihubungkan ke fitur keuangan nanti. Kalau ada ide tambahan, tulis juga di laporan akhir.
 
+
+
+## Fitur 11: Katalog harga
+
+Tujuan: daftar layanan beserta harga saran, supaya input pesanan lebih cepat. Harga hanya template, selalu bisa diubah per pesanan.
+
+Kelola katalog:
+- Tempatnya di Pengaturan, di bagian sendiri bernama "Katalog Harga".
+- Tiap item punya: nama layanan, jenis (Joki atau Topup), game (dipilih dari daftar kategori game fitur 14), harga saran dalam Rupiah.
+- Bisa tambah, ubah, dan hapus item.
+- Daftar item dikelompokkan per game.
+
+Pemakaian di form pesanan:
+- Ada pilihan "Ambil dari katalog" yang opsional, berisi item sesuai game yang dipilih.
+- Kalau item dipilih, nama layanan dan harga terisi otomatis.
+- Nama layanan dan harga tetap bisa diubah sebelum pesanan disimpan.
+- Pesanan tanpa katalog tetap bisa dibuat seperti sekarang.
+- Pesanan menyimpan salinan nama dan harga. Mengubah atau menghapus item katalog tidak boleh mengubah pesanan yang sudah ada.
+
+Data:
+- Katalog disimpan di IndexedDB, tiap item punya ID unik.
+- Katalog ikut di export dan import backup (fitur 12), termasuk pratinjau dan perbandingan jumlah data di dialog import.
+- Tambahkan beberapa item katalog contoh ke data dummy untuk demo portofolio.

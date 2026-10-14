@@ -1,6 +1,6 @@
 const ShugenDB = (function () {
   const DB_NAME = 'shugen-hub';
-  const DB_VERSION = 9;
+  const DB_VERSION = 10;
   let _db = null;
 
   const DEFAULT_PAYMENT_METHODS = [
@@ -105,6 +105,17 @@ const ShugenDB = (function () {
           partnerStore.createIndex('partnerId', 'partnerId', { unique: true });
           partnerStore.createIndex('name', 'name');
           partnerStore.createIndex('createdAt', 'createdAt');
+        }
+        if (!db.objectStoreNames.contains('catalog')) {
+          const catalogStore = db.createObjectStore('catalog', {
+            keyPath: 'id',
+            autoIncrement: true
+          });
+          catalogStore.createIndex('catalogId', 'catalogId', { unique: true });
+          catalogStore.createIndex('gameId', 'gameId', { unique: false });
+          catalogStore.createIndex('type', 'type', { unique: false });
+          catalogStore.createIndex('name', 'name', { unique: false });
+          catalogStore.createIndex('createdAt', 'createdAt', { unique: false });
         }
         if (e.target.transaction && e.target.transaction.objectStoreNames.contains('orders')) {
           const orderStore = e.target.transaction.objectStore('orders');
@@ -1185,6 +1196,11 @@ const ShugenDB = (function () {
     if (isUsed) {
       throw new Error('GAME_IN_USE');
     }
+    const allCatalog = await getAllCatalog();
+    const isUsedInCatalog = allCatalog.some((c) => c.gameId === existing.gameId);
+    if (isUsedInCatalog) {
+      throw new Error('GAME_IN_USE_CATALOG');
+    }
     return req2p(tx('games', 'readwrite').delete(id));
   }
 
@@ -1347,6 +1363,146 @@ const ShugenDB = (function () {
     return req2p(tx('partners', 'readwrite').clear());
   }
 
+  // Catalog (Price Catalog / Katalog Harga)
+
+  let _addCatalogQueue = Promise.resolve();
+
+  function buildCandidateCatalogId(date) {
+    const now = date || new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return 'CTL-' + yy + mm + dd + '-' + randomIdCode(4);
+  }
+
+  async function getAllCatalog() {
+    await open();
+    return req2p(tx('catalog', 'readonly').getAll());
+  }
+
+  async function getCatalogItem(id) {
+    await open();
+    return req2p(tx('catalog', 'readonly').get(id));
+  }
+
+  async function getCatalogItemByCatalogId(catalogId) {
+    await open();
+    if (!catalogId) return null;
+    return req2p(tx('catalog', 'readonly').index('catalogId').get(catalogId));
+  }
+
+  async function getCatalogItemsByGameId(gameId) {
+    await open();
+    if (!gameId) return [];
+    return req2p(tx('catalog', 'readonly').index('gameId').getAll(gameId));
+  }
+
+  function addCatalogItem(item) {
+    const run = _addCatalogQueue.then(async () => {
+      await open();
+      return new Promise((resolve, reject) => {
+        const transaction = _db.transaction('catalog', 'readwrite');
+        const store = transaction.objectStore('catalog');
+        const catIdx = store.index('catalogId');
+        const now = new Date();
+        let savedRecord = null;
+
+        transaction.oncomplete = () => resolve(savedRecord);
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error || new Error('Transaksi dibatalkan'));
+
+        const cleanName = String((item && item.name) || '').trim();
+        if (!cleanName) {
+          transaction.abort();
+          reject(new Error('Nama layanan wajib diisi'));
+          return;
+        }
+
+        const cleanGameId = String((item && item.gameId) || '').trim();
+        if (!cleanGameId) {
+          transaction.abort();
+          reject(new Error('Game wajib dipilih'));
+          return;
+        }
+
+        const cleanType = (item && item.type === 'topup') ? 'topup' : 'joki';
+        const cleanPrice = Math.max(0, Number(item && item.price) || 0);
+
+        function tryInsert(preferredId) {
+          const candidate = preferredId || buildCandidateCatalogId(now);
+          const checkReq = catIdx.getKey(candidate);
+          checkReq.onsuccess = () => {
+            if (checkReq.result !== undefined) {
+              tryInsert(null);
+              return;
+            }
+            const record = {
+              catalogId: candidate,
+              name: cleanName,
+              type: cleanType,
+              gameId: cleanGameId,
+              price: cleanPrice,
+              createdAt: (item && item.createdAt) || now,
+              updatedAt: now
+            };
+            const addReq = store.add(record);
+            addReq.onsuccess = () => {
+              record.id = addReq.result;
+              savedRecord = record;
+            };
+            addReq.onerror = (e) => {
+              if (addReq.error && addReq.error.name === 'ConstraintError') {
+                e.preventDefault();
+                e.stopPropagation();
+                tryInsert(null);
+              }
+            };
+          };
+        }
+
+        tryInsert((item && item.catalogId) || null);
+      });
+    });
+    _addCatalogQueue = run.catch(() => {});
+    return run;
+  }
+
+  async function updateCatalogItem(id, itemData) {
+    await open();
+    const existing = await getCatalogItem(id);
+    if (!existing) throw new Error('Item katalog tidak ditemukan');
+
+    const cleanName = itemData.name !== undefined ? String(itemData.name).trim() : existing.name;
+    if (!cleanName) throw new Error('Nama layanan wajib diisi');
+
+    const cleanGameId = itemData.gameId !== undefined ? String(itemData.gameId).trim() : existing.gameId;
+    if (!cleanGameId) throw new Error('Game wajib dipilih');
+
+    const cleanType = itemData.type !== undefined ? (itemData.type === 'topup' ? 'topup' : 'joki') : existing.type;
+    const cleanPrice = itemData.price !== undefined ? Math.max(0, Number(itemData.price) || 0) : existing.price;
+
+    const updated = Object.assign({}, existing, {
+      name: cleanName,
+      gameId: cleanGameId,
+      type: cleanType,
+      price: cleanPrice,
+      updatedAt: new Date()
+    });
+
+    await req2p(tx('catalog', 'readwrite').put(updated));
+    return updated;
+  }
+
+  async function deleteCatalogItem(id) {
+    await open();
+    return req2p(tx('catalog', 'readwrite').delete(id));
+  }
+
+  async function clearCatalog() {
+    await open();
+    return req2p(tx('catalog', 'readwrite').clear());
+  }
+
   // Backup & Restore
 
   function reviveDates(obj) {
@@ -1377,7 +1533,7 @@ const ShugenDB = (function () {
       return { valid: false, error: 'Penanda aplikasi tidak cocok. File ini bukan backup Shugen Hub.' };
     }
     const fileVersion = data.version !== undefined ? data.version : data.schemaVersion;
-    if (fileVersion !== DB_VERSION && fileVersion !== 8) {
+    if (fileVersion !== DB_VERSION && fileVersion !== 9 && fileVersion !== 8) {
       return {
         valid: false,
         error: 'Versi skema backup (' + fileVersion + ') tidak cocok dengan versi aplikasi saat ini (' + DB_VERSION + ').'
@@ -1553,6 +1709,16 @@ const ShugenDB = (function () {
       update: updatePartner,
       delete: deletePartner,
       clear: clearPartners
+    },
+    catalog: {
+      getAll: getAllCatalog,
+      get: getCatalogItem,
+      getByCatalogId: getCatalogItemByCatalogId,
+      getByGameId: getCatalogItemsByGameId,
+      add: addCatalogItem,
+      update: updateCatalogItem,
+      delete: deleteCatalogItem,
+      clear: clearCatalog
     },
     categories: {
       getAll: getAllExpenseCategories,

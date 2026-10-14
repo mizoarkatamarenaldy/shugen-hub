@@ -446,6 +446,14 @@
           </div>
         </div>
 
+        <div class="form-group" id="order-catalog-group">
+          <label class="form-label" for="field-order-catalog">Ambil dari Katalog (Opsional)</label>
+          <select id="field-order-catalog" class="form-select" disabled>
+            <option value="">-- Pilih game terlebih dahulu --</option>
+          </select>
+          <span class="form-hint" id="order-catalog-hint">Pilih game terlebih dahulu untuk melihat item katalog.</span>
+        </div>
+
         <div class="form-group">
           <label class="form-label" for="field-detail">Detail / Catatan</label>
           <textarea id="field-detail" class="form-textarea" placeholder="Contoh: Push Epic ke Legend, hero Lancelot"></textarea>
@@ -1236,6 +1244,14 @@
         </div>
       </div>
       <div class="settings-section">
+        <div class="settings-section-header">
+          <div class="settings-label" style="margin-bottom:0;">Katalog Harga</div>
+          <button type="button" id="btn-add-catalog" class="btn btn-secondary btn-small">+ Tambah Layanan</button>
+        </div>
+        <p class="settings-desc">Daftar layanan dan harga saran untuk mempercepat input pesanan. Dikelompokkan per game.</p>
+        <div id="catalog-list" class="catalog-list-grouped"></div>
+      </div>
+      <div class="settings-section">
         <div class="settings-label">Kategori Pengeluaran</div>
         <ul id="category-list" class="payment-list"></ul>
         <div class="payment-add">
@@ -1312,6 +1328,10 @@
           <div class="backup-summary-row">
             <span class="backup-summary-label">Game</span>
             <strong id="import-preview-games" class="backup-summary-val">0</strong>
+          </div>
+          <div class="backup-summary-row">
+            <span class="backup-summary-label">Katalog Harga</span>
+            <strong id="import-preview-catalog" class="backup-summary-val">0</strong>
           </div>
           <div class="backup-summary-row">
             <span class="backup-summary-label">Progress Joki</span>
@@ -1425,6 +1445,58 @@
         Buka WhatsApp
       </a>
     </div>
+  </dialog>
+
+  <!-- Dialog Kelola Item Katalog -->
+  <dialog id="catalog-dialog" class="dialog-catalog" aria-labelledby="catalog-dialog-title">
+    <div class="dialog-header">
+      <div class="dialog-header-titles">
+        <h2 id="catalog-dialog-title" class="dialog-title">Tambah Layanan Katalog</h2>
+        <span class="dialog-order-id">Katalog harga saran</span>
+      </div>
+      <button type="button" class="btn-icon" id="btn-close-catalog-dialog" aria-label="Tutup form katalog">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <form id="catalog-form">
+      <div class="dialog-body">
+        <input type="hidden" id="field-catalog-id">
+        <div class="form-group">
+          <label class="form-label" for="field-catalog-game">Game *</label>
+          <select id="field-catalog-game" class="form-select" required>
+            <option value="">Pilih game</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="field-catalog-type">Jenis Layanan *</label>
+            <select id="field-catalog-type" class="form-select" required>
+              <option value="joki">Joki</option>
+              <option value="topup">Topup</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="field-catalog-price">Harga Saran (Rp) *</label>
+            <div class="form-price-wrap">
+              <span class="form-price-prefix">Rp</span>
+              <input type="number" id="field-catalog-price" class="form-input form-input-price" min="0" step="1000" placeholder="0" required>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="field-catalog-name">Nama Layanan *</label>
+          <input type="text" id="field-catalog-name" class="form-input" placeholder="Contoh: Weekly Diamond Pass / Push Epic ke Legend" required>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" id="btn-delete-catalog" class="btn btn-danger" hidden>Hapus</button>
+        <button type="button" id="btn-cancel-catalog" class="btn btn-secondary">Batal</button>
+        <button type="submit" id="btn-save-catalog" class="btn btn-primary">Simpan</button>
+      </div>
+    </form>
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

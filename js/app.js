@@ -38,6 +38,8 @@ const App = (function () {
   let activePartnerId = null;
   let editingPartnerId = null;
   let partnerOrderFilter = 'semua';
+  let catalogItems = [];
+  let editingCatalogId = null;
   let pendingImportData = null;
   let activeRecapTab = 'daily';
   let recapDailyDate = '';
@@ -540,6 +542,7 @@ const App = (function () {
       orders = await ShugenDB.orders.getAll();
       customers = await ShugenDB.customers.getAll();
       partners = await ShugenDB.partners.getAll();
+      catalogItems = await ShugenDB.catalog.getAll();
       incomes = await ShugenDB.incomes.getAll();
       expenses = await ShugenDB.expenses.getAll();
       invoices = await ShugenDB.invoices.getAll();
@@ -1873,6 +1876,10 @@ const App = (function () {
     });
 
     $('#field-type').addEventListener('change', toggleProgressSection);
+    $('#field-game').addEventListener('change', () => {
+      updateOrderCatalogSelect();
+    });
+    $('#field-order-catalog').addEventListener('change', handleOrderCatalogSelect);
     $('#field-status').addEventListener('change', () => {
       updateCompletePrompt();
       if (editingId !== null) {
@@ -2035,6 +2042,27 @@ const App = (function () {
         $('#order-dialog').close();
         openSettings();
       });
+    }
+
+    const btnAddCatalog = $('#btn-add-catalog');
+    if (btnAddCatalog) {
+      btnAddCatalog.addEventListener('click', () => openCatalogDialog());
+    }
+    const btnCloseCatalog = $('#btn-close-catalog-dialog');
+    if (btnCloseCatalog) {
+      btnCloseCatalog.addEventListener('click', closeCatalogDialog);
+    }
+    const btnCancelCatalog = $('#btn-cancel-catalog');
+    if (btnCancelCatalog) {
+      btnCancelCatalog.addEventListener('click', closeCatalogDialog);
+    }
+    const catalogForm = $('#catalog-form');
+    if (catalogForm) {
+      catalogForm.addEventListener('submit', saveCatalogItem);
+    }
+    const btnDeleteCatalog = $('#btn-delete-catalog');
+    if (btnDeleteCatalog) {
+      btnDeleteCatalog.addEventListener('click', () => deleteCatalogItemAction());
     }
 
     $('#btn-add-category').addEventListener('click', addExpenseCategory);
@@ -2429,6 +2457,7 @@ const App = (function () {
       $('#field-customer').value = order.customerName;
       $('#field-type').value = order.type;
       populateGameSelect(order.gameId);
+      updateOrderCatalogSelect(order.gameId);
       $('#field-detail').value = order.detail;
       $('#field-price').value = order.price || '';
       $('#field-payment').value = order.paymentMethod;
@@ -2520,6 +2549,7 @@ const App = (function () {
       $('#detail-order-id').hidden = true;
       $('#detail-order-id-row').hidden = true;
       populateGameSelect('');
+      updateOrderCatalogSelect('');
       const deadlineDateInput = $('#field-deadline-date');
       const deadlineTimeInput = $('#field-deadline-time');
       const deadlineBadge = $('#detail-deadline-badge');
@@ -2820,6 +2850,77 @@ const App = (function () {
     if (selectedGameId) {
       sel.value = selectedGameId;
     }
+  }
+
+  function updateOrderCatalogSelect(preselectedGameId) {
+    const gameId = preselectedGameId !== undefined ? preselectedGameId : ($('#field-game') ? $('#field-game').value : '');
+    const sel = $('#field-order-catalog');
+    const hint = $('#order-catalog-hint');
+    if (!sel) return;
+
+    sel.innerHTML = '';
+
+    if (!gameId) {
+      sel.disabled = true;
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '-- Pilih game terlebih dahulu --';
+      sel.appendChild(opt);
+      if (hint) {
+        hint.textContent = 'Pilih game terlebih dahulu untuk melihat item katalog.';
+      }
+      return;
+    }
+
+    const items = catalogItems.filter((c) => c.gameId === gameId);
+    if (items.length === 0) {
+      sel.disabled = true;
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '-- Belum ada katalog untuk game ini --';
+      sel.appendChild(opt);
+      if (hint) {
+        hint.textContent = 'Belum ada item katalog untuk game ini. Tambahkan di Pengaturan.';
+      }
+      return;
+    }
+
+    sel.disabled = false;
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = '-- Ambil dari katalog (opsional) --';
+    sel.appendChild(defaultOpt);
+
+    items.forEach((item) => {
+      const opt = document.createElement('option');
+      opt.value = item.catalogId;
+      const typeLabel = item.type === 'joki' ? 'Joki' : 'Topup';
+      opt.textContent = item.name + ' (' + typeLabel + ') - Rp ' + formatPrice(item.price);
+      sel.appendChild(opt);
+    });
+
+    if (hint) {
+      hint.textContent = 'Pilih item untuk mengisi otomatis nama layanan dan harga.';
+    }
+  }
+
+  function handleOrderCatalogSelect() {
+    const sel = $('#field-order-catalog');
+    if (!sel) return;
+    const catalogId = sel.value;
+    if (!catalogId) return;
+
+    const item = catalogItems.find((c) => c.catalogId === catalogId);
+    if (!item) return;
+
+    $('#field-detail').value = item.name;
+    $('#field-price').value = item.price;
+    if (item.type) {
+      $('#field-type').value = item.type;
+      toggleProgressSection();
+    }
+    updateOrderShareSummary();
+    toast('Layanan dan harga katalog diterapkan');
   }
 
   function populatePaymentSelect() {
@@ -3482,6 +3583,7 @@ const App = (function () {
     $('#setting-shop-contact').value = shopContact || '';
     renderPaymentList();
     renderGameList();
+    renderCatalogList();
     renderCategoryList();
     renderTemplateSettings();
     renderNotificationSettings();
@@ -3662,6 +3764,8 @@ const App = (function () {
       games = await ShugenDB.games.getAll();
       input.value = '';
       renderGameList();
+      renderCatalogList();
+      updateOrderCatalogSelect();
       render();
       toast('Game ditambahkan');
     } catch (err) {
@@ -3697,6 +3801,8 @@ const App = (function () {
       await ShugenDB.games.update(id, trimmed);
       games = await ShugenDB.games.getAll();
       renderGameList();
+      renderCatalogList();
+      updateOrderCatalogSelect();
       render();
       toast('Game diperbarui');
     } catch (err) {
@@ -3720,19 +3826,324 @@ const App = (function () {
       return;
     }
 
+    const usedCatalogCount = catalogItems.filter((c) => c.gameId === game.gameId).length;
+    if (usedCatalogCount > 0) {
+      toast('Game sedang dipakai oleh katalog harga dan tidak dapat dihapus');
+      return;
+    }
+
     try {
       await ShugenDB.games.delete(id);
       games = await ShugenDB.games.getAll();
       renderGameList();
+      renderCatalogList();
+      updateOrderCatalogSelect();
       render();
       toast('Game dihapus');
     } catch (err) {
       console.error(err);
       if (err && err.message === 'GAME_IN_USE') {
         toast('Game sedang dipakai oleh pesanan dan tidak dapat dihapus');
+      } else if (err && err.message === 'GAME_IN_USE_CATALOG') {
+        toast('Game sedang dipakai oleh katalog harga dan tidak dapat dihapus');
       } else {
         toast('Gagal menghapus game');
       }
+    }
+  }
+
+  // Catalog management (Katalog Harga)
+
+  function renderCatalogList() {
+    const container = $('#catalog-list');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (games.length === 0) {
+      const emptyBox = document.createElement('div');
+      emptyBox.className = 'state-hint';
+      emptyBox.style.cssText = 'padding: 8px 0; font-size: 13px; color: var(--text-secondary);';
+      emptyBox.textContent = 'Daftar game masih kosong. Silakan tambah game di Kategori Game terlebih dahulu.';
+      container.appendChild(emptyBox);
+      return;
+    }
+
+    if (catalogItems.length === 0) {
+      const emptyBox = document.createElement('div');
+      emptyBox.className = 'state-hint';
+      emptyBox.style.cssText = 'padding: 8px 0; font-size: 13px; color: var(--text-secondary);';
+      emptyBox.textContent = 'Belum ada item katalog. Tap tombol "+ Tambah Layanan" di atas.';
+      container.appendChild(emptyBox);
+      return;
+    }
+
+    const gamesWithItems = games.filter((g) => catalogItems.some((c) => c.gameId === g.gameId));
+    const orphanItems = catalogItems.filter((c) => !games.some((g) => g.gameId === c.gameId));
+
+    if (gamesWithItems.length === 0 && orphanItems.length === 0) {
+      const emptyBox = document.createElement('div');
+      emptyBox.className = 'state-hint';
+      emptyBox.style.cssText = 'padding: 8px 0; font-size: 13px; color: var(--text-secondary);';
+      emptyBox.textContent = 'Belum ada item katalog. Tap tombol "+ Tambah Layanan" di atas.';
+      container.appendChild(emptyBox);
+      return;
+    }
+
+    gamesWithItems.forEach((game) => {
+      const items = catalogItems.filter((c) => c.gameId === game.gameId);
+      const groupEl = document.createElement('div');
+      groupEl.className = 'catalog-group';
+
+      const headerEl = document.createElement('div');
+      headerEl.className = 'catalog-group-header';
+      headerEl.innerHTML =
+        '<span class="catalog-group-title">' + esc(game.name) + '</span>' +
+        '<span class="catalog-group-count">' + items.length + ' item</span>';
+      groupEl.appendChild(headerEl);
+
+      const ulEl = document.createElement('ul');
+      ulEl.className = 'catalog-group-items';
+
+      items.forEach((item) => {
+        const li = document.createElement('li');
+        li.className = 'catalog-item-row';
+
+        const mainDiv = document.createElement('div');
+        mainDiv.className = 'catalog-item-main';
+
+        const typeBadge = '<span class="order-type type-' + item.type + '">' +
+          (item.type === 'joki' ? 'Joki' : 'Topup') + '</span>';
+
+        mainDiv.innerHTML =
+          '<div class="catalog-item-header">' +
+            typeBadge +
+            '<span class="catalog-item-name">' + esc(item.name) + '</span>' +
+          '</div>' +
+          '<div class="catalog-item-price">Rp ' + formatPrice(item.price) + '</div>';
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'catalog-item-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'btn btn-secondary btn-small';
+        editBtn.textContent = 'Ubah';
+        editBtn.setAttribute('aria-label', 'Ubah layanan ' + item.name);
+        editBtn.addEventListener('click', () => openCatalogDialog(item.id));
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn-delete-payment btn-del-catalog';
+        delBtn.setAttribute('aria-label', 'Hapus layanan ' + item.name);
+        delBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+        delBtn.addEventListener('click', () => deleteCatalogItemAction(item.id));
+
+        actionsDiv.appendChild(editBtn);
+        actionsDiv.appendChild(delBtn);
+
+        li.appendChild(mainDiv);
+        li.appendChild(actionsDiv);
+        ulEl.appendChild(li);
+      });
+
+      groupEl.appendChild(ulEl);
+      container.appendChild(groupEl);
+    });
+
+    if (orphanItems.length > 0) {
+      const groupEl = document.createElement('div');
+      groupEl.className = 'catalog-group';
+
+      const headerEl = document.createElement('div');
+      headerEl.className = 'catalog-group-header';
+      headerEl.innerHTML =
+        '<span class="catalog-group-title">Game Lainnya</span>' +
+        '<span class="catalog-group-count">' + orphanItems.length + ' item</span>';
+      groupEl.appendChild(headerEl);
+
+      const ulEl = document.createElement('ul');
+      ulEl.className = 'catalog-group-items';
+
+      orphanItems.forEach((item) => {
+        const li = document.createElement('li');
+        li.className = 'catalog-item-row';
+
+        const mainDiv = document.createElement('div');
+        mainDiv.className = 'catalog-item-main';
+
+        const typeBadge = '<span class="order-type type-' + item.type + '">' +
+          (item.type === 'joki' ? 'Joki' : 'Topup') + '</span>';
+
+        mainDiv.innerHTML =
+          '<div class="catalog-item-header">' +
+            typeBadge +
+            '<span class="catalog-item-name">' + esc(item.name) + '</span>' +
+          '</div>' +
+          '<div class="catalog-item-price">Rp ' + formatPrice(item.price) + '</div>';
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'catalog-item-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'btn btn-secondary btn-small';
+        editBtn.textContent = 'Ubah';
+        editBtn.setAttribute('aria-label', 'Ubah layanan ' + item.name);
+        editBtn.addEventListener('click', () => openCatalogDialog(item.id));
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn-delete-payment btn-del-catalog';
+        delBtn.setAttribute('aria-label', 'Hapus layanan ' + item.name);
+        delBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+        delBtn.addEventListener('click', () => deleteCatalogItemAction(item.id));
+
+        actionsDiv.appendChild(editBtn);
+        actionsDiv.appendChild(delBtn);
+
+        li.appendChild(mainDiv);
+        li.appendChild(actionsDiv);
+        ulEl.appendChild(li);
+      });
+
+      groupEl.appendChild(ulEl);
+      container.appendChild(groupEl);
+    }
+  }
+
+  function openCatalogDialog(id) {
+    if (games.length === 0) {
+      toast('Tambahkan kategori game terlebih dahulu di Pengaturan');
+      return;
+    }
+
+    editingCatalogId = id !== undefined ? id : null;
+    const dialog = $('#catalog-dialog');
+    const form = $('#catalog-form');
+    if (!dialog || !form) return;
+
+    form.reset();
+
+    const gameSelect = $('#field-catalog-game');
+    gameSelect.innerHTML = '';
+    const defaultGameOpt = document.createElement('option');
+    defaultGameOpt.value = '';
+    defaultGameOpt.textContent = 'Pilih game';
+    gameSelect.appendChild(defaultGameOpt);
+    games.forEach((g) => {
+      const opt = document.createElement('option');
+      opt.value = g.gameId;
+      opt.textContent = g.name;
+      gameSelect.appendChild(opt);
+    });
+
+    const titleEl = $('#catalog-dialog-title');
+    const deleteBtn = $('#btn-delete-catalog');
+
+    if (editingCatalogId !== null) {
+      const item = catalogItems.find((c) => c.id === editingCatalogId);
+      if (!item) return;
+      if (titleEl) titleEl.textContent = 'Ubah Layanan Katalog';
+      $('#field-catalog-id').value = item.id;
+      gameSelect.value = item.gameId || '';
+      $('#field-catalog-type').value = item.type || 'joki';
+      $('#field-catalog-name').value = item.name || '';
+      $('#field-catalog-price').value = item.price !== undefined ? item.price : '';
+      if (deleteBtn) deleteBtn.hidden = false;
+    } else {
+      if (titleEl) titleEl.textContent = 'Tambah Layanan Katalog';
+      $('#field-catalog-id').value = '';
+      if (games.length > 0) {
+        gameSelect.value = games[0].gameId;
+      }
+      $('#field-catalog-type').value = 'joki';
+      $('#field-catalog-name').value = '';
+      $('#field-catalog-price').value = '';
+      if (deleteBtn) deleteBtn.hidden = true;
+    }
+
+    dialog.showModal();
+  }
+
+  function closeCatalogDialog() {
+    editingCatalogId = null;
+    const dialog = $('#catalog-dialog');
+    if (dialog && dialog.open) {
+      dialog.close();
+    }
+  }
+
+  async function saveCatalogItem(e) {
+    e.preventDefault();
+    const saveBtn = $('#btn-save-catalog');
+    if (saveBtn) saveBtn.disabled = true;
+
+    const gameId = $('#field-catalog-game').value;
+    const type = $('#field-catalog-type').value;
+    const name = $('#field-catalog-name').value.trim();
+    const priceVal = $('#field-catalog-price').value;
+    const price = Math.max(0, Number(priceVal) || 0);
+
+    if (!gameId) {
+      toast('Game wajib dipilih');
+      if (saveBtn) saveBtn.disabled = false;
+      return;
+    }
+    if (!name) {
+      toast('Nama layanan wajib diisi');
+      if (saveBtn) saveBtn.disabled = false;
+      return;
+    }
+
+    try {
+      if (editingCatalogId !== null) {
+        await ShugenDB.catalog.update(editingCatalogId, {
+          gameId: gameId,
+          type: type,
+          name: name,
+          price: price
+        });
+        toast('Layanan katalog diperbarui');
+      } else {
+        await ShugenDB.catalog.add({
+          gameId: gameId,
+          type: type,
+          name: name,
+          price: price
+        });
+        toast('Layanan katalog ditambahkan');
+      }
+
+      catalogItems = await ShugenDB.catalog.getAll();
+      renderCatalogList();
+      updateOrderCatalogSelect();
+      closeCatalogDialog();
+    } catch (err) {
+      console.error(err);
+      toast('Gagal menyimpan layanan katalog');
+    } finally {
+      if (saveBtn) saveBtn.disabled = false;
+    }
+  }
+
+  async function deleteCatalogItemAction(id) {
+    const targetId = id !== undefined ? id : editingCatalogId;
+    if (targetId === null) return;
+    const item = catalogItems.find((c) => c.id === targetId);
+    if (!item) return;
+
+    if (!confirm('Hapus layanan "' + item.name + '" dari katalog?')) return;
+
+    try {
+      await ShugenDB.catalog.delete(targetId);
+      catalogItems = await ShugenDB.catalog.getAll();
+      renderCatalogList();
+      updateOrderCatalogSelect();
+      closeCatalogDialog();
+      toast('Layanan katalog dihapus');
+    } catch (err) {
+      console.error(err);
+      toast('Gagal menghapus layanan katalog');
     }
   }
 
@@ -4998,6 +5409,7 @@ const App = (function () {
     invoices = await ShugenDB.invoices.getAll();
     customers = await ShugenDB.customers.getAll();
     partners = await ShugenDB.partners.getAll();
+    catalogItems = await ShugenDB.catalog.getAll();
     populateCustomerDatalist();
     expenseCategories = await ShugenDB.categories.getAll();
     await refreshProgressMap();
@@ -5015,6 +5427,8 @@ const App = (function () {
     render();
     renderPaymentList();
     renderGameList();
+    renderCatalogList();
+    updateOrderCatalogSelect();
     renderCategoryList();
     renderTemplateSettings();
     renderNotificationSettings();
@@ -5143,7 +5557,8 @@ const App = (function () {
       curGames,
       curProgress,
       curCategories,
-      curPayments
+      curPayments,
+      curCatalog
     ] = await Promise.all([
       ShugenDB.orders.getAll().catch(() => []),
       ShugenDB.customers.getAll().catch(() => []),
@@ -5154,7 +5569,8 @@ const App = (function () {
       ShugenDB.games.getAll().catch(() => []),
       ShugenDB.progress.getAll().catch(() => []),
       ShugenDB.categories.getAll().catch(() => []),
-      ShugenDB.payment.getAll().catch(() => [])
+      ShugenDB.payment.getAll().catch(() => []),
+      ShugenDB.catalog.getAll().catch(() => [])
     ]);
 
     const curOrderCount = Array.isArray(curOrders) ? curOrders.length : 0;
@@ -5164,6 +5580,7 @@ const App = (function () {
     const curExpCount = Array.isArray(curExpenses) ? curExpenses.length : 0;
     const curInvCount = Array.isArray(curInvoices) ? curInvoices.length : 0;
     const curGameCount = Array.isArray(curGames) ? curGames.length : 0;
+    const curCatalogCount = Array.isArray(curCatalog) ? curCatalog.length : 0;
     const curProgCount = Array.isArray(curProgress) ? curProgress.length : 0;
     const curCatCount = Array.isArray(curCategories) ? curCategories.length : 0;
     const curPayCount = Array.isArray(curPayments) ? curPayments.length : 0;
@@ -5177,6 +5594,7 @@ const App = (function () {
     const expCount = Array.isArray(stores.expenses) ? stores.expenses.length : 0;
     const invCount = Array.isArray(stores.invoices) ? stores.invoices.length : 0;
     const gameCount = Array.isArray(stores.games) ? stores.games.length : 0;
+    const catalogCount = Array.isArray(stores.catalog) ? stores.catalog.length : 0;
     const progCount = Array.isArray(stores.progress) ? stores.progress.length : 0;
     const catCount = Array.isArray(stores.expenseCategories) ? stores.expenseCategories.length : 0;
     const payCount = Array.isArray(stores.paymentMethods) ? stores.paymentMethods.length : 0;
@@ -5204,6 +5622,10 @@ const App = (function () {
     $('#import-preview-expenses').textContent = formatCountComparison(curExpCount, expCount);
     $('#import-preview-invoices').textContent = formatCountComparison(curInvCount, invCount);
     $('#import-preview-games').textContent = formatCountComparison(curGameCount, gameCount);
+    const catalogPreviewEl = $('#import-preview-catalog');
+    if (catalogPreviewEl) {
+      catalogPreviewEl.textContent = formatCountComparison(curCatalogCount, catalogCount);
+    }
     $('#import-preview-progress').textContent = formatCountComparison(curProgCount, progCount);
     $('#import-preview-categories').textContent = formatCountComparison(curCatCount, catCount);
     $('#import-preview-payments').textContent = formatCountComparison(curPayCount, payCount);

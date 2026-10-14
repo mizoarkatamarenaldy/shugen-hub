@@ -89,6 +89,97 @@ const DummyData = (function () {
     }
   ];
 
+  const CATALOG = [
+    {
+      catalogId: 'CTL-261011-M1K1',
+      name: 'Weekly Diamond Pass',
+      type: 'topup',
+      gameId: 'GAM-261011-M7K2',
+      price: 28000,
+      createdAt: new Date('2026-10-11T08:30:00')
+    },
+    {
+      catalogId: 'CTL-261011-M1K2',
+      name: '86 Diamonds',
+      type: 'topup',
+      gameId: 'GAM-261011-M7K2',
+      price: 20000,
+      createdAt: new Date('2026-10-11T08:35:00')
+    },
+    {
+      catalogId: 'CTL-261011-M1K3',
+      name: 'Push rank Epic ke Legend',
+      type: 'joki',
+      gameId: 'GAM-261011-M7K2',
+      price: 150000,
+      createdAt: new Date('2026-10-11T08:40:00')
+    },
+    {
+      catalogId: 'CTL-261011-M1K4',
+      name: 'Push rank Legend ke Mythic',
+      type: 'joki',
+      gameId: 'GAM-261011-M7K2',
+      price: 220000,
+      createdAt: new Date('2026-10-11T08:45:00')
+    },
+    {
+      catalogId: 'CTL-261011-G2P1',
+      name: 'Blessing of the Welkin Moon',
+      type: 'topup',
+      gameId: 'GAM-261011-G4P9',
+      price: 65000,
+      createdAt: new Date('2026-10-11T08:50:00')
+    },
+    {
+      catalogId: 'CTL-261011-G2P2',
+      name: 'Spiral Abyss Floor 9-12 Full Star',
+      type: 'joki',
+      gameId: 'GAM-261011-G4P9',
+      price: 75000,
+      createdAt: new Date('2026-10-11T08:55:00')
+    },
+    {
+      catalogId: 'CTL-261011-V3T1',
+      name: '1000 Valorant Points',
+      type: 'topup',
+      gameId: 'GAM-261011-V8T3',
+      price: 115000,
+      createdAt: new Date('2026-10-11T09:00:00')
+    },
+    {
+      catalogId: 'CTL-261011-V3T2',
+      name: 'Push rank Silver ke Gold',
+      type: 'joki',
+      gameId: 'GAM-261011-V8T3',
+      price: 200000,
+      createdAt: new Date('2026-10-11T09:05:00')
+    },
+    {
+      catalogId: 'CTL-261011-F4W1',
+      name: 'Membership Mingguan',
+      type: 'topup',
+      gameId: 'GAM-261011-F2W6',
+      price: 30000,
+      createdAt: new Date('2026-10-11T09:10:00')
+    },
+    {
+      catalogId: 'CTL-261011-H5N1',
+      name: 'Express Supply Pass',
+      type: 'topup',
+      gameId: 'GAM-261011-H9N4',
+      price: 65000,
+      createdAt: new Date('2026-10-11T09:15:00')
+    },
+    {
+      catalogId: 'CTL-261011-H5N2',
+      name: 'Memory of Chaos Full Star',
+      type: 'joki',
+      gameId: 'GAM-261011-H9N4',
+      price: 80000,
+      createdAt: new Date('2026-10-11T09:20:00')
+    }
+  ];
+
   const INITIAL_CASH_BALANCE = 500000;
 
   const ORDERS = [
@@ -544,6 +635,7 @@ const DummyData = (function () {
     await ShugenDB.invoices.clear();
     await ShugenDB.customers.clear();
     await ShugenDB.partners.clear();
+    await ShugenDB.catalog.clear();
     await ShugenDB.games.clear();
     await ShugenDB.categories.clear();
     await ShugenDB.payment.clear();
@@ -569,6 +661,10 @@ const DummyData = (function () {
 
     for (const g of GAMES) {
       await ShugenDB.games.add(g);
+    }
+
+    for (const item of CATALOG) {
+      await ShugenDB.catalog.add(item);
     }
 
     for (const cust of CUSTOMERS) {

@@ -19,6 +19,21 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #025 [2026-10-14] Implementasi Fitur 11 (Katalog harga)
+- Fitur: Katalog harga
+- Ringkasan: Menambahkan fitur pengelolaan katalog harga layanan di Pengaturan yang dikelompokkan per game (nama layanan, jenis joki atau topup, game dari kategori game, dan harga saran dalam Rupiah) dengan dukungan tambah, ubah, dan hapus item. Pada form pesanan, ditambahkan opsi dropdown "Ambil dari katalog" sesuai game yang dipilih untuk mengisi otomatis nama layanan, harga, dan jenis pesanan tanpa mengunci nilai tersebut serta pesanan tetap dapat dibuat manual tanpa katalog. Data katalog disimpan di IndexedDB versi 10 dengan ID unik CTL-YYMMDD-XXXX, diikutsertakan dalam backup dan restore (lengkap dengan pratinjau dan perbandingan jumlah data pada dialog import), dilengkapi data dummy 11 item katalog untuk demo portofolio, dan cache service worker dinaikkan ke shugen-v22.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - dev/PLANSPEC.md
+  - index.html
+  - js/app.js
+  - js/db.js
+  - js/dummy.js
+  - sw.js
+- Catatan: Skema IndexedDB dinaikkan ke versi 10 dengan penambahan object store "catalog"; pesanan menyimpan salinan independen nama dan harga sehingga perubahan atau penghapusan item katalog tidak mempengaruhi pesanan yang sudah ada; penghapusan kategori game dicegah jika masih digunakan oleh item katalog; cache service worker dinaikkan ke shugen-v22.
+
 ### #024 [2026-10-14] Implementasi Fitur 9 (Daftar penjoki/partner dan bagi hasil per pesanan)
 - Fitur: Daftar penjoki/partner dan bagi hasil per pesanan
 - Ringkasan: Menambahkan menu mandiri "Partner" untuk mengelola data penjoki/partner (nama unik, nomor HP opsional, catatan, dan pengaturan bagi hasil bawaan mode persen atau nominal tetap dengan ID acak PRT-YYMMDD-XXXX). Di form dan detail pesanan, pengguna dapat memilih satu partner opsional serta mengatur bagi hasil per pesanan dengan kalkulasi otomatis bagian partner dan toko sesuai harga total pesanan serta validasi batas nilai. Status bayar ke partner ("Belum dibayar" / "Sudah dibayar") dapat ditandai atau dibatalkan khusus untuk pesanan berstatus Selesai, termasuk fitur tandai semua siap bayar sekaligus dari detail partner dengan dialog konfirmasi nominal dan jumlah pesanan. Data partner dan status bagi hasil tetap bersifat internal tanpa bocor ke invoice/WA pelanggan, IndexedDB dinaikkan ke versi 9 dengan migrasi aman, alur backup/restore dan dialog perbandingan diperbarui menyertakan jumlah partner, data dummy dilengkapi 5 partner (termasuk 1 nonaktif), dan cache service worker dinaikkan ke shugen-v21.
