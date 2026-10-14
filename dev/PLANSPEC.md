@@ -309,3 +309,36 @@ Alur aman:
 
 Data:
 - Penghapusan hanya terjadi di perangkat ini. Sinkron Google Drive belum ada, jadi tidak perlu ditangani di fitur ini.
+
+## Fitur 17: Rekening / E-Wallet Partner
+
+Tujuan: pemilik bisa menyimpan tujuan transfer tiap partner/penjoki dan menyalin nomornya dengan satu ketuk saat transfer bagi hasil lewat m-banking.
+
+Data partner (menambah Fitur 9):
+- Tiga field opsional baru di data partner: nama bank / e-wallet (teks bebas, misal BCA atau DANA), nomor rekening / nomor e-wallet, dan atas nama.
+- Nomor disimpan sebagai teks (string), supaya angka 0 di depan tidak hilang.
+- Partner lama yang belum punya field ini tetap berfungsi normal dan tidak perlu diisi ulang.
+
+Tempat dan tampilan:
+- Ketiga field ada di form tambah partner dan form edit partner.
+- Kalau terisi, nama bank / e-wallet, nomor, dan atas nama ditampilkan di detail partner dan di tempat bagi hasil partner ditampilkan.
+- Di samping nomor ada tombol "Salin Nomor Rekening". Tombol hanya muncul kalau nomor terisi.
+
+Tombol salin:
+- Satu ketuk menyalin nomor saja ke clipboard, tanpa spasi tambahan atau teks lain.
+- Setelah berhasil, tampil pesan singkat "Nomor disalin".
+- Kalau gagal menyalin, tampil pesan gagal yang jelas, dan nomor tetap bisa disalin manual (teks nomor bisa diseleksi).
+
+Data dan backup:
+- Data baru disimpan di IndexedDB bersama data partner.
+- Ikut export dan import backup, termasuk pratinjau (12b) dan perbandingan jumlah data (12d) kalau relevan.
+- Backup lama yang belum punya field ini tetap bisa diimpor tanpa error.
+- Ikut terhapus oleh "Hapus semua data" (Fitur 16).
+- Nomor rekening hanya ada di perangkat dan file backup. Tidak boleh ada di repo.
+
+Data contoh (dummy):
+- Data dummy untuk demo portofolio memakai nomor rekening yang jelas palsu, dan atas nama fiktif.
+
+Di luar cakupan:
+- Template pesan WA konfirmasi payout dan riwayat batch pembayaran tidak dikerjakan di fitur ini.
+- Tidak ada perubahan hitungan bagi hasil.

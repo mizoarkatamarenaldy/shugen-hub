@@ -1946,6 +1946,8 @@ const App = (function () {
       $('#field-partner').value = '';
       $('#order-share-config').hidden = true;
       $('#order-partner-payout-box').hidden = true;
+      const orderAccBox = $('#order-partner-account-box');
+      if (orderAccBox) orderAccBox.hidden = true;
       resetCopyButton();
     });
 
@@ -2259,6 +2261,24 @@ const App = (function () {
       });
     });
 
+    const btnCopyPartnerDetailAcc = $('#btn-copy-partner-detail-account');
+    if (btnCopyPartnerDetailAcc) {
+      btnCopyPartnerDetailAcc.addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        const num = btn.dataset.accountNumber;
+        if (num) copyPartnerAccountNumber(num, btn);
+      });
+    }
+
+    const btnCopyOrderPartnerAcc = $('#btn-copy-order-partner-account');
+    if (btnCopyOrderPartnerAcc) {
+      btnCopyOrderPartnerAcc.addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        const num = btn.dataset.accountNumber;
+        if (num) copyPartnerAccountNumber(num, btn);
+      });
+    }
+
     const btnClearDeadline = $('#btn-clear-deadline');
     const fieldDeadlineDate = $('#field-deadline-date');
     const fieldDeadlineTime = $('#field-deadline-time');
@@ -2382,6 +2402,8 @@ const App = (function () {
     if (!partnerId) {
       configBox.hidden = true;
       $('#order-partner-payout-box').hidden = true;
+      const orderAccBox = $('#order-partner-account-box');
+      if (orderAccBox) orderAccBox.hidden = true;
       return;
     }
 
@@ -2404,6 +2426,115 @@ const App = (function () {
     }
 
     updateOrderShareSummary();
+    updateOrderPartnerAccountUI();
+  }
+
+  async function copyPartnerAccountNumber(accountNumber, buttonEl) {
+    const cleanNumber = String(accountNumber || '').trim();
+    if (!cleanNumber) return;
+
+    let copied = false;
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      try {
+        await navigator.clipboard.writeText(cleanNumber);
+        copied = true;
+      } catch (clipErr) {
+        copied = false;
+      }
+    }
+
+    if (!copied) {
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = cleanNumber;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        copied = document.execCommand('copy');
+        document.body.removeChild(textArea);
+      } catch (fallbackErr) {
+        copied = false;
+      }
+    }
+
+    if (copied) {
+      toast('Nomor disalin');
+      if (buttonEl) {
+        buttonEl.classList.add('is-copied');
+        const textSpan = buttonEl.querySelector('span');
+        const origText = textSpan ? textSpan.textContent : buttonEl.textContent;
+        if (textSpan) {
+          textSpan.textContent = 'Nomor disalin';
+        } else {
+          buttonEl.textContent = 'Nomor disalin';
+        }
+        setTimeout(() => {
+          buttonEl.classList.remove('is-copied');
+          if (textSpan) {
+            textSpan.textContent = origText;
+          } else {
+            buttonEl.textContent = origText;
+          }
+        }, 2000);
+      }
+    } else {
+      toast('Gagal menyalin nomor rekening');
+    }
+  }
+
+  function updateOrderPartnerAccountUI() {
+    const partnerId = $('#field-partner') ? $('#field-partner').value : '';
+    const accountBox = $('#order-partner-account-box');
+    if (!accountBox) return;
+
+    if (!partnerId) {
+      accountBox.hidden = true;
+      return;
+    }
+
+    const part = getPartner(partnerId);
+    if (!part) {
+      accountBox.hidden = true;
+      return;
+    }
+
+    const hasBank = Boolean(part.bankName && part.bankName.trim());
+    const hasAccountNum = Boolean(part.accountNumber && part.accountNumber.trim());
+    const hasHolder = Boolean(part.accountHolder && part.accountHolder.trim());
+    const hasAnyAccountInfo = hasBank || hasAccountNum || hasHolder;
+
+    if (hasAnyAccountInfo) {
+      accountBox.hidden = false;
+      const bankEl = $('#order-partner-bank');
+      if (bankEl) {
+        bankEl.textContent = part.bankName ? part.bankName.trim() : '';
+        bankEl.hidden = !hasBank;
+      }
+
+      const numEl = $('#order-partner-account-num');
+      const copyBtn = $('#btn-copy-order-partner-account');
+      if (numEl) {
+        numEl.textContent = part.accountNumber ? part.accountNumber.trim() : '';
+        numEl.hidden = !hasAccountNum;
+      }
+      if (copyBtn) {
+        copyBtn.hidden = !hasAccountNum;
+        copyBtn.dataset.accountNumber = hasAccountNum ? part.accountNumber.trim() : '';
+        copyBtn.classList.remove('is-copied');
+        const textSpan = copyBtn.querySelector('span');
+        if (textSpan) textSpan.textContent = 'Salin Nomor Rekening';
+      }
+
+      const holderRow = $('#order-partner-holder-row');
+      const holderEl = $('#order-partner-holder');
+      if (holderEl) holderEl.textContent = part.accountHolder ? part.accountHolder.trim() : '';
+      if (holderRow) holderRow.hidden = !hasHolder;
+    } else {
+      accountBox.hidden = true;
+    }
   }
 
   function updateOrderShareSummary() {
@@ -2589,6 +2720,8 @@ const App = (function () {
       $('#field-share-value').value = '';
       $('#order-share-config').hidden = true;
       $('#order-partner-payout-box').hidden = true;
+      const orderAccBox = $('#order-partner-account-box');
+      if (orderAccBox) orderAccBox.hidden = true;
 
       $('#order-paid-group').hidden = true;
       $('#order-paid-total').textContent = 'Rp 0';
@@ -5001,6 +5134,44 @@ const App = (function () {
     }
     $('#partner-detail-share').textContent = shareDefaultLabel;
 
+    const hasBank = Boolean(part.bankName && part.bankName.trim());
+    const hasAccountNum = Boolean(part.accountNumber && part.accountNumber.trim());
+    const hasHolder = Boolean(part.accountHolder && part.accountHolder.trim());
+    const hasAnyAccountInfo = hasBank || hasAccountNum || hasHolder;
+
+    const detailAccountBox = $('#partner-detail-account-box');
+    if (detailAccountBox) {
+      if (hasAnyAccountInfo) {
+        detailAccountBox.hidden = false;
+        const bankEl = $('#partner-detail-bank');
+        if (bankEl) {
+          bankEl.textContent = part.bankName ? part.bankName.trim() : '';
+          bankEl.hidden = !hasBank;
+        }
+
+        const numEl = $('#partner-detail-account-num');
+        const copyBtn = $('#btn-copy-partner-detail-account');
+        if (numEl) {
+          numEl.textContent = part.accountNumber ? part.accountNumber.trim() : '';
+          numEl.hidden = !hasAccountNum;
+        }
+        if (copyBtn) {
+          copyBtn.hidden = !hasAccountNum;
+          copyBtn.dataset.accountNumber = hasAccountNum ? part.accountNumber.trim() : '';
+          copyBtn.classList.remove('is-copied');
+          const textSpan = copyBtn.querySelector('span');
+          if (textSpan) textSpan.textContent = 'Salin Nomor Rekening';
+        }
+
+        const holderRow = $('#partner-detail-holder-row');
+        const holderEl = $('#partner-detail-holder');
+        if (holderEl) holderEl.textContent = part.accountHolder ? part.accountHolder.trim() : '';
+        if (holderRow) holderRow.hidden = !hasHolder;
+      } else {
+        detailAccountBox.hidden = true;
+      }
+    }
+
     // Filter orders
     const matchedOrders = orders.filter((o) => o.partnerId === partnerId && o.status !== 'dibatalkan');
     const orderCount = matchedOrders.length;
@@ -5128,6 +5299,9 @@ const App = (function () {
       $('#partner-id-row').hidden = false;
       $('#partner-field-name').value = part.name;
       $('#partner-field-phone').value = part.phone || '';
+      $('#partner-field-bank-name').value = part.bankName || '';
+      $('#partner-field-account-number').value = part.accountNumber || '';
+      $('#partner-field-account-holder').value = part.accountHolder || '';
       $('#partner-field-share-type').value = part.defaultShareType || '';
       $('#partner-field-share-val').value = part.defaultShareValue != null ? part.defaultShareValue : '';
       $('#partner-field-status').value = part.isActive === false ? 'nonaktif' : 'aktif';
@@ -5141,6 +5315,9 @@ const App = (function () {
       $('#partner-id-row').hidden = true;
       $('#partner-field-name').value = '';
       $('#partner-field-phone').value = '';
+      $('#partner-field-bank-name').value = '';
+      $('#partner-field-account-number').value = '';
+      $('#partner-field-account-holder').value = '';
       $('#partner-field-share-type').value = '';
       $('#partner-field-share-val').value = '';
       $('#partner-field-status').value = 'aktif';
@@ -5186,6 +5363,9 @@ const App = (function () {
 
     const nameVal = $('#partner-field-name').value.trim();
     const phoneVal = $('#partner-field-phone').value.trim();
+    const bankNameVal = $('#partner-field-bank-name').value.trim();
+    const accountNumberVal = $('#partner-field-account-number').value.trim();
+    const accountHolderVal = $('#partner-field-account-holder').value.trim();
     const shareTypeVal = $('#partner-field-share-type').value || null;
     const rawShareVal = $('#partner-field-share-val').value.trim();
     const isActiveVal = $('#partner-field-status').value === 'aktif';
@@ -5238,6 +5418,9 @@ const App = (function () {
         await ShugenDB.partners.update(editingPartnerId, {
           name: nameVal,
           phone: phoneVal,
+          bankName: bankNameVal,
+          accountNumber: accountNumberVal,
+          accountHolder: accountHolderVal,
           defaultShareType: shareTypeVal,
           defaultShareValue: shareVal,
           isActive: isActiveVal,
@@ -5254,6 +5437,9 @@ const App = (function () {
         await ShugenDB.partners.add({
           name: nameVal,
           phone: phoneVal,
+          bankName: bankNameVal,
+          accountNumber: accountNumberVal,
+          accountHolder: accountHolderVal,
           defaultShareType: shareTypeVal,
           defaultShareValue: shareVal,
           isActive: isActiveVal,

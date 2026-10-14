@@ -556,6 +556,29 @@
             </div>
           </div>
 
+          <div id="order-partner-account-box" class="partner-account-box" hidden>
+            <div class="partner-account-box-header">
+              <span class="partner-account-label">Tujuan Transfer Partner</span>
+            </div>
+            <div class="partner-account-body">
+              <div class="partner-account-num-row">
+                <span id="order-partner-bank" class="partner-bank-badge"></span>
+                <span id="order-partner-account-num" class="partner-account-number"></span>
+                <button type="button" id="btn-copy-order-partner-account" class="btn btn-secondary btn-small btn-copy-account" aria-label="Salin nomor rekening partner">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                  <span>Salin Nomor Rekening</span>
+                </button>
+              </div>
+              <div id="order-partner-holder-row" class="partner-account-holder-row">
+                <span class="partner-account-holder-label">a.n.</span>
+                <span id="order-partner-holder" class="partner-account-holder-val"></span>
+              </div>
+            </div>
+          </div>
+
           <div id="order-partner-payout-box" class="order-paid-box" hidden>
             <div class="order-paid-meta">
               <span class="order-paid-label">Status Bayar ke Partner</span>
@@ -1028,6 +1051,29 @@
             <p id="partner-detail-note" class="customer-info-val">-</p>
           </div>
         </div>
+
+        <div id="partner-detail-account-box" class="partner-account-box" hidden>
+          <div class="partner-account-box-header">
+            <span class="partner-account-label">Rekening / E-Wallet</span>
+          </div>
+          <div class="partner-account-body">
+            <div class="partner-account-num-row">
+              <span id="partner-detail-bank" class="partner-bank-badge"></span>
+              <span id="partner-detail-account-num" class="partner-account-number"></span>
+              <button type="button" id="btn-copy-partner-detail-account" class="btn btn-secondary btn-small btn-copy-account" aria-label="Salin nomor rekening partner">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                <span>Salin Nomor Rekening</span>
+              </button>
+            </div>
+            <div id="partner-detail-holder-row" class="partner-account-holder-row">
+              <span class="partner-account-holder-label">a.n.</span>
+              <span id="partner-detail-holder" class="partner-account-holder-val"></span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="customer-stats-grid" aria-label="Ringkasan bagi hasil partner">
@@ -1092,6 +1138,22 @@
         <div class="form-group">
           <label class="form-label" for="partner-field-phone">Nomor HP (Opsional)</label>
           <input type="tel" id="partner-field-phone" class="form-input" placeholder="Contoh: 0812-3456-7890">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="partner-field-bank-name">Bank / E-Wallet (Opsional)</label>
+            <input type="text" id="partner-field-bank-name" class="form-input" placeholder="Contoh: BCA atau DANA">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="partner-field-account-number">No. Rekening / E-Wallet (Opsional)</label>
+            <input type="text" id="partner-field-account-number" class="form-input" placeholder="Contoh: 0123456789">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="partner-field-account-holder">Atas Nama (Opsional)</label>
+          <input type="text" id="partner-field-account-holder" class="form-input" placeholder="Contoh: Reza Pratama">
         </div>
 
         <div class="form-row">

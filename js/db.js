@@ -1238,6 +1238,10 @@ const ShugenDB = (function () {
 
   async function getPartner(id) {
     await open();
+    if (!id) return null;
+    if (typeof id === 'string' && id.startsWith('PRT-')) {
+      return getPartnerByPartnerId(id);
+    }
     return req2p(tx('partners', 'readonly').get(id));
   }
 
@@ -1292,6 +1296,9 @@ const ShugenDB = (function () {
                 partnerId: candidate,
                 name: cleanName,
                 phone: String((partner && partner.phone) || '').trim(),
+                bankName: String((partner && partner.bankName) || '').trim(),
+                accountNumber: String((partner && partner.accountNumber) || '').trim(),
+                accountHolder: String((partner && partner.accountHolder) || '').trim(),
                 note: String((partner && partner.note) || '').trim(),
                 defaultShareType: partner && partner.defaultShareType ? String(partner.defaultShareType) : '',
                 defaultShareValue: partner && partner.defaultShareValue !== undefined && partner.defaultShareValue !== null && partner.defaultShareValue !== ''
@@ -1326,7 +1333,10 @@ const ShugenDB = (function () {
 
   async function updatePartner(id, partnerData) {
     await open();
-    const existing = await getPartner(id);
+    let existing = await getPartner(id);
+    if (!existing && typeof id === 'string') {
+      existing = await getPartnerByPartnerId(id);
+    }
     if (!existing) throw new Error('Partner tidak ditemukan');
 
     const cleanName = partnerData.name !== undefined ? String(partnerData.name).trim() : existing.name;
@@ -1334,7 +1344,7 @@ const ShugenDB = (function () {
 
     const all = await getAllPartners();
     const isDup = all.some(
-      (p) => p.id !== id && p.name && p.name.trim().toLowerCase() === cleanName.toLowerCase()
+      (p) => p.id !== existing.id && p.name && p.name.trim().toLowerCase() === cleanName.toLowerCase()
     );
     if (isDup) {
       throw new Error('DUPLICATE_PARTNER_NAME');
@@ -1343,6 +1353,9 @@ const ShugenDB = (function () {
     const updated = Object.assign({}, existing, {
       name: cleanName,
       phone: partnerData.phone !== undefined ? String(partnerData.phone).trim() : existing.phone,
+      bankName: partnerData.bankName !== undefined ? String(partnerData.bankName).trim() : (existing.bankName || ''),
+      accountNumber: partnerData.accountNumber !== undefined ? String(partnerData.accountNumber).trim() : (existing.accountNumber || ''),
+      accountHolder: partnerData.accountHolder !== undefined ? String(partnerData.accountHolder).trim() : (existing.accountHolder || ''),
       note: partnerData.note !== undefined ? String(partnerData.note).trim() : existing.note,
       defaultShareType: partnerData.defaultShareType !== undefined ? String(partnerData.defaultShareType) : existing.defaultShareType,
       defaultShareValue: partnerData.defaultShareValue !== undefined && partnerData.defaultShareValue !== null && partnerData.defaultShareValue !== ''
@@ -1358,14 +1371,17 @@ const ShugenDB = (function () {
 
   async function deletePartner(id) {
     await open();
-    const existing = await getPartner(id);
+    let existing = await getPartner(id);
+    if (!existing && typeof id === 'string') {
+      existing = await getPartnerByPartnerId(id);
+    }
     if (!existing) return;
     const allOrders = await getAllOrders();
     const isUsed = allOrders.some((o) => o.partnerId === existing.partnerId);
     if (isUsed) {
       throw new Error('PARTNER_IN_USE');
     }
-    return req2p(tx('partners', 'readwrite').delete(id));
+    return req2p(tx('partners', 'readwrite').delete(existing.id));
   }
 
   async function clearPartners() {

@@ -19,6 +19,21 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #027 [2026-10-14] Implementasi Fitur 17 (Rekening / E-Wallet Partner)
+- Fitur: Rekening / e-wallet partner + tombol salin
+- Ringkasan: Menambahkan tiga field opsional di data partner (nama bank / e-wallet, nomor rekening / e-wallet, dan atas nama) yang disimpan sebagai string di IndexedDB agar angka 0 di depan tetap utuh dan partner lama tetap berfungsi normal. Field ini tersedia di form tambah dan edit partner, ditampilkan di detail partner serta di bagian bagi hasil pesanan (order share summary) lengkap dengan tombol 'Salin Nomor Rekening' untuk menyalin nomor saja ke clipboard dalam satu ketukan dengan notifikasi singkat dan nomor tetap dapat diseleksi manual jika clipboard tidak tersedia. Seluruh data rekening ikut dalam alur backup/restore dan terhapus pada aksi hapus semua data, data dummy portofolio diperbarui menggunakan nomor rekening dan identitas fiktif tanpa mengekspos data riil ke repo, dan cache service worker dinaikkan ke shugen-v24.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - dev/PLANSPEC.md
+  - index.html
+  - js/app.js
+  - js/db.js
+  - js/dummy.js
+  - sw.js
+- Catatan: Mendukung pencarian dan update partner baik lewat ID integer maupun partnerId string; tombol salin nomor rekening hanya muncul jika nomor rekening terisi; versi cache service worker dinaikkan ke shugen-v24.
+
 ### #026 [2026-10-14] Implementasi Fitur 16 (Hapus semua data)
 - Fitur: Hapus semua data
 - Ringkasan: Menambahkan bagian 'Hapus Semua Data' di Pengaturan untuk mengosongkan seluruh data operasional toko di IndexedDB perangkat dalam sekali aksi secara aman. Dialog konfirmasi menyajikan perbandingan jumlah data saat ini per jenis ke 0 (pesanan, pelanggan, partner, pemasukan, pengeluaran, invoice, game, katalog, progress, kategori, metode pembayaran, template pesan, dan kas toko), mewajibkan pemakai mengetik kata 'HAPUS' untuk mengaktifkan tombol konfirmasi, serta secara otomatis mengunduh file backup (fitur 12c) sebelum penghapusan dieksekusi. Jika pengunduhan backup otomatis gagal, tindakan penghapusan langsung dibatalkan; setelah penghapusan berhasil, preferensi tema tampilan (gelap/terang) tetap dipertahankan, aplikasi kembali ke keadaan kosong awal, dan ditampilkan pesan notifikasi bahwa semua data sudah dihapus.

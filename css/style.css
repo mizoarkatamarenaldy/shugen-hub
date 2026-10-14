@@ -2383,6 +2383,114 @@ dialog.dialog-customer-detail {
   color: var(--text-secondary);
 }
 
+.partner-account-box {
+  padding: 10px 12px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.partner-account-box-header {
+  margin-bottom: 6px;
+}
+
+.partner-account-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.partner-account-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.partner-account-num-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.partner-bank-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.partner-account-number {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.btn-copy-account {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 6px;
+  cursor: pointer;
+  touch-action: manipulation;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-copy-account:hover {
+  border-color: var(--text-secondary);
+}
+
+.btn-copy-account.is-copied {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-copy-account svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.partner-account-holder-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.partner-account-holder-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.partner-account-holder-val {
+  color: var(--text);
+  font-weight: 600;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 .order-invoice-box {
   padding: 12px;
   background: var(--surface-raised);
