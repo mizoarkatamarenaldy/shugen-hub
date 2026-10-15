@@ -281,6 +281,39 @@
     </div>
 
     <div id="view-incomes" hidden>
+      <section class="finance-charts-section" aria-label="Grafik pemasukan">
+        <div class="finance-charts-card">
+          <div class="chart-header">
+            <h2 class="chart-section-title">Grafik Pemasukan</h2>
+            <div class="chart-range-bar" role="group" aria-label="Pilihan rentang grafik pemasukan">
+              <button type="button" class="chart-range-btn active" data-type="income" data-range="7d" aria-pressed="true">7 hari</button>
+              <button type="button" class="chart-range-btn" data-type="income" data-range="30d" aria-pressed="false">30 hari</button>
+              <button type="button" class="chart-range-btn" data-type="income" data-range="month" aria-pressed="false">Bulan ini</button>
+            </div>
+          </div>
+
+          <div id="income-chart-empty" class="chart-empty-state" hidden>
+            <p class="chart-empty-text">Belum ada data untuk rentang ini</p>
+          </div>
+
+          <div id="income-chart-content" class="chart-content">
+            <div class="chart-block">
+              <h3 class="chart-block-title">Tren Harian</h3>
+              <div id="income-bar-chart" class="chart-svg-container" aria-label="Grafik batang tren pemasukan"></div>
+              <div id="income-bar-detail" class="chart-bar-detail" aria-live="polite">
+                <span class="chart-bar-detail-hint">Ketuk salah satu batang untuk melihat detail</span>
+              </div>
+            </div>
+
+            <div class="chart-block">
+              <h3 class="chart-block-title">Komposisi Metode Pembayaran</h3>
+              <div id="income-donut-chart" class="chart-donut-container" aria-label="Diagram donat metode pembayaran"></div>
+              <div id="income-donut-legend" class="chart-donut-legend"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="income-controls" aria-label="Filter dan ringkasan pemasukan">
         <div class="income-filter-bar">
           <div class="income-filter-fields">
@@ -319,6 +352,39 @@
     </div>
 
     <div id="view-expenses" hidden>
+      <section class="finance-charts-section" aria-label="Grafik pengeluaran">
+        <div class="finance-charts-card finance-charts-card-expense">
+          <div class="chart-header">
+            <h2 class="chart-section-title">Grafik Pengeluaran</h2>
+            <div class="chart-range-bar" role="group" aria-label="Pilihan rentang grafik pengeluaran">
+              <button type="button" class="chart-range-btn active" data-type="expense" data-range="7d" aria-pressed="true">7 hari</button>
+              <button type="button" class="chart-range-btn" data-type="expense" data-range="30d" aria-pressed="false">30 hari</button>
+              <button type="button" class="chart-range-btn" data-type="expense" data-range="month" aria-pressed="false">Bulan ini</button>
+            </div>
+          </div>
+
+          <div id="expense-chart-empty" class="chart-empty-state" hidden>
+            <p class="chart-empty-text">Belum ada data untuk rentang ini</p>
+          </div>
+
+          <div id="expense-chart-content" class="chart-content">
+            <div class="chart-block">
+              <h3 class="chart-block-title">Tren Harian</h3>
+              <div id="expense-bar-chart" class="chart-svg-container" aria-label="Grafik batang tren pengeluaran"></div>
+              <div id="expense-bar-detail" class="chart-bar-detail" aria-live="polite">
+                <span class="chart-bar-detail-hint">Ketuk salah satu batang untuk melihat detail</span>
+              </div>
+            </div>
+
+            <div class="chart-block">
+              <h3 class="chart-block-title">Komposisi Pengeluaran</h3>
+              <div id="expense-donut-chart" class="chart-donut-container" aria-label="Diagram donat kategori pengeluaran"></div>
+              <div id="expense-donut-legend" class="chart-donut-legend"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="income-controls" aria-label="Filter dan ringkasan pengeluaran">
         <div class="income-filter-bar">
           <div class="income-filter-fields">

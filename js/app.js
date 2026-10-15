@@ -12,9 +12,13 @@ const App = (function () {
   let searchQuery = '';
   let incomeStartDate = '';
   let incomeEndDate = '';
+  let incomeChartRange = '7d';
+  let incomeChartSelectedDate = null;
   let expenseStartDate = '';
   let expenseEndDate = '';
   let expenseCategoryFilter = 'semua';
+  let expenseChartRange = '7d';
+  let expenseChartSelectedDate = null;
   let cashStartDate = '';
   let cashEndDate = '';
   let cashInitialBalance = 0;
@@ -1657,6 +1661,7 @@ const App = (function () {
       container.appendChild(card);
     });
 
+    renderIncomeCharts();
     showView('ready');
   }
 
@@ -1739,7 +1744,332 @@ const App = (function () {
       container.appendChild(card);
     });
 
+    renderExpenseCharts();
     showView('ready');
+  }
+
+  function getLocalDateStr(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+  }
+
+  function formatShortDate(ymd) {
+    if (!ymd) return '';
+    const parts = String(ymd).split('-');
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      if (!isNaN(d.getTime())) {
+        return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(d);
+      }
+    }
+    return ymd;
+  }
+
+  function getBarDateLabel(ymd, prevYmd, totalDays) {
+    if (!ymd) return '';
+    const parts = String(ymd).split('-');
+    const dayNum = String(Number(parts[2]));
+    if (totalDays <= 7) {
+      if (!prevYmd || prevYmd.slice(5, 7) !== ymd.slice(5, 7)) {
+        return formatShortDate(ymd);
+      }
+      return dayNum;
+    }
+    return formatShortDate(ymd);
+  }
+
+  function getChartDateRange(rangeType, items) {
+    const now = new Date();
+    const curYm = currentYm();
+    if (rangeType === '30d') {
+      const days = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(now.getDate() - i);
+        days.push(getLocalDateStr(d));
+      }
+      return { startDate: days[0], endDate: days[days.length - 1], days };
+    }
+    if (rangeType === 'month') {
+      let maxDay = now.getDate();
+      const monthItems = (items || []).filter((item) => item.date && item.date.slice(0, 7) === curYm);
+      monthItems.forEach((item) => {
+        const d = Number(item.date.slice(8, 10));
+        if (d > maxDay) maxDay = d;
+      });
+      const days = [];
+      for (let i = 1; i <= maxDay; i++) {
+        days.push(curYm + '-' + String(i).padStart(2, '0'));
+      }
+      return { startDate: days[0], endDate: days[days.length - 1], days };
+    }
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(now.getDate() - i);
+      days.push(getLocalDateStr(d));
+    }
+    return { startDate: days[0], endDate: days[days.length - 1], days };
+  }
+
+  function renderFinanceCharts(type) {
+    const isIncome = type === 'income';
+    const allData = isIncome ? incomes : expenses;
+    const currentRange = isIncome ? incomeChartRange : expenseChartRange;
+    const selectedDate = isIncome ? incomeChartSelectedDate : expenseChartSelectedDate;
+    const prefix = isIncome ? 'income' : 'expense';
+    const colorToken = isIncome ? 'var(--accent)' : 'var(--text-secondary)';
+
+    $$('.chart-range-btn[data-type="' + prefix + '"]').forEach((btn) => {
+      const isActive = btn.dataset.range === currentRange;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+
+    const rangeInfo = getChartDateRange(currentRange, allData);
+    const startDate = rangeInfo.startDate;
+    const endDate = rangeInfo.endDate;
+    const days = rangeInfo.days;
+
+    const itemsInRange = allData.filter(
+      (item) => item.date && item.date >= startDate && item.date <= endDate
+    );
+
+    const emptyEl = $('#' + prefix + '-chart-empty');
+    const contentEl = $('#' + prefix + '-chart-content');
+
+    if (itemsInRange.length === 0) {
+      if (emptyEl) emptyEl.hidden = false;
+      if (contentEl) contentEl.hidden = true;
+      return;
+    }
+
+    if (emptyEl) emptyEl.hidden = true;
+    if (contentEl) contentEl.hidden = false;
+
+    // 1. Grafik Batang Tren
+    const dailySums = {};
+    days.forEach((d) => {
+      dailySums[d] = 0;
+    });
+    itemsInRange.forEach((item) => {
+      if (dailySums[item.date] !== undefined) {
+        dailySums[item.date] += Number(item.amount) || 0;
+      }
+    });
+
+    const maxAmount = Math.max(...Object.values(dailySums), 0);
+    const padLeft = 10;
+    const padRight = 10;
+    const padTop = 15;
+    const padBottom = 30;
+    const plotWidth = 320 - padLeft - padRight;
+    const plotHeight = 150 - padTop - padBottom;
+    const baseY = padTop + plotHeight;
+    const n = days.length;
+    const slotWidth = plotWidth / n;
+    const barWidth = Math.max(3, Math.min(22, slotWidth * 0.65));
+
+    let barsHtml = '';
+    days.forEach((dayStr, idx) => {
+      const dayAmount = dailySums[dayStr] || 0;
+      const slotX = padLeft + idx * slotWidth;
+      const barX = slotX + (slotWidth - barWidth) / 2;
+      let barH = 2;
+      if (maxAmount > 0 && dayAmount > 0) {
+        barH = Math.max(4, Math.round((dayAmount / maxAmount) * plotHeight));
+      }
+      const barY = baseY - barH;
+      const isSelected = selectedDate === dayStr;
+      const barOpacity = dayAmount > 0 ? (isSelected ? '1' : '0.8') : '0.25';
+
+      let highlightHtml = '';
+      if (isSelected) {
+        highlightHtml =
+          '<rect x="' + slotX.toFixed(1) + '" y="' + padTop + '" width="' + slotWidth.toFixed(1) + '" height="' + plotHeight + '" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="1" />' +
+          '<circle cx="' + (slotX + slotWidth / 2).toFixed(1) + '" cy="126" r="2.5" fill="' + colorToken + '" />';
+      }
+
+      barsHtml +=
+        '<g class="chart-bar-col" role="button" tabindex="0" data-type="' + prefix + '" data-date="' + dayStr + '" data-amount="' + dayAmount + '" aria-label="' + esc(formatYmd(dayStr)) + ': Rp ' + formatPrice(dayAmount) + '">' +
+          highlightHtml +
+          '<rect x="' + barX.toFixed(1) + '" y="' + barY + '" width="' + barWidth.toFixed(1) + '" height="' + barH + '" rx="2" fill="' + colorToken + '" fill-opacity="' + barOpacity + '" />' +
+          '<rect x="' + slotX.toFixed(1) + '" y="0" width="' + slotWidth.toFixed(1) + '" height="145" fill="transparent" />' +
+        '</g>';
+    });
+
+    let labelsHtml = '';
+    if (n <= 7) {
+      days.forEach((dayStr, idx) => {
+        const x = padLeft + idx * slotWidth + slotWidth / 2;
+        const label = getBarDateLabel(dayStr, idx > 0 ? days[idx - 1] : '', n);
+        labelsHtml += '<text x="' + x.toFixed(1) + '" y="137" text-anchor="middle" font-size="10" fill="var(--text-secondary)">' + esc(label) + '</text>';
+      });
+    } else if (n <= 16) {
+      const step = Math.max(1, Math.floor((n - 1) / 3));
+      const labeledIndices = new Set([0, step, step * 2, n - 1]);
+      days.forEach((dayStr, idx) => {
+        if (!labeledIndices.has(idx)) return;
+        const x = padLeft + idx * slotWidth + slotWidth / 2;
+        const anchor = idx === 0 ? 'start' : (idx === n - 1 ? 'end' : 'middle');
+        const posX = idx === 0 ? padLeft : (idx === n - 1 ? 320 - padRight : x);
+        labelsHtml += '<text x="' + posX.toFixed(1) + '" y="137" text-anchor="' + anchor + '" font-size="10" fill="var(--text-secondary)">' + esc(formatShortDate(dayStr)) + '</text>';
+      });
+    } else {
+      const labeledIndices = [0, 9, 19, n - 1];
+      labeledIndices.forEach((idx) => {
+        const dayStr = days[idx];
+        if (!dayStr) return;
+        const x = padLeft + idx * slotWidth + slotWidth / 2;
+        const anchor = idx === 0 ? 'start' : (idx === n - 1 ? 'end' : 'middle');
+        const posX = idx === 0 ? padLeft : (idx === n - 1 ? 320 - padRight : x);
+        labelsHtml += '<text x="' + posX.toFixed(1) + '" y="137" text-anchor="' + anchor + '" font-size="10" fill="var(--text-secondary)">' + esc(formatShortDate(dayStr)) + '</text>';
+      });
+    }
+
+    const barSvg =
+      '<svg viewBox="0 0 320 150" class="chart-svg" width="100%" height="150" role="img" aria-label="Grafik tren per hari">' +
+        '<line x1="' + padLeft + '" y1="' + baseY + '" x2="' + (320 - padRight) + '" y2="' + baseY + '" stroke="var(--border)" stroke-width="1" />' +
+        barsHtml +
+        labelsHtml +
+      '</svg>';
+
+    const barChartContainer = $('#' + prefix + '-bar-chart');
+    if (barChartContainer) {
+      barChartContainer.innerHTML = barSvg;
+    }
+
+    const detailEl = $('#' + prefix + '-bar-detail');
+    if (detailEl) {
+      if (selectedDate && dailySums[selectedDate] !== undefined) {
+        const amt = dailySums[selectedDate];
+        detailEl.innerHTML =
+          '<span class="chart-bar-detail-date">' + esc(formatYmd(selectedDate)) + '</span>: ' +
+          '<strong class="chart-bar-detail-amount">Rp ' + formatPrice(amt) + '</strong>';
+      } else {
+        detailEl.innerHTML =
+          '<span class="chart-bar-detail-hint">Ketuk salah satu batang untuk melihat detail</span>';
+      }
+    }
+
+    // 2. Diagram Donat Komposisi
+    const groupMap = {};
+    itemsInRange.forEach((item) => {
+      let key;
+      if (isIncome) {
+        key = (item.paymentMethod && String(item.paymentMethod).trim()) || 'Tanpa metode';
+      } else {
+        let catName = null;
+        if (item.categoryId !== undefined && item.categoryId !== null && item.categoryId !== '') {
+          catName = getCategoryName(item.categoryId);
+        }
+        if (!catName && item.categoryName) {
+          catName = item.categoryName;
+        }
+        if (!catName) {
+          catName = (item.paymentMethod && String(item.paymentMethod).trim()) || 'Tanpa kategori';
+        }
+        key = catName;
+      }
+      groupMap[key] = (groupMap[key] || 0) + (Number(item.amount) || 0);
+    });
+
+    const sortedGroups = Object.keys(groupMap)
+      .map((name) => ({ label: name, amount: groupMap[name] }))
+      .filter((g) => g.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+
+    let segments = [];
+    if (sortedGroups.length <= 5) {
+      segments = sortedGroups;
+    } else {
+      const top4 = sortedGroups.slice(0, 4);
+      const remainingAmount = sortedGroups.slice(4).reduce((sum, g) => sum + g.amount, 0);
+      segments = [...top4, { label: 'Lainnya', amount: remainingAmount }];
+    }
+
+    const donutTotal = segments.reduce((sum, s) => sum + s.amount, 0);
+    const opacities = [1.0, 0.78, 0.58, 0.42, 0.28];
+
+    let donutPaths = '';
+    if (donutTotal > 0) {
+      if (segments.length === 1) {
+        donutPaths = '<circle cx="80" cy="80" r="57" fill="none" stroke="' + colorToken + '" stroke-width="26" opacity="1" />';
+      } else {
+        let startAngle = -Math.PI / 2;
+        segments.forEach((seg, idx) => {
+          const sliceFraction = seg.amount / donutTotal;
+          const angleSpan = sliceFraction * 2 * Math.PI;
+          const endAngle = startAngle + angleSpan;
+          const opacity = opacities[idx % opacities.length];
+
+          const xos = 80 + 70 * Math.cos(startAngle);
+          const yos = 80 + 70 * Math.sin(startAngle);
+          const xoe = 80 + 70 * Math.cos(endAngle);
+          const yoe = 80 + 70 * Math.sin(endAngle);
+
+          const xie = 80 + 44 * Math.cos(endAngle);
+          const yie = 80 + 44 * Math.sin(endAngle);
+          const xis = 80 + 44 * Math.cos(startAngle);
+          const yis = 80 + 44 * Math.sin(startAngle);
+
+          const largeArc = angleSpan > Math.PI ? 1 : 0;
+          const d =
+            'M ' + xos.toFixed(2) + ' ' + yos.toFixed(2) + ' ' +
+            'A 70 70 0 ' + largeArc + ' 1 ' + xoe.toFixed(2) + ' ' + yoe.toFixed(2) + ' ' +
+            'L ' + xie.toFixed(2) + ' ' + yie.toFixed(2) + ' ' +
+            'A 44 44 0 ' + largeArc + ' 0 ' + xis.toFixed(2) + ' ' + yis.toFixed(2) + ' Z';
+
+          donutPaths += '<path d="' + d + '" fill="' + colorToken + '" fill-opacity="' + opacity + '" stroke="var(--surface)" stroke-width="2" stroke-linejoin="round" />';
+          startAngle = endAngle;
+        });
+      }
+    }
+
+    const donutSvg =
+      '<svg viewBox="0 0 160 160" class="donut-svg" width="160" height="160" role="img" aria-label="Diagram komposisi">' +
+        donutPaths +
+      '</svg>';
+
+    const donutChartContainer = $('#' + prefix + '-donut-chart');
+    if (donutChartContainer) {
+      donutChartContainer.innerHTML = donutSvg;
+    }
+
+    let legendHtml = '<div class="chart-legend">';
+    segments.forEach((seg, idx) => {
+      const opacity = opacities[idx % opacities.length];
+      const pct = donutTotal > 0 ? (seg.amount / donutTotal) * 100 : 0;
+      const pctStr = pct.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + '%';
+
+      legendHtml +=
+        '<div class="chart-legend-item">' +
+          '<div class="chart-legend-left">' +
+            '<span class="chart-legend-swatch" style="background: ' + colorToken + '; opacity: ' + opacity + ';" aria-hidden="true"></span>' +
+            '<span class="chart-legend-label" title="' + esc(seg.label) + '">' + esc(seg.label) + '</span>' +
+          '</div>' +
+          '<div class="chart-legend-right">' +
+            '<span class="chart-legend-amount">Rp ' + formatPrice(seg.amount) + '</span>' +
+            '<span class="chart-legend-percent">(' + esc(pctStr) + ')</span>' +
+          '</div>' +
+        '</div>';
+    });
+    legendHtml += '</div>';
+
+    const legendContainer = $('#' + prefix + '-donut-legend');
+    if (legendContainer) {
+      legendContainer.innerHTML = legendHtml;
+    }
+  }
+
+  function renderIncomeCharts() {
+    renderFinanceCharts('income');
+  }
+
+  function renderExpenseCharts() {
+    renderFinanceCharts('expense');
   }
 
   function renderRecap() {
@@ -2056,6 +2386,60 @@ const App = (function () {
         openOrderForm(Number(card.dataset.id));
       }
     });
+
+    $$('.chart-range-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const type = btn.dataset.type;
+        const range = btn.dataset.range;
+        if (type === 'income') {
+          incomeChartRange = range;
+          incomeChartSelectedDate = null;
+          renderIncomeCharts();
+        } else if (type === 'expense') {
+          expenseChartRange = range;
+          expenseChartSelectedDate = null;
+          renderExpenseCharts();
+        }
+      });
+    });
+
+    const incomeBarChart = $('#income-bar-chart');
+    if (incomeBarChart) {
+      incomeBarChart.addEventListener('click', (e) => {
+        const col = e.target.closest('.chart-bar-col');
+        if (!col) return;
+        incomeChartSelectedDate = col.dataset.date;
+        renderIncomeCharts();
+      });
+
+      incomeBarChart.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const col = e.target.closest('.chart-bar-col');
+        if (!col) return;
+        e.preventDefault();
+        incomeChartSelectedDate = col.dataset.date;
+        renderIncomeCharts();
+      });
+    }
+
+    const expenseBarChart = $('#expense-bar-chart');
+    if (expenseBarChart) {
+      expenseBarChart.addEventListener('click', (e) => {
+        const col = e.target.closest('.chart-bar-col');
+        if (!col) return;
+        expenseChartSelectedDate = col.dataset.date;
+        renderExpenseCharts();
+      });
+
+      expenseBarChart.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const col = e.target.closest('.chart-bar-col');
+        if (!col) return;
+        e.preventDefault();
+        expenseChartSelectedDate = col.dataset.date;
+        renderExpenseCharts();
+      });
+    }
 
     $('#income-filter-start').addEventListener('change', (e) => {
       incomeStartDate = e.target.value;

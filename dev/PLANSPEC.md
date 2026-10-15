@@ -405,3 +405,32 @@ Aturan data:
 Di luar cakupan:
 - Tidak ada grafik tren, tidak ada ekspor, tidak ada pengaturan susunan dashboard.
 - Tidak mengubah halaman Rekap, Kas, atau Pesanan.
+
+
+## Fitur 20: Grafik pemasukan dan pengeluaran
+
+Tujuan: lihat tren dan komposisi uang masuk dan keluar sekilas.
+
+Lokasi: bagian atas halaman Pemasukan dan halaman Pengeluaran, di atas daftar. Setiap halaman punya dua grafik.
+
+1. Grafik batang tren: total per hari.
+   - Pilihan rentang: 7 hari, 30 hari, Bulan ini. Default 7 hari.
+   - Hari tanpa data tetap tampil dengan nilai 0.
+   - Tap satu batang menampilkan tanggal dan nominalnya sebagai teks di bawah grafik. Tanpa tooltip melayang.
+2. Diagram donat komposisi.
+   - Pemasukan: per metode pembayaran.
+   - Pengeluaran: per kategori pengeluaran kalau field itu sudah ada. Kalau belum ada, pakai metode pembayaran.
+   - Maksimal 5 segmen, sisanya digabung jadi "Lainnya".
+   - Legenda di bawah donat berisi label teks, nominal, dan persen.
+
+Aturan:
+- Gambar dengan SVG buatan sendiri. Tanpa library. Harus jalan offline.
+- Hanya membaca data yang sudah ada. Jangan ubah struktur data dan jangan tambah field.
+- Tanggal memakai zona waktu perangkat. Format rupiah ikut format yang sudah dipakai di app.
+- Warna mengikuti DESIGN.md: warna hanya untuk status. Pemasukan memakai accent, pengeluaran memakai text-secondary. Segmen donat dibedakan lewat tingkat kepekatan warna yang sama dan garis pemisah border, dan maknanya dibawa oleh label legenda.
+- Wajib tampil benar di tema gelap dan terang, pakai token yang sudah ada.
+- Tanpa animasi.
+- Harus terbaca di layar 360px, tetap dalam kolom max-width 640px.
+- Kalau data kosong untuk rentang yang dipilih, tampilkan teks "Belum ada data untuk rentang ini".
+
+Di luar cakupan: grafik di Dashboard atau Rekap, ekspor grafik sebagai gambar.

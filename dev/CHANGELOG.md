@@ -19,6 +19,19 @@ NNN = nomor urut 3 digit (001, 002, dst). TANGGAL = YYYY-MM-DD.
 
 ## Riwayat
 
+### #030 [2026-10-15] Implementasi Fitur 20 (Grafik pemasukan dan pengeluaran)
+- Fitur: Grafik pemasukan dan pengeluaran
+- Ringkasan: Menambahkan grafik batang tren harian dan diagram donat komposisi di bagian atas halaman Pemasukan dan Pengeluaran menggunakan SVG murni tanpa library eksternal. Grafik batang menampilkan total per hari untuk rentang 7 hari (default), 30 hari, dan Bulan ini, dengan nilai 0 pada hari tanpa transaksi serta detail tanggal dan nominal saat batang diketuk tanpa tooltip melayang. Diagram donat menampilkan komposisi per metode pembayaran untuk pemasukan dan per kategori pengeluaran dengan maksimal 5 segmen (sisanya digabung menjadi Lainnya) lengkap dengan legenda nominal dan persentase, tema gelap dan terang sesuai token dev/DESIGN.md, serta teks "Belum ada data untuk rentang ini" saat kosong.
+- File diubah:
+  - css/style.css
+  - dev/CHANGELOG.md
+  - dev/PLAN.md
+  - dev/PLANSPEC.md
+  - index.html
+  - js/app.js
+  - sw.js
+- Catatan: Grafik hanya membaca data lokal yang sudah ada tanpa menambah field atau mengubah struktur data; cache service worker dinaikkan ke shugen-v27.
+
 ### #029 [2026-10-14] Implementasi Fitur 19 (Dashboard)
 - Fitur: Dashboard
 - Ringkasan: Menambahkan halaman Dashboard sebagai halaman awal aplikasi saat dibuka dan menu navigasi baru untuk merangkum kondisi operasional toko hari ini dalam tampilan satu kolom monokrom sesuai dev/DESIGN.md. Dashboard menampilkan 6 blok berurutan: pesanan yang perlu perhatian (menunggu bayar dan deadline mendesak beserta daftar pendek), performa keuangan hari ini dan ringkasan bulan ini dengan rumus rekap Fitur 8, saldo kas toko saat ini yang dapat diketuk membuka menu Kas, daftar maksimal 5 joki berjalan berstatus diproses dengan progress bar CSS dan tautan lihat semua, total dan rincian bagi hasil partner yang belum dibayar, serta tombol aksi cepat untuk pesanan baru, pemasukan, dan pengeluaran.

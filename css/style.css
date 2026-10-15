@@ -1395,6 +1395,232 @@ dialog.dialog-import-confirm .dialog-footer .btn {
   border-color: var(--accent);
 }
 
+/* Feature 20: Grafik Pemasukan dan Pengeluaran */
+
+.finance-charts-section {
+  padding: 12px 16px 0;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.finance-charts-card {
+  padding: 14px;
+  margin-bottom: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.chart-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.chart-range-bar {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--surface-raised);
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.chart-range-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  min-height: 38px;
+  cursor: pointer;
+  touch-action: manipulation;
+  line-height: 1;
+}
+
+.chart-range-btn:hover:not(.active) {
+  color: var(--text);
+}
+
+.chart-range-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.chart-range-btn.active {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.finance-charts-card-expense .chart-range-btn.active {
+  background: var(--text-secondary);
+  color: var(--bg);
+}
+
+.chart-empty-state {
+  padding: 24px 12px;
+  text-align: center;
+  background: var(--surface-raised);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+.chart-empty-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.chart-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.chart-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-block-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.chart-svg-container {
+  width: 100%;
+  overflow: hidden;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 4px 6px;
+}
+
+.chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chart-bar-detail {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+}
+
+.chart-bar-detail-hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.chart-donut-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 0 4px;
+}
+
+.donut-svg {
+  display: block;
+}
+
+.chart-donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.chart-legend-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.chart-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.chart-legend-label {
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chart-legend-right {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-legend-amount {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.chart-legend-percent {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.chart-bar-col {
+  cursor: pointer;
+}
+
+.chart-bar-col:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 .income-controls {
   padding: 12px 16px 8px;
   max-width: 640px;
